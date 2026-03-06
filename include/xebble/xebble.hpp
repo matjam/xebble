@@ -16,3 +16,6 @@
 #include <xebble/font.hpp>
 #include <xebble/asset_manager.hpp>
 #include <xebble/game.hpp>
+#include <xebble/ecs.hpp>
+#include <xebble/system.hpp>
+#include <xebble/world.hpp>

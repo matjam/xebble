@@ -10,6 +10,7 @@
 #include <xebble/window.hpp>
 #include <xebble/renderer.hpp>
 #include <xebble/asset_manager.hpp>
+#include <xebble/world.hpp>
 #include <memory>
 
 namespace xebble {
@@ -56,5 +57,11 @@ struct GameConfig {
 /// @param config Full game configuration.
 /// @return 0 on success, non-zero on failure.
 int run(std::unique_ptr<Game> game, const GameConfig& config);
+
+/// @brief Create systems and run the game loop with an ECS World.
+/// @param world The ECS world with registered components and systems.
+/// @param config Full game configuration.
+/// @return 0 on success, non-zero on failure.
+int run(World world, const GameConfig& config);
 
 } // namespace xebble

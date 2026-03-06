@@ -4,6 +4,7 @@
 
 #include <climits>
 #include <cstdint>
+#include <span>
 #include <vector>
 
 namespace xebble {
@@ -13,6 +14,13 @@ struct Entity {
     uint32_t id = 0;
     bool operator==(Entity other) const { return id == other.id; }
     bool operator!=(Entity other) const { return id != other.id; }
+};
+
+class Event;
+
+/// @brief Resource providing input events for the current frame.
+struct EventQueue {
+    std::span<const Event> events;
 };
 
 namespace ecs_detail {
