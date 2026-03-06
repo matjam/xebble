@@ -1,5 +1,6 @@
 add_library(xebble STATIC
     log.cpp
+    window.cpp
 )
 
 target_include_directories(xebble PUBLIC
