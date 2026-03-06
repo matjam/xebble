@@ -1,6 +1,7 @@
 add_executable(xebble_tests
     test_types.cpp
     test_event.cpp
+    test_spritesheet.cpp
 )
 
 target_link_libraries(xebble_tests PRIVATE

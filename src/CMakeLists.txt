@@ -8,8 +8,10 @@ add_library(xebble STATIC
     vulkan/descriptor.cpp
     vulkan/command.cpp
     vulkan/pipeline.cpp
+    stb_impl.cpp
     texture.cpp
     renderer.cpp
+    spritesheet.cpp
 )
 
 target_include_directories(xebble PUBLIC
