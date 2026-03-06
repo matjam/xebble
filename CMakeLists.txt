@@ -54,7 +54,9 @@ if(APPLE)
 
         message(STATUS "MoltenVK bundled to: ${CMAKE_BINARY_DIR}/lib/libMoltenVK.dylib")
     else()
-        message(WARNING "MoltenVK not found — Vulkan may not work on macOS without it")
+        message(FATAL_ERROR
+            "MoltenVK not found. Install via: brew install molten-vk\n"
+            "Or set MOLTENVK_LIB to the path of libMoltenVK.dylib")
     endif()
 endif()
 

@@ -7,9 +7,13 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <set>
 #include <vector>
-#include <filesystem>
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 namespace xebble::vk {
 
@@ -155,19 +159,30 @@ std::expected<Context, Error> Context::create(GLFWwindow* window) {
 
 #ifdef __APPLE__
     // Ensure the Vulkan loader can find MoltenVK on macOS.
-    // Priority: env var > bundled (build-time) > Homebrew system install.
+    // Searches: env var > .app bundle > build-time bundled copy.
     if (!std::getenv("VK_DRIVER_FILES") && !std::getenv("VK_ICD_FILENAMES")) {
-        static const char* icd_paths[] = {
+        std::vector<std::string> icd_paths;
+
+        // Check for .app bundle: Contents/MacOS/exe -> ../Resources/vulkan/icd.d/
+        {
+            char exe_buf[4096];
+            uint32_t exe_size = sizeof(exe_buf);
+            if (_NSGetExecutablePath(exe_buf, &exe_size) == 0) {
+                auto exe_dir = std::filesystem::path(exe_buf).parent_path();
+                auto bundle_icd = exe_dir / "../Resources/vulkan/icd.d/MoltenVK_icd.json";
+                icd_paths.push_back(bundle_icd.string());
+            }
+        }
+
+        // Build-time bundled copy (set by CMake)
 #ifdef XEBBLE_MOLTENVK_ICD
-            XEBBLE_MOLTENVK_ICD,
+        icd_paths.push_back(XEBBLE_MOLTENVK_ICD);
 #endif
-            "/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json",
-            "/usr/local/etc/vulkan/icd.d/MoltenVK_icd.json",
-        };
-        for (auto path : icd_paths) {
+
+        for (auto& path : icd_paths) {
             if (std::filesystem::exists(path)) {
-                setenv("VK_DRIVER_FILES", path, 0);
-                log(LogLevel::Info, std::string("Using MoltenVK ICD: ") + path);
+                setenv("VK_DRIVER_FILES", path.c_str(), 0);
+                log(LogLevel::Info, "Using MoltenVK ICD: " + path);
                 break;
             }
         }

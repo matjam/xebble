@@ -14,6 +14,10 @@
 #include <filesystem>
 #include <vector>
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 namespace {
 
 /// Generate a 128x128 test spritesheet with 8x8 colored 16x16 tiles.
@@ -184,14 +188,40 @@ public:
     void layout(uint32_t /*w*/, uint32_t /*h*/) override {}
 };
 
+/// Find the assets directory — checks .app bundle Resources first, then relative path.
+std::filesystem::path find_assets_dir() {
+#ifdef __APPLE__
+    char exe_buf[4096];
+    uint32_t exe_size = sizeof(exe_buf);
+    if (_NSGetExecutablePath(exe_buf, &exe_size) == 0) {
+        auto resources = std::filesystem::path(exe_buf).parent_path() / "../Resources/assets";
+        if (std::filesystem::exists(resources)) return resources;
+    }
+#endif
+    return "examples/basic_tilemap/assets";
+}
+
 int main() {
+    auto assets_dir = find_assets_dir();
+
     // Generate test assets if they don't exist
-    generate_test_tiles("examples/basic_tilemap/assets/tiles.png");
+    std::filesystem::create_directories(assets_dir);
+    generate_test_tiles(assets_dir / "tiles.png");
+
+    auto manifest_path = assets_dir / "manifest.toml";
+    // Generate manifest if not present (for non-bundle builds)
+    if (!std::filesystem::exists(manifest_path)) {
+        std::FILE* f = std::fopen(manifest_path.string().c_str(), "w");
+        if (f) {
+            std::fputs("[spritesheets.tiles]\npath = \"tiles.png\"\ntile_width = 16\ntile_height = 16\n", f);
+            std::fclose(f);
+        }
+    }
 
     return xebble::run(std::make_unique<BasicTilemap>(), {
         .window = {.title = "Xebble - Basic Tilemap", .width = 1280, .height = 720},
         .renderer = {.virtual_width = 640, .virtual_height = 360},
-        .assets = {.directory = "examples/basic_tilemap/assets/",
-                   .manifest = "examples/basic_tilemap/assets/manifest.toml"},
+        .assets = {.directory = assets_dir,
+                   .manifest = manifest_path},
     });
 }

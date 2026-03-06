@@ -5,6 +5,12 @@
 #include <GLFW/glfw3.h>
 
 #include <atomic>
+#include <cstdlib>
+#include <filesystem>
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 namespace xebble {
 
@@ -92,6 +98,34 @@ struct Window::Impl {
 
 std::expected<Window, Error> Window::create(const WindowConfig& config) {
     if (g_glfw_ref_count++ == 0) {
+#ifdef __APPLE__
+        // Set MoltenVK ICD path before glfwInit() so the Vulkan loader can find the driver.
+        if (!std::getenv("VK_DRIVER_FILES") && !std::getenv("VK_ICD_FILENAMES")) {
+            std::vector<std::string> icd_paths;
+
+            // Check for .app bundle
+            char exe_buf[4096];
+            uint32_t exe_size = sizeof(exe_buf);
+            if (_NSGetExecutablePath(exe_buf, &exe_size) == 0) {
+                auto exe_dir = std::filesystem::path(exe_buf).parent_path();
+                icd_paths.push_back((exe_dir / "../Resources/vulkan/icd.d/MoltenVK_icd.json").string());
+            }
+
+            // Build-time bundled copy
+#ifdef XEBBLE_MOLTENVK_ICD
+            icd_paths.push_back(XEBBLE_MOLTENVK_ICD);
+#endif
+
+            for (auto& path : icd_paths) {
+                if (std::filesystem::exists(path)) {
+                    auto canonical = std::filesystem::canonical(path).string();
+                    setenv("VK_DRIVER_FILES", canonical.c_str(), 0);
+                    log(LogLevel::Info, "MoltenVK ICD: " + canonical);
+                    break;
+                }
+            }
+        }
+#endif
         if (!glfwInit()) {
             g_glfw_ref_count--;
             return std::unexpected(Error{"Failed to initialize GLFW"});

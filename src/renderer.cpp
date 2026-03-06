@@ -19,6 +19,10 @@
 #include <unordered_map>
 #include <vector>
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 namespace xebble {
 
 static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
@@ -324,10 +328,32 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
     // Create offscreen descriptor for blit
     impl.offscreen_descriptor = impl.get_or_create_descriptor(*impl.offscreen_texture);
 
-    // Find shader directory (adjacent to build dir)
-    auto shader_dir = std::filesystem::path("build/debug/shaders");
-    if (!std::filesystem::exists(shader_dir)) {
-        shader_dir = std::filesystem::path("build/release/shaders");
+    // Find shader directory: .app bundle > relative to exe > build paths
+    auto shader_dir = std::filesystem::path();
+    {
+        std::vector<std::filesystem::path> search_paths;
+#ifdef __APPLE__
+        char exe_buf[4096];
+        uint32_t exe_size = sizeof(exe_buf);
+        if (_NSGetExecutablePath(exe_buf, &exe_size) == 0) {
+            auto exe_dir = std::filesystem::path(exe_buf).parent_path();
+            search_paths.push_back(exe_dir / "../Resources/shaders");  // .app bundle
+            search_paths.push_back(exe_dir / "shaders");               // next to exe
+        }
+#endif
+        search_paths.push_back("build/debug/shaders");
+        search_paths.push_back("build/release/shaders");
+        search_paths.push_back("shaders");
+
+        for (auto& p : search_paths) {
+            if (std::filesystem::exists(p / "sprite.vert.spv")) {
+                shader_dir = p;
+                break;
+            }
+        }
+        if (shader_dir.empty()) {
+            return std::unexpected(Error{"Could not find shader directory"});
+        }
     }
 
     // Create pipelines
