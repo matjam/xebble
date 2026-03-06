@@ -295,10 +295,250 @@ void PanelBuilder::text(std::string_view text, TextStyle style) {
     ctx_.draw_text_at(text, r.x, r.y, color, z_base_ + 0.1f);
 }
 
-bool PanelBuilder::button(std::string_view, ButtonStyle) { return false; }
-void PanelBuilder::checkbox(std::string_view, bool&, CheckboxStyle) {}
-void PanelBuilder::list(std::string_view, std::span<const std::string>, int&, ListStyle) {}
-bool PanelBuilder::text_input(std::string_view, std::string&, TextInputStyle) { return false; }
+bool PanelBuilder::button(std::string_view label, ButtonStyle style) {
+    float h = text_height() + padding_ * 2;
+    auto r = next_control_rect(h);
+    std::string id = std::string(label);
+    ctx_.register_widget(id, r);
+
+    bool hovered = ctx_.is_hot(id);
+    bool clicked = ctx_.is_clicked(id);
+
+    Color bg = hovered
+        ? pick_color(style.hover_color, ctx_.theme_->button_hover_color)
+        : pick_color(style.color, ctx_.theme_->button_color);
+    Color text_col = pick_color(style.text_color, ctx_.theme_->button_text_color);
+
+    ctx_.draw_rect(r, bg, z_base_ + 0.05f);
+    ctx_.draw_text_at(label, r.x + padding_, r.y + padding_, text_col, z_base_ + 0.1f);
+
+    if (clicked && ctx_.frame_events_) {
+        for (auto& e : *ctx_.frame_events_) {
+            if (e.type == EventType::MousePress && !e.consumed) {
+                e.consumed = true;
+                break;
+            }
+        }
+    }
+    return clicked;
+}
+
+void PanelBuilder::checkbox(std::string_view label, bool& value, CheckboxStyle style) {
+    float h = text_height() + padding_ * 2;
+    auto r = next_control_rect(h);
+    std::string id = std::string(label);
+    ctx_.register_widget(id, r);
+
+    bool clicked = ctx_.is_clicked(id);
+    if (clicked) {
+        value = !value;
+    }
+
+    // Draw background box (small square on the left)
+    float box_size = text_height();
+    Rect box_rect = {r.x + padding_, r.y + padding_, box_size, box_size};
+    Color box_color = value
+        ? pick_color(style.checked_color, ctx_.theme_->checkbox_checked_color)
+        : pick_color(style.color, ctx_.theme_->checkbox_color);
+    ctx_.draw_rect(box_rect, box_color, z_base_ + 0.05f);
+
+    // Draw "X" indicator if checked
+    if (value) {
+        ctx_.draw_text_at("X", box_rect.x, box_rect.y, pick_color(style.text_color, ctx_.theme_->text_color), z_base_ + 0.1f);
+    }
+
+    // Draw label text to the right of the box
+    float text_x = box_rect.x + box_size + padding_;
+    Color text_col = pick_color(style.text_color, ctx_.theme_->text_color);
+    ctx_.draw_text_at(label, text_x, r.y + padding_, text_col, z_base_ + 0.1f);
+
+    // Consume click event
+    if (clicked && ctx_.frame_events_) {
+        for (auto& e : *ctx_.frame_events_) {
+            if (e.type == EventType::MousePress && !e.consumed) {
+                e.consumed = true;
+                break;
+            }
+        }
+    }
+}
+
+void PanelBuilder::list(std::string_view id, std::span<const std::string> items,
+                         int& selected, ListStyle style) {
+    float row_h = text_height() + padding_ * 2;
+    float visible_rows = style.visible_rows;
+    float total_h = row_h * visible_rows;
+    auto r = next_control_rect(total_h);
+
+    // Draw background
+    Color bg = pick_color(style.color, ctx_.theme_->list_color);
+    ctx_.draw_rect(r, bg, z_base_ + 0.05f);
+
+    // Manage scroll state
+    std::string id_str(id);
+    int& scroll_offset = ctx_.scroll_offsets_[id_str];
+
+    // Handle scroll events
+    // Register the whole list rect for scroll detection
+    ctx_.register_widget(id_str, r);
+
+    if (ctx_.is_hot(id_str) && ctx_.frame_events_) {
+        for (auto& e : *ctx_.frame_events_) {
+            if (e.type == EventType::MouseScroll && !e.consumed) {
+                scroll_offset -= static_cast<int>(e.mouse_scroll().dy);
+                // Clamp scroll offset
+                int max_scroll = std::max(0, static_cast<int>(items.size()) - static_cast<int>(visible_rows));
+                scroll_offset = std::clamp(scroll_offset, 0, max_scroll);
+                e.consumed = true;
+                break;
+            }
+        }
+    }
+
+    // Clamp scroll offset in case items changed
+    int max_scroll = std::max(0, static_cast<int>(items.size()) - static_cast<int>(visible_rows));
+    scroll_offset = std::clamp(scroll_offset, 0, max_scroll);
+
+    // Draw visible items
+    int vis_count = std::min(static_cast<int>(visible_rows), static_cast<int>(items.size()) - scroll_offset);
+    Color text_col = pick_color(style.text_color, ctx_.theme_->text_color);
+    Color sel_color = pick_color(style.selected_color, ctx_.theme_->list_selected_color);
+
+    for (int i = 0; i < vis_count; ++i) {
+        int item_idx = scroll_offset + i;
+        if (item_idx < 0 || item_idx >= static_cast<int>(items.size())) break;
+
+        float item_y = r.y + static_cast<float>(i) * row_h;
+        Rect item_rect = {r.x, item_y, r.w, row_h};
+
+        // Register each item as clickable
+        std::string item_id = id_str + "##" + std::to_string(item_idx);
+        ctx_.register_widget(item_id, item_rect);
+
+        // Highlight selected item
+        if (item_idx == selected) {
+            ctx_.draw_rect(item_rect, sel_color, z_base_ + 0.06f);
+        }
+
+        // Handle click to select
+        if (ctx_.is_clicked(item_id)) {
+            selected = item_idx;
+            if (ctx_.frame_events_) {
+                for (auto& e : *ctx_.frame_events_) {
+                    if (e.type == EventType::MousePress && !e.consumed) {
+                        e.consumed = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Draw item text
+        ctx_.draw_text_at(items[item_idx], r.x + padding_, item_y + padding_, text_col, z_base_ + 0.1f);
+    }
+}
+
+bool PanelBuilder::text_input(std::string_view id, std::string& value, TextInputStyle style) {
+    float h = text_height() + padding_ * 2;
+    auto r = next_control_rect(h);
+    std::string id_str(id);
+    ctx_.register_widget(id_str, r);
+
+    bool is_focused = (ctx_.focused_input_id_ == id_str);
+    bool submitted = false;
+
+    // Click to focus
+    if (ctx_.is_clicked(id_str)) {
+        ctx_.focused_input_id_ = id_str;
+        is_focused = true;
+        // Initialize cursor position
+        ctx_.cursor_positions_[id_str] = value.size();
+        if (ctx_.frame_events_) {
+            for (auto& e : *ctx_.frame_events_) {
+                if (e.type == EventType::MousePress && !e.consumed) {
+                    e.consumed = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Handle key input when focused
+    if (is_focused && ctx_.frame_events_) {
+        size_t& cursor = ctx_.cursor_positions_[id_str];
+        if (cursor > value.size()) cursor = value.size();
+
+        for (auto& e : *ctx_.frame_events_) {
+            if (e.consumed) continue;
+            if (e.type == EventType::KeyPress || e.type == EventType::KeyRepeat) {
+                Key k = e.key().key;
+                if (k == Key::Enter) {
+                    submitted = true;
+                    ctx_.focused_input_id_.clear();
+                    is_focused = false;
+                    e.consumed = true;
+                    break;
+                } else if (k == Key::Escape) {
+                    ctx_.focused_input_id_.clear();
+                    is_focused = false;
+                    e.consumed = true;
+                    break;
+                } else if (k == Key::Backspace) {
+                    if (cursor > 0) {
+                        value.erase(cursor - 1, 1);
+                        cursor--;
+                    }
+                    e.consumed = true;
+                } else if (k == Key::Delete) {
+                    if (cursor < value.size()) {
+                        value.erase(cursor, 1);
+                    }
+                    e.consumed = true;
+                } else if (k == Key::Left) {
+                    if (cursor > 0) cursor--;
+                    e.consumed = true;
+                } else if (k == Key::Right) {
+                    if (cursor < value.size()) cursor++;
+                    e.consumed = true;
+                } else {
+                    // Check for printable character
+                    int kv = static_cast<int>(k);
+                    if (kv >= static_cast<int>(Key::Space) && kv <= static_cast<int>(Key::Z)) {
+                        char ch = static_cast<char>(kv);
+                        if (kv >= static_cast<int>(Key::A) && kv <= static_cast<int>(Key::Z)) {
+                            if (!e.key().mods.shift) {
+                                ch = static_cast<char>(ch + 32);
+                            }
+                        }
+                        value.insert(value.begin() + static_cast<std::ptrdiff_t>(cursor), ch);
+                        cursor++;
+                        e.consumed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Draw background
+    Color bg = is_focused
+        ? pick_color(style.active_color, ctx_.theme_->input_active_color)
+        : pick_color(style.color, ctx_.theme_->input_color);
+    ctx_.draw_rect(r, bg, z_base_ + 0.05f);
+
+    // Draw text with cursor
+    Color text_col = pick_color(style.text_color, ctx_.theme_->text_color);
+    if (is_focused) {
+        size_t cursor = ctx_.cursor_positions_[id_str];
+        if (cursor > value.size()) cursor = value.size();
+        std::string display = value;
+        display.insert(cursor, "|");
+        ctx_.draw_text_at(display, r.x + padding_, r.y + padding_, text_col, z_base_ + 0.1f);
+    } else {
+        ctx_.draw_text_at(value, r.x + padding_, r.y + padding_, text_col, z_base_ + 0.1f);
+    }
+
+    return submitted;
+}
 
 // --- Systems stubs (Task 6) ---
 
