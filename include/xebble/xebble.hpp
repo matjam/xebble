@@ -20,3 +20,4 @@
 #include <xebble/world.hpp>
 #include <xebble/components.hpp>
 #include <xebble/builtin_systems.hpp>
+#include <xebble/ui.hpp>

@@ -19,6 +19,7 @@ add_library(xebble STATIC
     world.cpp
     builtin_systems.cpp
     embedded_font.cpp
+    ui.cpp
 )
 
 target_include_directories(xebble PUBLIC

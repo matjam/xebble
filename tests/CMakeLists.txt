@@ -7,6 +7,7 @@ add_executable(xebble_tests
     test_asset_manager.cpp
     test_ecs.cpp
     test_embedded_font.cpp
+    test_ui.cpp
 )
 
 target_link_libraries(xebble_tests PRIVATE
