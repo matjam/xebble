@@ -1,0 +1,10 @@
+Angband Adam Bolt 16x16 Tileset
+================================
+
+This tileset is from the Angband roguelike game project.
+Source: https://github.com/angband/angband/tree/master/lib/tiles/adam-bolt
+
+The Angband game and its assets are distributed under the Angband License,
+a permissive open-source license similar to the BSD license.
+
+See https://rephial.org/wiki/License for full license terms.
