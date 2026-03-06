@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include <xebble/ecs.hpp>
+#include <xebble/world.hpp>
+#include <xebble/system.hpp>
 
 using namespace xebble;
 
@@ -104,4 +106,129 @@ TEST(ComponentPool, ManyEntities) {
     for (uint32_t i = 0; i < 1000; i++) {
         EXPECT_EQ(pool.get(Entity{i}).v, i * 2);
     }
+}
+
+// --- Test components (in anonymous namespace) ---
+namespace {
+    struct Position { int x, y; };
+    struct Velocity { int dx, dy; };
+    struct Health { int hp; };
+}
+
+TEST(World, CreateAndDestroyEntity) {
+    World world;
+    world.register_component<Position>();
+
+    auto e = world.create_entity();
+    EXPECT_TRUE(world.alive(e));
+    world.add<Position>(e, {10, 20});
+    EXPECT_TRUE(world.has<Position>(e));
+    EXPECT_EQ(world.get<Position>(e).x, 10);
+
+    world.destroy(e);
+    world.flush_destroyed();
+    EXPECT_FALSE(world.alive(e));
+}
+
+TEST(World, EntityBuilder) {
+    World world;
+    world.register_component<Position>();
+    world.register_component<Velocity>();
+
+    auto e = world.build_entity()
+        .with<Position>({5, 10})
+        .with<Velocity>({1, -1})
+        .build();
+
+    EXPECT_TRUE(world.alive(e));
+    EXPECT_EQ(world.get<Position>(e).x, 5);
+    EXPECT_EQ(world.get<Velocity>(e).dx, 1);
+}
+
+TEST(World, EachSingleComponent) {
+    World world;
+    world.register_component<Position>();
+
+    world.add<Position>(world.create_entity(), {1, 0});
+    world.add<Position>(world.create_entity(), {2, 0});
+    world.add<Position>(world.create_entity(), {3, 0});
+
+    int sum = 0;
+    world.each<Position>([&](Entity, Position& p) { sum += p.x; });
+    EXPECT_EQ(sum, 6);
+}
+
+TEST(World, EachMultipleComponents) {
+    World world;
+    world.register_component<Position>();
+    world.register_component<Velocity>();
+
+    auto e0 = world.create_entity();
+    world.add<Position>(e0, {1, 0});
+    world.add<Velocity>(e0, {10, 0});
+
+    auto e1 = world.create_entity();
+    world.add<Position>(e1, {2, 0});
+    // e1 has no Velocity
+
+    int count = 0;
+    world.each<Position, Velocity>([&](Entity, Position& p, Velocity& v) {
+        count++;
+        EXPECT_EQ(p.x, 1);
+        EXPECT_EQ(v.dx, 10);
+    });
+    EXPECT_EQ(count, 1);
+}
+
+TEST(World, Resources) {
+    struct GameState { int score; };
+
+    World world;
+    world.add_resource<GameState>(GameState{42});
+    EXPECT_TRUE(world.has_resource<GameState>());
+    EXPECT_EQ(world.resource<GameState>().score, 42);
+
+    world.resource<GameState>().score = 100;
+    EXPECT_EQ(world.resource<GameState>().score, 100);
+
+    world.remove_resource<GameState>();
+    EXPECT_FALSE(world.has_resource<GameState>());
+}
+
+TEST(World, SystemInitAndUpdate) {
+    struct Counter { int value = 0; };
+
+    struct CountSystem : System {
+        void init(World& w) override {
+            w.resource<Counter>().value = 10;
+        }
+        void update(World& w, float) override {
+            w.resource<Counter>().value++;
+        }
+    };
+
+    World world;
+    world.add_resource<Counter>({});
+    world.add_system<CountSystem>();
+    world.init_systems();
+    EXPECT_EQ(world.resource<Counter>().value, 10);
+
+    world.tick_update(1.0f / 60.0f);
+    EXPECT_EQ(world.resource<Counter>().value, 11);
+}
+
+TEST(World, DeferredDestruction) {
+    World world;
+    world.register_component<Position>();
+
+    auto e = world.create_entity();
+    world.add<Position>(e, {1, 2});
+    world.destroy(e);
+
+    // Still alive until flush
+    EXPECT_TRUE(world.alive(e));
+    EXPECT_TRUE(world.has<Position>(e));
+
+    world.flush_destroyed();
+    EXPECT_FALSE(world.alive(e));
 }
