@@ -3,6 +3,7 @@
 #include <xebble/ui.hpp>
 #include <xebble/world.hpp>
 #include <xebble/spritesheet.hpp>
+#include <xebble/ecs.hpp>
 
 #include <algorithm>
 
@@ -540,9 +541,23 @@ bool PanelBuilder::text_input(std::string_view id, std::string& value, TextInput
     return submitted;
 }
 
-// --- Systems stubs (Task 6) ---
+// --- Systems ---
 
-void UIInputSystem::update(World&, float) {}
-void UIFlushSystem::draw(World&, Renderer&) {}
+void UIInputSystem::update(World& world, float) {
+    auto& events = world.resource<EventQueue>().events;
+    auto* renderer = world.resource<Renderer*>();
+    auto& ui = world.resource<UIContext>();
+
+    if (world.has_resource<UITheme>()) {
+        ui.theme_ = &world.resource<UITheme>();
+    }
+
+    ui.begin_frame(events, *renderer);
+}
+
+void UIFlushSystem::draw(World& world, Renderer& renderer) {
+    auto& ui = world.resource<UIContext>();
+    ui.flush(renderer);
+}
 
 } // namespace xebble

@@ -149,6 +149,7 @@ public:
 
 private:
     friend class PanelBuilder;
+    friend class UIInputSystem;
 
     Rect resolve_placement(const PanelPlacement& p) const;
     void draw_panel_bg(Rect rect);
