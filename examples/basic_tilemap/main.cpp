@@ -59,6 +59,15 @@ struct GameState {
     bool needs_rebuild = true;
 };
 
+void center_camera(xebble::World& world, xebble::Position& player_pos) {
+    auto& cam = world.resource<xebble::Camera>();
+    auto& dg = world.resource<GameState>().dungeon;
+    cam.x = player_pos.x - static_cast<float>(VIRTUAL_W) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
+    cam.y = player_pos.y - static_cast<float>(VIRTUAL_H - HUD_HEIGHT * TILE_SIZE) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
+    cam.x = std::clamp(cam.x, 0.0f, static_cast<float>(dg.width * TILE_SIZE - VIRTUAL_W));
+    cam.y = std::clamp(cam.y, 0.0f, static_cast<float>(dg.height * TILE_SIZE - (VIRTUAL_H - HUD_HEIGHT * TILE_SIZE)));
+}
+
 // --- Systems ---
 
 class DungeonSystem : public xebble::System {
@@ -148,13 +157,8 @@ private:
     }
 
     void update_camera(xebble::World& world) {
-        auto& cam = world.resource<xebble::Camera>();
         world.each<PlayerTag, xebble::Position>([&](xebble::Entity, PlayerTag&, xebble::Position& pos) {
-            cam.x = pos.x - static_cast<float>(VIRTUAL_W) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
-            cam.y = pos.y - static_cast<float>(VIRTUAL_H - HUD_HEIGHT * TILE_SIZE) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
-            auto& dg = world.resource<GameState>().dungeon;
-            cam.x = std::clamp(cam.x, 0.0f, static_cast<float>(dg.width * TILE_SIZE - VIRTUAL_W));
-            cam.y = std::clamp(cam.y, 0.0f, static_cast<float>(dg.height * TILE_SIZE - (VIRTUAL_H - HUD_HEIGHT * TILE_SIZE)));
+            center_camera(world, pos);
         });
     }
 };
@@ -233,11 +237,7 @@ private:
             }
 
             // Update camera
-            auto& cam = world.resource<xebble::Camera>();
-            cam.x = pos.x - static_cast<float>(VIRTUAL_W) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
-            cam.y = pos.y - static_cast<float>(VIRTUAL_H - HUD_HEIGHT * TILE_SIZE) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
-            cam.x = std::clamp(cam.x, 0.0f, static_cast<float>(state.dungeon.width * TILE_SIZE - VIRTUAL_W));
-            cam.y = std::clamp(cam.y, 0.0f, static_cast<float>(state.dungeon.height * TILE_SIZE - static_cast<int>(VIRTUAL_H - HUD_HEIGHT * TILE_SIZE)));
+            center_camera(world, pos);
         });
     }
 };
