@@ -5,9 +5,11 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <set>
 #include <vector>
+#include <filesystem>
 
 namespace xebble::vk {
 
@@ -151,6 +153,23 @@ bool device_has_extension(VkPhysicalDevice device, const char* name) {
 std::expected<Context, Error> Context::create(GLFWwindow* window) {
     auto impl = std::make_unique<Impl>();
 
+#ifdef __APPLE__
+    // Ensure the Vulkan loader can find MoltenVK on macOS.
+    // If VK_DRIVER_FILES isn't set, check common Homebrew locations.
+    if (!std::getenv("VK_DRIVER_FILES") && !std::getenv("VK_ICD_FILENAMES")) {
+        static const char* icd_paths[] = {
+            "/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json",
+            "/usr/local/etc/vulkan/icd.d/MoltenVK_icd.json",
+        };
+        for (auto path : icd_paths) {
+            if (std::filesystem::exists(path)) {
+                setenv("VK_DRIVER_FILES", path, 0);
+                break;
+            }
+        }
+    }
+#endif
+
     // --- Instance ---
     VkApplicationInfo app_info{};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -160,8 +179,11 @@ std::expected<Context, Error> Context::create(GLFWwindow* window) {
     app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
     app_info.apiVersion = VK_API_VERSION_1_2;
 
-    uint32_t glfw_ext_count;
+    uint32_t glfw_ext_count = 0;
     const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_ext_count);
+    if (!glfw_extensions) {
+        return std::unexpected(Error{"GLFW: Vulkan not supported or GLFW not initialized"});
+    }
     std::vector<const char*> extensions(glfw_extensions, glfw_extensions + glfw_ext_count);
 
 #ifdef __APPLE__
@@ -192,8 +214,10 @@ std::expected<Context, Error> Context::create(GLFWwindow* window) {
     create_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
     create_info.ppEnabledLayerNames = layers.data();
 
-    if (vkCreateInstance(&create_info, nullptr, &impl->instance) != VK_SUCCESS) {
-        return std::unexpected(Error{"Failed to create Vulkan instance"});
+    VkResult instance_result = vkCreateInstance(&create_info, nullptr, &impl->instance);
+    if (instance_result != VK_SUCCESS) {
+        return std::unexpected(Error{"Failed to create Vulkan instance (VkResult: " +
+            std::to_string(static_cast<int>(instance_result)) + ")"});
     }
 
     log(LogLevel::Info, "Vulkan instance created");
