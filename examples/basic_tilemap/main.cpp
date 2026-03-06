@@ -1,5 +1,5 @@
 /// @file main.cpp
-/// @brief Roguelike dungeon demo using ECS and the Angband Adam Bolt 16x16 tileset.
+/// @brief Roguelike dungeon demo using xebble ECS with built-in rendering.
 ///
 /// Generates a procedural dungeon with rooms and corridors. Move with WASD or
 /// arrow keys. Walk over items to collect them. Bump into monsters to see their
@@ -46,13 +46,12 @@ constexpr uint32_t VIEW_TILES_Y = VIRTUAL_H / TILE_SIZE;
 constexpr uint32_t HUD_HEIGHT = 2;
 constexpr uint32_t MAP_VIEW_TILES_Y = VIEW_TILES_Y - HUD_HEIGHT;
 
-// --- ECS Components ---
+// --- Game-specific components ---
 struct PlayerTag {};
-struct Position { int x, y; };
-struct TileSprite { uint32_t tile_id; };
 struct MonsterInfo { std::string name; };
 struct ItemInfo { std::string name; };
-struct Camera { int x, y; };
+
+// --- Game-specific resources ---
 struct GameState {
     Dungeon dungeon;
     int items_collected = 0;
@@ -63,8 +62,12 @@ struct GameState {
 // --- Systems ---
 
 class DungeonSystem : public xebble::System {
+    const xebble::SpriteSheet* sheet_ = nullptr;
+
 public:
     void init(xebble::World& world) override {
+        auto* assets = world.resource<xebble::AssetManager*>();
+        sheet_ = &assets->get<xebble::SpriteSheet>("tiles");
         rebuild(world);
     }
 
@@ -84,7 +87,10 @@ private:
 
         // Clear old entities
         std::vector<xebble::Entity> to_destroy;
-        world.each<Position>([&](xebble::Entity e, Position&) {
+        world.each<xebble::Position>([&](xebble::Entity e, xebble::Position&) {
+            to_destroy.push_back(e);
+        });
+        world.each<xebble::TileMapLayer>([&](xebble::Entity e, xebble::TileMapLayer&) {
             to_destroy.push_back(e);
         });
         for (auto e : to_destroy) world.destroy(e);
@@ -92,19 +98,36 @@ private:
 
         auto& dg = state.dungeon;
 
+        // Create tilemap from dungeon data
+        auto tilemap = std::make_shared<xebble::TileMap>(*sheet_, dg.width, dg.height, 2);
+        for (int y = 0; y < dg.height; y++) {
+            for (int x = 0; x < dg.width; x++) {
+                tilemap->set_tile(0, x, y, dg.floor_tiles[y * dg.width + x]);
+                uint32_t feat = dg.feature_tiles[y * dg.width + x];
+                if (feat != UINT32_MAX)
+                    tilemap->set_tile(1, x, y, feat);
+            }
+        }
+
+        world.build_entity()
+            .with<xebble::TileMapLayer>({tilemap, 0.0f})
+            .build();
+
         // Create player
         world.build_entity()
             .with<PlayerTag>({})
-            .with<Position>({dg.player_start_x, dg.player_start_y})
-            .with<TileSprite>({tiles::PLAYER})
+            .with<xebble::Position>({static_cast<float>(dg.player_start_x * TILE_SIZE),
+                                     static_cast<float>(dg.player_start_y * TILE_SIZE)})
+            .with<xebble::Sprite>({sheet_, tiles::PLAYER, 3.0f})
             .build();
 
         // Create monsters
         for (auto& ent : dg.entities) {
             if (!ent.is_monster) continue;
             world.build_entity()
-                .with<Position>({ent.x, ent.y})
-                .with<TileSprite>({ent.tile})
+                .with<xebble::Position>({static_cast<float>(ent.x * TILE_SIZE),
+                                         static_cast<float>(ent.y * TILE_SIZE)})
+                .with<xebble::Sprite>({sheet_, ent.tile, 2.0f})
                 .with<MonsterInfo>({ent.name})
                 .build();
         }
@@ -113,8 +136,9 @@ private:
         for (auto& ent : dg.entities) {
             if (ent.is_monster) continue;
             world.build_entity()
-                .with<Position>({ent.x, ent.y})
-                .with<TileSprite>({ent.tile})
+                .with<xebble::Position>({static_cast<float>(ent.x * TILE_SIZE),
+                                         static_cast<float>(ent.y * TILE_SIZE)})
+                .with<xebble::Sprite>({sheet_, ent.tile, 1.0f})
                 .with<ItemInfo>({ent.name})
                 .build();
         }
@@ -124,13 +148,13 @@ private:
     }
 
     void update_camera(xebble::World& world) {
-        auto& cam = world.resource<Camera>();
-        world.each<PlayerTag, Position>([&](xebble::Entity, PlayerTag&, Position& pos) {
-            cam.x = pos.x - static_cast<int>(VIEW_TILES_X) / 2;
-            cam.y = pos.y - static_cast<int>(MAP_VIEW_TILES_Y) / 2;
+        auto& cam = world.resource<xebble::Camera>();
+        world.each<PlayerTag, xebble::Position>([&](xebble::Entity, PlayerTag&, xebble::Position& pos) {
+            cam.x = pos.x - static_cast<float>(VIRTUAL_W) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
+            cam.y = pos.y - static_cast<float>(VIRTUAL_H - HUD_HEIGHT * TILE_SIZE) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
             auto& dg = world.resource<GameState>().dungeon;
-            cam.x = std::clamp(cam.x, 0, std::max(0, dg.width - static_cast<int>(VIEW_TILES_X)));
-            cam.y = std::clamp(cam.y, 0, std::max(0, dg.height - static_cast<int>(MAP_VIEW_TILES_Y)));
+            cam.x = std::clamp(cam.x, 0.0f, static_cast<float>(dg.width * TILE_SIZE - VIRTUAL_W));
+            cam.y = std::clamp(cam.y, 0.0f, static_cast<float>(dg.height * TILE_SIZE - (VIRTUAL_H - HUD_HEIGHT * TILE_SIZE)));
         });
     }
 };
@@ -156,11 +180,12 @@ public:
 private:
     void try_move(xebble::World& world, int dx, int dy) {
         auto& state = world.resource<GameState>();
-        auto& cam = world.resource<Camera>();
 
-        world.each<PlayerTag, Position>([&](xebble::Entity, PlayerTag&, Position& pos) {
-            int nx = pos.x + dx;
-            int ny = pos.y + dy;
+        world.each<PlayerTag, xebble::Position>([&](xebble::Entity, PlayerTag&, xebble::Position& pos) {
+            int tile_x = static_cast<int>(pos.x) / TILE_SIZE;
+            int tile_y = static_cast<int>(pos.y) / TILE_SIZE;
+            int nx = tile_x + dx;
+            int ny = tile_y + dy;
 
             if (!state.dungeon.is_walkable(nx, ny)) {
                 state.message = "You bump into a wall.";
@@ -169,21 +194,25 @@ private:
 
             // Check for monster
             bool blocked = false;
-            world.each<MonsterInfo, Position>([&](xebble::Entity, MonsterInfo& info, Position& mpos) {
-                if (mpos.x == nx && mpos.y == ny) {
+            world.each<MonsterInfo, xebble::Position>([&](xebble::Entity, MonsterInfo& info, xebble::Position& mpos) {
+                int mx = static_cast<int>(mpos.x) / TILE_SIZE;
+                int my = static_cast<int>(mpos.y) / TILE_SIZE;
+                if (mx == nx && my == ny) {
                     state.message = std::format("You see a {}.", info.name);
                     blocked = true;
                 }
             });
             if (blocked) return;
 
-            pos.x = nx;
-            pos.y = ny;
+            pos.x = static_cast<float>(nx * TILE_SIZE);
+            pos.y = static_cast<float>(ny * TILE_SIZE);
 
             // Check for item pickup
             bool picked_up = false;
-            world.each<ItemInfo, Position>([&](xebble::Entity ie, ItemInfo& info, Position& ipos) {
-                if (ipos.x == nx && ipos.y == ny) {
+            world.each<ItemInfo, xebble::Position>([&](xebble::Entity ie, ItemInfo& info, xebble::Position& ipos) {
+                int ix = static_cast<int>(ipos.x) / TILE_SIZE;
+                int iy = static_cast<int>(ipos.y) / TILE_SIZE;
+                if (ix == nx && iy == ny) {
                     state.items_collected++;
                     state.message = std::format("You picked up {}.", info.name);
                     world.destroy(ie);
@@ -204,96 +233,11 @@ private:
             }
 
             // Update camera
-            cam.x = pos.x - static_cast<int>(VIEW_TILES_X) / 2;
-            cam.y = pos.y - static_cast<int>(MAP_VIEW_TILES_Y) / 2;
-            cam.x = std::clamp(cam.x, 0, std::max(0, state.dungeon.width - static_cast<int>(VIEW_TILES_X)));
-            cam.y = std::clamp(cam.y, 0, std::max(0, state.dungeon.height - static_cast<int>(MAP_VIEW_TILES_Y)));
-        });
-    }
-};
-
-class RenderSystem : public xebble::System {
-    const xebble::SpriteSheet* sheet_ = nullptr;
-
-public:
-    void init(xebble::World& world) override {
-        auto* assets = world.resource<xebble::AssetManager*>();
-        sheet_ = &assets->get<xebble::SpriteSheet>("tiles");
-    }
-
-    void draw(xebble::World& world, xebble::Renderer& renderer) override {
-        auto& state = world.resource<GameState>();
-        auto& cam = world.resource<Camera>();
-        auto& dg = state.dungeon;
-
-        // Draw tilemap layers (floor + features)
-        for (int layer = 0; layer < 2; layer++) {
-            std::vector<xebble::SpriteInstance> instances;
-            for (int vy = 0; vy <= static_cast<int>(MAP_VIEW_TILES_Y); vy++) {
-                for (int vx = 0; vx <= static_cast<int>(VIEW_TILES_X); vx++) {
-                    int tx = cam.x + vx;
-                    int ty = cam.y + vy;
-                    if (tx < 0 || tx >= dg.width || ty < 0 || ty >= dg.height) continue;
-                    uint32_t tile;
-                    if (layer == 0) {
-                        tile = dg.floor_tiles[ty * dg.width + tx];
-                    } else {
-                        tile = dg.feature_tiles[ty * dg.width + tx];
-                        if (tile == UINT32_MAX) continue;
-                    }
-                    auto uv = sheet_->region(tile);
-                    instances.push_back({
-                        .pos_x = static_cast<float>(vx * TILE_SIZE),
-                        .pos_y = static_cast<float>(vy * TILE_SIZE),
-                        .uv_x = uv.x, .uv_y = uv.y, .uv_w = uv.w, .uv_h = uv.h,
-                        .quad_w = static_cast<float>(TILE_SIZE),
-                        .quad_h = static_cast<float>(TILE_SIZE),
-                        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
-                    });
-                }
-            }
-            if (!instances.empty())
-                renderer.submit_instances(instances, sheet_->texture(), static_cast<float>(layer));
-        }
-
-        // Draw entities (monsters + items)
-        {
-            std::vector<xebble::SpriteInstance> instances;
-            world.each<Position, TileSprite>([&](xebble::Entity e, Position& pos, TileSprite& spr) {
-                if (world.has<PlayerTag>(e)) return; // player drawn separately
-                int sx = pos.x - cam.x;
-                int sy = pos.y - cam.y;
-                if (sx < 0 || sx >= static_cast<int>(VIEW_TILES_X) ||
-                    sy < 0 || sy >= static_cast<int>(MAP_VIEW_TILES_Y))
-                    return;
-                auto uv = sheet_->region(spr.tile_id);
-                instances.push_back({
-                    .pos_x = static_cast<float>(sx * TILE_SIZE),
-                    .pos_y = static_cast<float>(sy * TILE_SIZE),
-                    .uv_x = uv.x, .uv_y = uv.y, .uv_w = uv.w, .uv_h = uv.h,
-                    .quad_w = static_cast<float>(TILE_SIZE),
-                    .quad_h = static_cast<float>(TILE_SIZE),
-                    .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
-                });
-            });
-            if (!instances.empty())
-                renderer.submit_instances(instances, sheet_->texture(), 2.0f);
-        }
-
-        // Draw player
-        world.each<PlayerTag, Position, TileSprite>([&](xebble::Entity, PlayerTag&, Position& pos, TileSprite& spr) {
-            int px = pos.x - cam.x;
-            int py = pos.y - cam.y;
-            auto uv = sheet_->region(spr.tile_id);
-            xebble::SpriteInstance inst{
-                .pos_x = static_cast<float>(px * TILE_SIZE),
-                .pos_y = static_cast<float>(py * TILE_SIZE),
-                .uv_x = uv.x, .uv_y = uv.y, .uv_w = uv.w, .uv_h = uv.h,
-                .quad_w = static_cast<float>(TILE_SIZE),
-                .quad_h = static_cast<float>(TILE_SIZE),
-                .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
-            };
-            renderer.submit_instances({&inst, 1}, sheet_->texture(), 3.0f);
+            auto& cam = world.resource<xebble::Camera>();
+            cam.x = pos.x - static_cast<float>(VIRTUAL_W) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
+            cam.y = pos.y - static_cast<float>(VIRTUAL_H - HUD_HEIGHT * TILE_SIZE) / 2.0f + static_cast<float>(TILE_SIZE) / 2.0f;
+            cam.x = std::clamp(cam.x, 0.0f, static_cast<float>(state.dungeon.width * TILE_SIZE - VIRTUAL_W));
+            cam.y = std::clamp(cam.y, 0.0f, static_cast<float>(state.dungeon.height * TILE_SIZE - static_cast<int>(VIRTUAL_H - HUD_HEIGHT * TILE_SIZE)));
         });
     }
 };
@@ -332,14 +276,14 @@ public:
                     });
                 }
             }
-            renderer.submit_instances(hud_bg, tile_sheet_->texture(), 4.0f);
+            renderer.submit_instances(hud_bg, tile_sheet_->texture(), 10.0f);
         }
 
         // HUD text
         int player_x = 0, player_y = 0;
-        world.each<PlayerTag, Position>([&](xebble::Entity, PlayerTag&, Position& pos) {
-            player_x = pos.x;
-            player_y = pos.y;
+        world.each<PlayerTag, xebble::Position>([&](xebble::Entity, PlayerTag&, xebble::Position& pos) {
+            player_x = static_cast<int>(pos.x) / TILE_SIZE;
+            player_y = static_cast<int>(pos.y) / TILE_SIZE;
         });
 
         auto draw_text = [&](const std::string& text, float x, float y,
@@ -358,7 +302,7 @@ public:
                 });
             }
             if (!glyphs.empty())
-                renderer.submit_instances(glyphs, font_->sheet().texture(), 5.0f);
+                renderer.submit_instances(glyphs, font_->sheet().texture(), 11.0f);
         };
 
         auto status = std::format("Pos:({},{}) Items:{} [R]egen [Esc]ape",
@@ -410,21 +354,16 @@ int main() {
 
     xebble::World world;
 
-    // Register components
+    // Only game-specific components needed
     world.register_component<PlayerTag>();
-    world.register_component<Position>();
-    world.register_component<TileSprite>();
     world.register_component<MonsterInfo>();
     world.register_component<ItemInfo>();
 
-    // Add resources
-    world.add_resource<Camera>({0, 0});
     world.add_resource<GameState>({});
 
-    // Add systems (order matters)
+    // Only game logic systems — no render system needed!
     world.add_system<DungeonSystem>();
     world.add_system<InputSystem>();
-    world.add_system<RenderSystem>();
     world.add_system<HudSystem>();
 
     return xebble::run(std::move(world), {

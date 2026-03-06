@@ -12,12 +12,12 @@ add_library(xebble STATIC
     texture.cpp
     renderer.cpp
     spritesheet.cpp
-    sprite.cpp
     tilemap.cpp
     font.cpp
     asset_manager.cpp
     game.cpp
     world.cpp
+    builtin_systems.cpp
 )
 
 target_include_directories(xebble PUBLIC

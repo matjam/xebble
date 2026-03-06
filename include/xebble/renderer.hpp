@@ -20,7 +20,6 @@ namespace xebble {
 
 class Window;
 class SpriteSheet;
-struct Sprite;
 struct TileMap;
 struct TextBlock;
 

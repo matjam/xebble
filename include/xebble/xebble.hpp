@@ -11,7 +11,6 @@
 #include <xebble/renderer.hpp>
 #include <xebble/texture.hpp>
 #include <xebble/spritesheet.hpp>
-#include <xebble/sprite.hpp>
 #include <xebble/tilemap.hpp>
 #include <xebble/font.hpp>
 #include <xebble/asset_manager.hpp>
@@ -19,3 +18,5 @@
 #include <xebble/ecs.hpp>
 #include <xebble/system.hpp>
 #include <xebble/world.hpp>
+#include <xebble/components.hpp>
+#include <xebble/builtin_systems.hpp>
