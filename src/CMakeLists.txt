@@ -4,6 +4,9 @@ add_library(xebble STATIC
     vulkan/vma_impl.cpp
     vulkan/context.cpp
     vulkan/swapchain.cpp
+    vulkan/buffer.cpp
+    vulkan/descriptor.cpp
+    vulkan/command.cpp
 )
 
 target_include_directories(xebble PUBLIC
