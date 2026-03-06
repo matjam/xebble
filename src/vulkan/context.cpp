@@ -155,15 +155,19 @@ std::expected<Context, Error> Context::create(GLFWwindow* window) {
 
 #ifdef __APPLE__
     // Ensure the Vulkan loader can find MoltenVK on macOS.
-    // If VK_DRIVER_FILES isn't set, check common Homebrew locations.
+    // Priority: env var > bundled (build-time) > Homebrew system install.
     if (!std::getenv("VK_DRIVER_FILES") && !std::getenv("VK_ICD_FILENAMES")) {
         static const char* icd_paths[] = {
+#ifdef XEBBLE_MOLTENVK_ICD
+            XEBBLE_MOLTENVK_ICD,
+#endif
             "/opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json",
             "/usr/local/etc/vulkan/icd.d/MoltenVK_icd.json",
         };
         for (auto path : icd_paths) {
             if (std::filesystem::exists(path)) {
                 setenv("VK_DRIVER_FILES", path, 0);
+                log(LogLevel::Info, std::string("Using MoltenVK ICD: ") + path);
                 break;
             }
         }
