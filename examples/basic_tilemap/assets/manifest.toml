@@ -1,0 +1,4 @@
+[spritesheets.tiles]
+path = "tiles.png"
+tile_width = 16
+tile_height = 16
