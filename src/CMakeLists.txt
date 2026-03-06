@@ -15,6 +15,8 @@ add_library(xebble STATIC
     sprite.cpp
     tilemap.cpp
     font.cpp
+    asset_manager.cpp
+    game.cpp
 )
 
 target_include_directories(xebble PUBLIC
