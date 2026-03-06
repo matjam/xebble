@@ -243,74 +243,24 @@ private:
 };
 
 class HudSystem : public xebble::System {
-    const xebble::SpriteSheet* tile_sheet_ = nullptr;
-    const xebble::BitmapFont* font_ = nullptr;
-
 public:
-    void init(xebble::World& world) override {
-        auto* assets = world.resource<xebble::AssetManager*>();
-        tile_sheet_ = &assets->get<xebble::SpriteSheet>("tiles");
-        font_ = &assets->get<xebble::BitmapFont>("font");
-    }
-
     void draw(xebble::World& world, xebble::Renderer& renderer) override {
+        auto& ui = world.resource<xebble::UIContext>();
         auto& state = world.resource<GameState>();
-        float hud_y = static_cast<float>(MAP_VIEW_TILES_Y * TILE_SIZE);
-        float gw = static_cast<float>(font_->glyph_width());
-        float gh = static_cast<float>(font_->glyph_height());
 
-        // HUD background
-        {
-            std::vector<xebble::SpriteInstance> hud_bg;
-            auto wall_uv = tile_sheet_->region(tiles::PERMANENT_WALL);
-            for (uint32_t x = 0; x < VIEW_TILES_X; x++) {
-                for (uint32_t row = 0; row < HUD_HEIGHT; row++) {
-                    hud_bg.push_back({
-                        .pos_x = static_cast<float>(x * TILE_SIZE),
-                        .pos_y = static_cast<float>(MAP_VIEW_TILES_Y * TILE_SIZE + row * TILE_SIZE),
-                        .uv_x = wall_uv.x, .uv_y = wall_uv.y,
-                        .uv_w = wall_uv.w, .uv_h = wall_uv.h,
-                        .quad_w = static_cast<float>(TILE_SIZE),
-                        .quad_h = static_cast<float>(TILE_SIZE),
-                        .r = 0.2f, .g = 0.2f, .b = 0.25f, .a = 1.0f,
-                    });
-                }
-            }
-            renderer.submit_instances(hud_bg, tile_sheet_->texture(), 10.0f);
-        }
-
-        // HUD text
         int player_x = 0, player_y = 0;
         world.each<PlayerTag, xebble::Position>([&](xebble::Entity, PlayerTag&, xebble::Position& pos) {
             player_x = static_cast<int>(pos.x) / TILE_SIZE;
             player_y = static_cast<int>(pos.y) / TILE_SIZE;
         });
 
-        auto draw_text = [&](const std::string& text, float x, float y,
-                              float r, float g, float b) {
-            std::vector<xebble::SpriteInstance> glyphs;
-            for (size_t i = 0; i < text.size(); i++) {
-                auto gi = font_->glyph_index(text[i]);
-                if (!gi) continue;
-                auto uv = font_->sheet().region(*gi);
-                glyphs.push_back({
-                    .pos_x = x + static_cast<float>(i) * gw,
-                    .pos_y = y,
-                    .uv_x = uv.x, .uv_y = uv.y, .uv_w = uv.w, .uv_h = uv.h,
-                    .quad_w = gw, .quad_h = gh,
-                    .r = r, .g = g, .b = b, .a = 1.0f,
-                });
-            }
-            if (!glyphs.empty())
-                renderer.submit_instances(glyphs, font_->sheet().texture(), 11.0f);
-        };
-
-        auto status = std::format("Pos:({},{}) Items:{} [R]egen [Esc]ape",
-                                   player_x, player_y, state.items_collected);
-        draw_text(status, 4.0f, hud_y + 4.0f, 1.0f, 1.0f, 0.6f);
-
-        if (!state.message.empty())
-            draw_text(state.message, 4.0f, hud_y + 4.0f + gh + 2.0f, 0.8f, 0.8f, 0.8f);
+        ui.panel("hud", {.anchor = xebble::Anchor::Bottom, .size = {1.0f, 32}}, [&](auto& p) {
+            p.text(std::format("Pos:({},{}) Items:{} [R]egen [Esc]ape",
+                               player_x, player_y, state.items_collected),
+                   {.color = {255, 255, 150}});
+            if (!state.message.empty())
+                p.text(state.message, {.color = {200, 200, 200}});
+        });
     }
 };
 
