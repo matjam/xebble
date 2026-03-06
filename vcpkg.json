@@ -1,0 +1,18 @@
+{
+  "name": "xebble",
+  "version-string": "0.1.0",
+  "description": "2D rendering API for cross-platform Vulkan roguelike games",
+  "dependencies": [
+    "glfw3",
+    "vulkan-headers",
+    "vulkan-loader",
+    "vulkan-memory-allocator",
+    "stb",
+    "freetype",
+    "shaderc",
+    "glm",
+    "tomlplusplus",
+    "minizip-ng",
+    "gtest"
+  ]
+}
