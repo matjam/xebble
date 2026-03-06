@@ -147,9 +147,11 @@ public:
 
     void flush(Renderer& renderer);
 
+    /// @brief Set the theme pointer. Called by run() and UIInputSystem.
+    void set_theme(const UITheme* theme) { theme_ = theme; }
+
 private:
     friend class PanelBuilder;
-    friend class UIInputSystem;
 
     Rect resolve_placement(const PanelPlacement& p) const;
     void draw_panel_bg(Rect rect);

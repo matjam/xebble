@@ -549,7 +549,7 @@ void UIInputSystem::update(World& world, float) {
     auto& ui = world.resource<UIContext>();
 
     if (world.has_resource<UITheme>()) {
-        ui.theme_ = &world.resource<UITheme>();
+        ui.set_theme(&world.resource<UITheme>());
     }
 
     ui.begin_frame(events, *renderer);

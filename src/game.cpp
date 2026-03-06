@@ -71,6 +71,7 @@ int run(World world, const GameConfig& config) {
     }
 
     world.add_resource<UIContext>(UIContext{});
+    world.resource<UIContext>().set_theme(&world.resource<UITheme>());
     world.prepend_system<UIInputSystem>();
     world.add_system<UIFlushSystem>();
 
