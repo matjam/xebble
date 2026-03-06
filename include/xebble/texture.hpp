@@ -69,15 +69,19 @@ public:
     VkImageView image_view() const;
     VkSampler sampler() const;
 
+    /// @brief Create a texture from decoded RGBA pixel data.
+    /// @param ctx Vulkan context.
+    /// @param pixels Pointer to RGBA pixel data (4 bytes per pixel).
+    /// @param width Image width in pixels.
+    /// @param height Image height in pixels.
+    static std::expected<Texture, Error> create_from_pixels(
+        vk::Context& ctx, const uint8_t* pixels,
+        uint32_t width, uint32_t height);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
     Texture() = default;
-
-    /// @brief Internal: create texture from decoded RGBA pixels.
-    static std::expected<Texture, Error> create_from_pixels(
-        vk::Context& ctx, const uint8_t* pixels,
-        uint32_t width, uint32_t height);
 };
 
 } // namespace xebble
