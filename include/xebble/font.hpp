@@ -65,6 +65,12 @@ public:
         uint32_t glyph_width, uint32_t glyph_height,
         std::string_view charset);
 
+    /// @brief Create a bitmap font from an existing spritesheet.
+    /// @param sheet The glyph atlas spritesheet (takes ownership).
+    /// @param charset String mapping character position to tile index.
+    static std::expected<BitmapFont, Error> from_spritesheet(
+        SpriteSheet sheet, std::string_view charset);
+
     ~BitmapFont();
     BitmapFont(BitmapFont&&) noexcept;
     BitmapFont& operator=(BitmapFont&&) noexcept;

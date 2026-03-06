@@ -52,6 +52,18 @@ std::expected<BitmapFont, Error> BitmapFont::load(
     return font;
 }
 
+std::expected<BitmapFont, Error> BitmapFont::from_spritesheet(
+    SpriteSheet sheet, std::string_view charset)
+{
+    uint32_t gw = sheet.tile_width();
+    uint32_t gh = sheet.tile_height();
+    BitmapFont font;
+    font.impl_ = std::make_unique<Impl>(
+        std::move(sheet),
+        BitmapFontData(gw, gh, charset));
+    return font;
+}
+
 BitmapFont::~BitmapFont() = default;
 BitmapFont::BitmapFont(BitmapFont&&) noexcept = default;
 BitmapFont& BitmapFont::operator=(BitmapFont&&) noexcept = default;
