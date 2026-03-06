@@ -57,6 +57,7 @@ struct ResizeData {
 class Event {
 public:
     EventType type;
+    bool consumed = false;
 
     /// @name Factory methods
     /// @{

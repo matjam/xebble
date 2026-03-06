@@ -20,7 +20,7 @@ class Event;
 
 /// @brief Resource providing input events for the current frame.
 struct EventQueue {
-    std::span<const Event> events;
+    std::vector<Event> events;
 };
 
 namespace ecs_detail {

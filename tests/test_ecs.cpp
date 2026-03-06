@@ -217,6 +217,33 @@ TEST(World, SystemInitAndUpdate) {
     EXPECT_EQ(world.resource<Counter>().value, 11);
 }
 
+TEST(World, PrependSystem) {
+    struct OrderTracker {
+        std::vector<int> order;
+    };
+
+    World world;
+    world.add_resource<OrderTracker>({});
+
+    struct SecondSystem : System {
+        void update(World& w, float) override { w.resource<OrderTracker>().order.push_back(2); }
+    };
+    struct FirstSystem : System {
+        void update(World& w, float) override { w.resource<OrderTracker>().order.push_back(1); }
+    };
+
+    world.add_system<SecondSystem>();
+    world.prepend_system<FirstSystem>();
+
+    world.init_systems();
+    world.tick_update(0.0f);
+
+    auto& result = world.resource<OrderTracker>().order;
+    ASSERT_EQ(result.size(), 2u);
+    EXPECT_EQ(result[0], 1);
+    EXPECT_EQ(result[1], 2);
+}
+
 TEST(World, DeferredDestruction) {
     World world;
     world.register_component<Position>();

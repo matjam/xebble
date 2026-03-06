@@ -91,6 +91,11 @@ struct Renderer::Impl {
     // Border color
     Color border_color{0, 0, 0, 255};
 
+    // Blit transform (for screen_to_virtual)
+    float blit_scale = 1.0f;
+    float blit_offset_x = 0.0f;
+    float blit_offset_y = 0.0f;
+
     ~Impl() {
         if (!context || !context->device()) return;
         vkDeviceWaitIdle(context->device());
@@ -576,6 +581,10 @@ void Renderer::end_frame() {
     float offset_x = (sw - scaled_w) / 2.0f;
     float offset_y = (sh - scaled_h) / 2.0f;
 
+    impl.blit_scale = scale;
+    impl.blit_offset_x = offset_x;
+    impl.blit_offset_y = offset_y;
+
     VkViewport blit_viewport{};
     blit_viewport.x = offset_x;
     blit_viewport.y = offset_y;
@@ -627,5 +636,16 @@ uint64_t Renderer::frame_count() const { return impl_->frame_count_; }
 uint32_t Renderer::virtual_width() const { return impl_->config.virtual_width; }
 uint32_t Renderer::virtual_height() const { return impl_->config.virtual_height; }
 vk::Context& Renderer::context() { return *impl_->context; }
+
+Vec2 Renderer::screen_to_virtual(Vec2 screen_pos) const {
+    float cs = impl_->window->content_scale();
+    float fx = screen_pos.x * cs;
+    float fy = screen_pos.y * cs;
+    if (impl_->blit_scale == 0.0f) return {fx, fy};
+    return {
+        (fx - impl_->blit_offset_x) / impl_->blit_scale,
+        (fy - impl_->blit_offset_y) / impl_->blit_scale
+    };
+}
 
 } // namespace xebble

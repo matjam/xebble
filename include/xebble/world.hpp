@@ -147,6 +147,11 @@ public:
         systems_.push_back(std::make_unique<T>(std::forward<Args>(args)...));
     }
 
+    template<typename T, typename... Args>
+    void prepend_system(Args&&... args) {
+        systems_.insert(systems_.begin(), std::make_unique<T>(std::forward<Args>(args)...));
+    }
+
     void init_systems();
     void tick_update(float dt);
     void tick_draw(Renderer& renderer);

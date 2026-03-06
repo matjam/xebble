@@ -100,6 +100,9 @@ public:
     /// @brief Get the virtual resolution height.
     uint32_t virtual_height() const;
 
+    /// @brief Convert screen coordinates (from mouse events) to virtual pixel coordinates.
+    Vec2 screen_to_virtual(Vec2 screen_pos) const;
+
     /// @brief Access the underlying Vulkan context (for texture/spritesheet creation).
     vk::Context& context();
 

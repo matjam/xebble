@@ -52,7 +52,8 @@ int run(World world, const GameConfig& config) {
 
     while (!window->should_close()) {
         window->poll_events();
-        world.resource<EventQueue>().events = window->events();
+        auto raw = window->events();
+        world.resource<EventQueue>().events.assign(raw.begin(), raw.end());
 
         accumulator += renderer->delta_time();
         while (accumulator >= config.fixed_timestep) {
