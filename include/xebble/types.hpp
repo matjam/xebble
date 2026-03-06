@@ -1,3 +1,9 @@
+/// @file types.hpp
+/// @brief Common types used throughout the Xebble API.
+///
+/// Provides fundamental value types (Vec2, Rect, Color), keyboard/mouse
+/// enumerations mirroring GLFW key codes, modifier state, and the Error
+/// type used with std::expected for fallible operations.
 #pragma once
 
 #include <cstdint>
@@ -5,11 +11,13 @@
 
 namespace xebble {
 
+/// @brief 2D floating-point vector.
 struct Vec2 {
     float x = 0.0f;
     float y = 0.0f;
 };
 
+/// @brief Axis-aligned rectangle defined by position and size.
 struct Rect {
     float x = 0.0f;
     float y = 0.0f;
@@ -17,6 +25,7 @@ struct Rect {
     float h = 0.0f;
 };
 
+/// @brief RGBA color with 8-bit channels. Defaults to opaque white.
 struct Color {
     uint8_t r = 255;
     uint8_t g = 255;
@@ -24,10 +33,12 @@ struct Color {
     uint8_t a = 255;
 };
 
+/// @brief Error type for fallible operations. Used as the E in std::expected<T, Error>.
 struct Error {
     std::string message;
 };
 
+/// @brief Keyboard key codes. Values match GLFW key constants.
 enum class Key {
     Unknown = -1,
     Space = 32,
@@ -76,12 +87,14 @@ enum class Key {
     Menu = 348,
 };
 
+/// @brief Mouse button identifiers.
 enum class MouseButton {
     Left = 0,
     Right = 1,
     Middle = 2,
 };
 
+/// @brief Keyboard modifier state (shift, ctrl, alt, super).
 struct Modifiers {
     bool shift = false;
     bool ctrl = false;
@@ -89,6 +102,7 @@ struct Modifiers {
     bool super = false;
 };
 
+/// @brief Log severity levels.
 enum class LogLevel {
     Debug,
     Info,

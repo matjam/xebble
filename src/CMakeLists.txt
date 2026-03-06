@@ -1,6 +1,8 @@
 add_library(xebble STATIC
     log.cpp
     window.cpp
+    vulkan/vma_impl.cpp
+    vulkan/context.cpp
 )
 
 target_include_directories(xebble PUBLIC
