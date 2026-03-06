@@ -5,6 +5,7 @@ add_executable(xebble_tests
     test_tilemap.cpp
     test_font.cpp
     test_asset_manager.cpp
+    test_ecs.cpp
 )
 
 target_link_libraries(xebble_tests PRIVATE
