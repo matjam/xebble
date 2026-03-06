@@ -114,7 +114,7 @@ public:
         tilemap_->set_tile(1, 30, 15, 2); // water
 
         player_ = {
-            .position = {160.0f, 120.0f},
+            .position = {160.0f, 128.0f},
             .z_order = 1.0f,
             .sheet = tiles_,
             .source = 4u, // crimson tile as player
