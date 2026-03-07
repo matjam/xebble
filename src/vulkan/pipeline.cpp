@@ -55,13 +55,16 @@ std::expected<VkShaderModule, Error> create_shader_module(
 } // anonymous namespace
 
 /// Per-instance vertex data for the sprite pipeline.
-/// Must match the layout in sprite.vert.
+/// Must match the layout in sprite.vert exactly (field order, types, padding).
 struct SpriteInstanceData {
     glm::vec2 position;   // location 0
     glm::vec2 uv_offset;  // location 1
     glm::vec2 uv_size;    // location 2
     glm::vec2 quad_size;  // location 3
     glm::vec4 color;      // location 4
+    float     scale;      // location 5
+    float     rotation;   // location 6
+    glm::vec2 pivot;      // location 7
 };
 
 std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
@@ -101,7 +104,7 @@ std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
     binding.stride = sizeof(SpriteInstanceData);
     binding.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-    VkVertexInputAttributeDescription attrs[5]{};
+    VkVertexInputAttributeDescription attrs[8]{};
     // position
     attrs[0].binding = 0; attrs[0].location = 0;
     attrs[0].format = VK_FORMAT_R32G32_SFLOAT;
@@ -122,12 +125,24 @@ std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
     attrs[4].binding = 0; attrs[4].location = 4;
     attrs[4].format = VK_FORMAT_R32G32B32A32_SFLOAT;
     attrs[4].offset = offsetof(SpriteInstanceData, color);
+    // scale
+    attrs[5].binding = 0; attrs[5].location = 5;
+    attrs[5].format = VK_FORMAT_R32_SFLOAT;
+    attrs[5].offset = offsetof(SpriteInstanceData, scale);
+    // rotation
+    attrs[6].binding = 0; attrs[6].location = 6;
+    attrs[6].format = VK_FORMAT_R32_SFLOAT;
+    attrs[6].offset = offsetof(SpriteInstanceData, rotation);
+    // pivot
+    attrs[7].binding = 0; attrs[7].location = 7;
+    attrs[7].format = VK_FORMAT_R32G32_SFLOAT;
+    attrs[7].offset = offsetof(SpriteInstanceData, pivot);
 
     VkPipelineVertexInputStateCreateInfo vertex_input{};
     vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input.vertexBindingDescriptionCount = 1;
     vertex_input.pVertexBindingDescriptions = &binding;
-    vertex_input.vertexAttributeDescriptionCount = 5;
+    vertex_input.vertexAttributeDescriptionCount = 8;
     vertex_input.pVertexAttributeDescriptions = attrs;
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly{};

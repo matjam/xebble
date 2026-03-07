@@ -1,5 +1,64 @@
 /// @file ui.hpp
 /// @brief Immediate-mode UI system — panels, controls, and theming.
+///
+/// Xebble's UI layer is an **immediate-mode** system: there is no persistent
+/// widget tree. Each frame you describe the interface by calling layout
+/// functions inside a `UIContext::panel()` lambda. The context tracks hot/active
+/// widget state internally and produces draw calls that are flushed to the
+/// renderer by `UIFlushSystem` at the end of the frame.
+///
+/// ## Quick-start: a pause menu
+///
+/// @code
+/// #include <xebble/ui.hpp>
+/// using namespace xebble;
+///
+/// // In your UI system's draw() method:
+/// void PauseMenuSystem::draw(World& world, Renderer& renderer) {
+///     auto& ui = world.resource<UIContext>();
+///
+///     ui.panel("pause_menu",
+///         PanelPlacement{ .anchor = Anchor::Center,
+///                         .size   = {300.0f, 200.0f} },
+///         [](PanelBuilder& p) {
+///             p.text("-- PAUSED --");
+///
+///             if (p.button("Resume")) { resume_game(); }
+///             if (p.button("Save"))   { save_game();   }
+///             if (p.button("Quit"))   { quit_game();   }
+///         });
+/// }
+/// @endcode
+///
+/// ## Theming
+///
+/// Customise colours and spacing via `UITheme`. A `UITheme` component on any
+/// entity (or stored as a resource) is picked up by `UIInputSystem` and
+/// applied globally.
+///
+/// @code
+/// UITheme dark_dungeon{
+///     .bg_color            = {10, 10, 20, 230},
+///     .text_color          = {200, 180, 100, 255},   // parchment yellow
+///     .button_color        = {40,  30,  60, 255},
+///     .button_hover_color  = {70,  50,  90, 255},
+///     .button_text_color   = {220, 200, 140, 255},
+///     .padding             = 6.0f,
+///     .margin              = 3.0f,
+/// };
+/// @endcode
+///
+/// ## System integration
+///
+/// Register the two built-in UI systems when building your World.
+/// `UIInputSystem` must run **before** game logic systems so mouse state is
+/// fresh, and `UIFlushSystem` must run **last** so UI is drawn on top.
+///
+/// @code
+/// world.add_system<UIInputSystem>();
+/// world.add_system<MyGameSystems>();
+/// world.add_system<UIFlushSystem>();
+/// @endcode
 #pragma once
 
 #include <xebble/types.hpp>
@@ -10,6 +69,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -21,78 +81,263 @@ namespace xebble {
 
 class World;
 
+/// @brief Screen anchor point for panel placement.
+///
+/// Defines which corner or edge of the screen (or the centre) a panel is
+/// positioned relative to. Used together with `PanelPlacement::offset` to
+/// nudge the panel away from the anchor point.
+///
+/// ```
+/// TopLeft ──── Top ──── TopRight
+///    │                      │
+///   Left     Center        Right
+///    │                      │
+/// BottomLeft─ Bottom─BottomRight
+/// ```
 enum class Anchor {
-    TopLeft, Top, TopRight,
-    Left, Center, Right,
-    BottomLeft, Bottom, BottomRight,
+    TopLeft,    ///< Top-left corner of the screen.
+    Top,        ///< Horizontally centred, pinned to the top edge.
+    TopRight,   ///< Top-right corner of the screen.
+    Left,       ///< Vertically centred, pinned to the left edge.
+    Center,     ///< Centred both horizontally and vertically.
+    Right,      ///< Vertically centred, pinned to the right edge.
+    BottomLeft, ///< Bottom-left corner of the screen.
+    Bottom,     ///< Horizontally centred, pinned to the bottom edge.
+    BottomRight,///< Bottom-right corner of the screen.
 };
 
+/// @brief Describes where and how large a UI panel should be.
+///
+/// The final on-screen rectangle is derived from the anchor, the panel size,
+/// and an optional pixel offset that shifts the panel away from the anchor.
+///
+/// @code
+/// // A 320×240 panel centred on screen, shifted up by 40 pixels.
+/// PanelPlacement{ .anchor = Anchor::Center,
+///                 .size   = {320.0f, 240.0f},
+///                 .offset = {0.0f, -40.0f} }
+///
+/// // A 200×300 inventory panel pinned to the right edge.
+/// PanelPlacement{ .anchor = Anchor::Right,
+///                 .size   = {200.0f, 300.0f},
+///                 .offset = {-8.0f, 0.0f} }  // 8px gap from right edge
+/// @endcode
 struct PanelPlacement {
-    Anchor anchor = Anchor::TopLeft;
-    Vec2 size = {};
-    Vec2 offset = {};
+    Anchor anchor = Anchor::TopLeft; ///< Screen anchor point.
+    Vec2   size   = {};              ///< Panel size in pixels {width, height}.
+    Vec2   offset = {};              ///< Pixel offset from the anchor point.
 };
 
+/// @brief Style overrides for a text label widget.
+///
+/// When the default colour is `{0,0,0,0}` the theme's `text_color` is used.
 struct TextStyle {
-    Color color = {0, 0, 0, 0};
+    Color color = {0, 0, 0, 0}; ///< Text colour override; {0,0,0,0} = use theme default.
 };
 
+/// @brief Style overrides for a button widget.
+///
+/// Any field left at `{0,0,0,0}` inherits the corresponding theme colour.
+///
+/// @code
+/// ButtonStyle danger_btn{
+///     .color      = {120, 30, 30, 255},
+///     .hover_color= {180, 50, 50, 255},
+///     .text_color = {255, 220, 220, 255},
+/// };
+/// if (p.button("Delete Save", danger_btn)) { delete_save_file(); }
+/// @endcode
 struct ButtonStyle {
-    Color color = {0, 0, 0, 0};
-    Color hover_color = {0, 0, 0, 0};
-    Color text_color = {0, 0, 0, 0};
+    Color color       = {0, 0, 0, 0}; ///< Normal button background colour.
+    Color hover_color = {0, 0, 0, 0}; ///< Background colour when the cursor hovers.
+    Color text_color  = {0, 0, 0, 0}; ///< Button label text colour.
+    float width       = 0.0f;         ///< Fixed width in pixels; 0 = fill panel content width.
 };
 
+/// @brief Style overrides for a checkbox widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
 struct CheckboxStyle {
-    Color color = {0, 0, 0, 0};
-    Color checked_color = {0, 0, 0, 0};
-    Color text_color = {0, 0, 0, 0};
+    Color color         = {0, 0, 0, 0}; ///< Unchecked box background colour.
+    Color checked_color = {0, 0, 0, 0}; ///< Checked box background colour.
+    Color text_color    = {0, 0, 0, 0}; ///< Label text colour.
 };
 
+/// @brief Style overrides for a scrollable list widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
 struct ListStyle {
-    Color color = {0, 0, 0, 0};
-    Color selected_color = {0, 0, 0, 0};
-    Color text_color = {0, 0, 0, 0};
-    float visible_rows = 8;
+    Color color          = {0, 0, 0, 0}; ///< Row background colour.
+    Color selected_color = {0, 0, 0, 0}; ///< Highlighted row background colour.
+    Color text_color     = {0, 0, 0, 0}; ///< Row text colour.
+    float visible_rows   = 8;             ///< Number of rows visible without scrolling.
 };
 
+/// @brief Style overrides for a single-line text input widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
 struct TextInputStyle {
-    Color color = {0, 0, 0, 0};
-    Color active_color = {0, 0, 0, 0};
-    Color text_color = {0, 0, 0, 0};
+    Color color        = {0, 0, 0, 0}; ///< Background colour when not focused.
+    Color active_color = {0, 0, 0, 0}; ///< Background colour when focused.
+    Color text_color   = {0, 0, 0, 0}; ///< Input text colour.
 };
 
+/// @brief Visual theme controlling colours, spacing, and z-ordering for all UI.
+///
+/// Assign a theme to `UIContext` (via `set_theme()` or through
+/// `UIInputSystem`'s ECS resource lookup) to apply it globally. Every widget
+/// falls back to theme values when its per-widget style has `{0,0,0,0}`.
+///
+/// @code
+/// UITheme fantasy_theme{
+///     .bg_color           = {20, 15, 10, 240},   // very dark brown
+///     .text_color         = {230, 210, 150, 255}, // aged parchment
+///     .button_color       = {50,  35,  20, 255},
+///     .button_hover_color = {80,  60,  30, 255},
+///     .button_text_color  = {240, 220, 160, 255},
+///     .checkbox_color         = {50,  35,  20, 255},
+///     .checkbox_checked_color = {100, 160,  60, 255},
+///     .input_color        = {30,  22,  12, 255},
+///     .input_active_color = {45,  32,  18, 255},
+///     .list_color         = {30,  22,  12, 255},
+///     .list_selected_color= {70,  50,  25, 255},
+///     .padding            = 5.0f,
+///     .margin             = 3.0f,
+///     .z_order            = 100.0f,
+/// };
+/// @endcode
 struct UITheme {
+    /// Font used to render all UI text. Can be a `BitmapFont*` (fixed-size,
+    /// roguelike-grid style) or a `Font*` (TrueType, scalable).
     std::variant<const BitmapFont*, const Font*> font = static_cast<const BitmapFont*>(nullptr);
-    Color bg_color = {20, 20, 30, 220};
-    Color text_color = {200, 200, 200, 255};
-    Color button_color = {60, 60, 80, 255};
-    Color button_hover_color = {80, 80, 110, 255};
-    Color button_text_color = {230, 230, 230, 255};
-    Color checkbox_color = {60, 60, 80, 255};
-    Color checkbox_checked_color = {100, 180, 100, 255};
-    Color input_color = {40, 40, 50, 255};
-    Color input_active_color = {50, 50, 70, 255};
-    Color list_color = {40, 40, 50, 255};
-    Color list_selected_color = {70, 70, 100, 255};
-    float padding = 4.0f;
-    float margin = 2.0f;
-    float z_order = 100.0f;
+
+    Color bg_color             = {20,  20,  30,  220}; ///< Panel background fill colour.
+    Color text_color           = {200, 200, 200, 255}; ///< Default label/text colour.
+    Color button_color         = {60,  60,  80,  255}; ///< Button background (normal).
+    Color button_hover_color   = {80,  80,  110, 255}; ///< Button background (hovered).
+    Color button_text_color    = {230, 230, 230, 255}; ///< Button label colour.
+    Color checkbox_color       = {60,  60,  80,  255}; ///< Checkbox background (unchecked).
+    Color checkbox_checked_color = {100, 180, 100, 255}; ///< Checkbox background (checked).
+    Color input_color          = {40,  40,  50,  255}; ///< Text input background (inactive).
+    Color input_active_color   = {50,  50,  70,  255}; ///< Text input background (focused).
+    Color list_color           = {40,  40,  50,  255}; ///< List row background.
+    Color list_selected_color  = {70,  70,  100, 255}; ///< Selected list row background.
+    float padding              = 4.0f;                  ///< Inner padding within a panel (px).
+    float margin               = 2.0f;                  ///< Vertical gap between widgets (px).
+    float z_order              = 100.0f;                ///< Base draw depth for all UI elements.
 };
 
 class UIContext;
 
+/// @brief Fluent builder for laying out widgets inside a panel.
+///
+/// `PanelBuilder` is passed by reference into every `UIContext::panel()`
+/// callback. It maintains a vertical cursor that advances after each widget,
+/// producing a top-to-bottom stacked layout.
+///
+/// Use `horizontal()` to arrange multiple widgets side-by-side on one row.
+///
+/// @code
+/// ui.panel("hud",
+///     PanelPlacement{ .anchor = Anchor::TopLeft, .size = {200.0f, 150.0f} },
+///     [](PanelBuilder& p) {
+///         p.text("Hero Status");
+///
+///         // Two buttons on the same row.
+///         p.horizontal([](PanelBuilder& row) {
+///             if (row.button("Use Potion")) { use_potion(); }
+///             if (row.button("Cast Spell")) { cast_spell(); }
+///         });
+///
+///         // Toggle sound in-game.
+///         static bool sound_on = true;
+///         p.checkbox("Sound", sound_on);
+///     });
+/// @endcode
 class PanelBuilder {
 public:
     PanelBuilder(UIContext& ctx, Rect panel_rect, float z_base);
 
-    void text(std::string_view text, TextStyle style = {});
-    bool button(std::string_view label, ButtonStyle style = {});
-    void checkbox(std::string_view label, bool& value, CheckboxStyle style = {});
-    void list(std::string_view id, std::span<const std::string> items,
-              int& selected, ListStyle style = {});
-    bool text_input(std::string_view id, std::string& value, TextInputStyle style = {});
+    /// @brief Draw a static text label.
+    ///
+    /// The label is drawn at the current cursor position and the cursor
+    /// advances by one text line.
+    ///
+    /// @code
+    /// p.text("Floor 3 – The Iron Mines");
+    /// p.text("HP: 28 / 40", TextStyle{ .color = {200, 80, 80, 255} });
+    /// @endcode
+    void text(std::u8string_view text, TextStyle style = {});
 
+    /// @brief Draw a clickable button and return `true` on the frame it is clicked.
+    ///
+    /// Buttons automatically highlight when hovered. The return value is `true`
+    /// for exactly one frame when the user clicks the button.
+    ///
+    /// @code
+    /// if (p.button("New Game")) { start_new_game(); }
+    /// if (p.button("Load"))     { show_load_dialog(); }
+    /// if (p.button("Quit",  ButtonStyle{ .color = {100, 30, 30, 255} }))
+    ///     request_quit();
+    /// @endcode
+    bool button(std::u8string_view label, ButtonStyle style = {});
+
+    /// @brief Draw a labelled toggle checkbox. Modifies @p value in place.
+    ///
+    /// @code
+    /// static bool show_fps = false;
+    /// p.checkbox("Show FPS", show_fps);
+    ///
+    /// static bool fullscreen = false;
+    /// p.checkbox("Fullscreen", fullscreen,
+    ///            CheckboxStyle{ .checked_color = {80, 150, 80, 255} });
+    /// @endcode
+    void checkbox(std::u8string_view label, bool& value, CheckboxStyle style = {});
+
+    /// @brief Draw a scrollable list of string items.
+    ///
+    /// @p id      Unique string identifier for scroll/selection state.
+    /// @p items   All items to display (may exceed visible_rows).
+    /// @p selected Index of the currently selected item (modified in place).
+    ///
+    /// @code
+    /// static std::vector<std::string> saves = load_save_names();
+    /// static int selected_save = 0;
+    /// p.list("save_list", saves, selected_save);
+    ///
+    /// if (p.button("Load Selected")) {
+    ///     load_game(saves[selected_save]);
+    /// }
+    /// @endcode
+    void list(std::string_view id, std::span<const std::u8string> items,
+              int& selected, ListStyle style = {});
+
+    /// @brief Draw a single-line editable text input. Returns `true` when Enter is pressed.
+    ///
+    /// @p id     Unique string identifier for cursor/focus state.
+    /// @p value  The current string contents (modified in place as the user types).
+    ///
+    /// @code
+    /// static std::string player_name;
+    /// if (p.text_input("name_input", player_name)) {
+    ///     // User pressed Enter — confirm the name.
+    ///     start_game_with_name(player_name);
+    /// }
+    /// @endcode
+    bool text_input(std::string_view id, std::u8string& value, TextInputStyle style = {});
+
+    /// @brief Lay out child widgets horizontally on a single row.
+    ///
+    /// All widgets added inside @p fn are placed left-to-right. After the
+    /// lambda returns the cursor advances past the tallest widget in the row.
+    ///
+    /// @code
+    /// p.horizontal([](PanelBuilder& row) {
+    ///     if (row.button("Attack")) { attack(); }
+    ///     if (row.button("Defend")) { defend(); }
+    ///     if (row.button("Flee"))   { flee();   }
+    /// });
+    /// @endcode
     template<typename Fn>
     void horizontal(Fn&& fn) {
         float saved_y = cursor_y_;
@@ -112,8 +357,11 @@ private:
     friend class UIContext;
 
     Rect next_control_rect(float height);
+    // After next_control_rect() in horizontal mode, call this to correct the
+    // cursor advance when the widget's actual width differs from content_width_.
+    void correct_horiz_advance(float actual_w);
     float text_height() const;
-    float measure_text_width(std::string_view text) const;
+    float measure_text_width(std::u8string_view text) const;
 
     UIContext& ctx_;
     Rect panel_rect_;
@@ -128,13 +376,65 @@ private:
     float horiz_max_h_ = 0;
 };
 
+/// @brief Per-frame immediate-mode UI context.
+///
+/// `UIContext` is the stateful core of the UI system. It accumulates draw
+/// calls generated by `panel()` callbacks into batches, then flushes them to
+/// the GPU via `flush()`. Mouse state and widget hot/active tracking live here
+/// so the same `UIContext` can service multiple panels per frame.
+///
+/// In normal usage you never instantiate `UIContext` directly — `run()`
+/// creates one and stores it as a World resource. Retrieve it from a system:
+///
+/// @code
+/// void MyUISystem::draw(World& world, Renderer& renderer) {
+///     auto& ui = world.resource<UIContext>();
+///
+///     ui.panel("stats_panel",
+///         PanelPlacement{ .anchor = Anchor::TopRight, .size = {180.0f, 120.0f} },
+///         [&](PanelBuilder& p) {
+///             p.text(std::format("HP:  {} / {}", hp, max_hp));
+///             p.text(std::format("MP:  {} / {}", mp, max_mp));
+///             p.text(std::format("XP:  {}", xp));
+///             p.text(std::format("Lvl: {}", level));
+///         });
+/// }
+/// @endcode
 class UIContext {
 public:
     UIContext();
     ~UIContext();
 
+    /// @brief Reset per-frame state and consume pending input events.
+    ///
+    /// Must be called once at the start of every frame, before any `panel()`
+    /// calls. Normally handled automatically by `UIInputSystem`.
+    ///
+    /// @param events   Events from the current frame (mouse, keyboard).
+    /// @param renderer Used to obtain the current framebuffer dimensions.
     void begin_frame(std::vector<Event>& events, const Renderer& renderer);
 
+    /// @brief Declare a UI panel and lay out its widgets for this frame.
+    ///
+    /// The @p fn callback receives a `PanelBuilder` reference and should call
+    /// widget methods (text, button, checkbox, list, text_input, horizontal)
+    /// to build the panel layout. Returned values (e.g. `button()` returning
+    /// `true`) are valid only during the execution of @p fn.
+    ///
+    /// @param id        Unique panel identifier (used for per-panel state).
+    /// @param placement Size and anchor position of the panel.
+    /// @param fn        Layout callback: `void fn(PanelBuilder&)`.
+    ///
+    /// @code
+    /// ui.panel("inventory",
+    ///     PanelPlacement{ .anchor = Anchor::Left, .size = {220.0f, 400.0f} },
+    ///     [&](PanelBuilder& p) {
+    ///         p.text("Inventory");
+    ///         for (auto& item : player.inventory) {
+    ///             if (p.button(item.name)) { use_item(item); }
+    ///         }
+    ///     });
+    /// @endcode
     template<typename Fn>
     void panel(std::string_view id, PanelPlacement placement, Fn&& fn) {
         auto rect = resolve_placement(placement);
@@ -145,10 +445,19 @@ public:
         fn(builder);
     }
 
+    /// @brief Flush all accumulated draw calls to the renderer.
+    ///
+    /// Submits all sprite instances produced by the current frame's panel
+    /// calls. Must be called once after all panels have been declared, before
+    /// the frame is presented. Normally handled automatically by
+    /// `UIFlushSystem`.
     void flush(Renderer& renderer);
 
     /// @brief Set the theme pointer. Called by run() and UIInputSystem.
     void set_theme(const UITheme* theme) { theme_ = theme; }
+
+    // Called by UIInputSystem each frame to lazily create the white texture.
+    void ensure_white_texture(vk::Context& ctx);
 
 private:
     friend class PanelBuilder;
@@ -156,13 +465,16 @@ private:
     Rect resolve_placement(const PanelPlacement& p) const;
     void draw_panel_bg(Rect rect);
     void draw_rect(Rect rect, Color color, float z);
-    void draw_text_at(std::string_view text, float x, float y, Color color, float z);
+    void draw_text_at(std::u8string_view text, float x, float y, Color color, float z);
     float glyph_width() const;
     float glyph_height() const;
 
     void register_widget(std::string_view id, Rect rect);
     bool is_hot(std::string_view id) const;
     bool is_clicked(std::string_view id) const;
+
+    // 1×1 white texture used as the source for all filled rect draws.
+    std::shared_ptr<Texture> white_texture_;
 
     const UITheme* theme_ = nullptr;
     uint32_t screen_w_ = 0;
@@ -182,7 +494,7 @@ private:
     std::vector<WidgetRect> prev_rects_;
     std::vector<WidgetRect> curr_rects_;
 
-    std::unordered_map<std::string, int> scroll_offsets_;
+    std::unordered_map<std::string, int>    scroll_offsets_;
     std::unordered_map<std::string, size_t> cursor_positions_;
     std::vector<char> input_chars_;
 
@@ -196,17 +508,62 @@ private:
     std::vector<Event>* frame_events_ = nullptr;
 };
 
+/// @brief ECS system that drives `UIContext` each frame.
+///
+/// `UIInputSystem` calls `UIContext::begin_frame()` at the start of every
+/// update tick, feeding in the current events and renderer state. It also
+/// picks up any `UITheme` resource from the World and applies it.
+///
+/// Register this system **before** any system that calls `UIContext::panel()`:
+///
+/// @code
+/// world.add_system<UIInputSystem>();    // must be first
+/// world.add_system<HUDSystem>();
+/// world.add_system<MenuSystem>();
+/// world.add_system<UIFlushSystem>();   // must be last
+/// @endcode
 class UIInputSystem : public System {
 public:
+    /// @brief Polls input events and prepares the UIContext for a new frame.
     void update(World& world, float dt) override;
 };
 
+/// @brief ECS system that flushes the UIContext draw calls to the renderer.
+///
+/// Call `UIFlushSystem::draw()` after all panels have been declared for the
+/// frame. It calls `UIContext::flush()` which submits all batched UI sprites
+/// to the renderer.
+///
+/// Register this system **last** so UI renders on top of the game world:
+///
+/// @code
+/// world.add_system<GameRenderSystem>();
+/// world.add_system<UIFlushSystem>();   // always last
+/// @endcode
 class UIFlushSystem : public System {
 public:
+    /// @brief Flushes all accumulated UI draw calls to the renderer.
     void draw(World& world, Renderer& renderer) override;
 };
 
-/// @brief Resolve a PanelPlacement to a screen Rect.
+/// @brief Resolve a PanelPlacement to a screen-space Rect.
+///
+/// Converts an anchor + size + offset into an absolute pixel rectangle given
+/// the current screen dimensions. Used internally by `UIContext::panel()` but
+/// also available for custom layout calculations.
+///
+/// @param p         The panel placement to resolve.
+/// @param screen_w  Current framebuffer width in pixels.
+/// @param screen_h  Current framebuffer height in pixels.
+/// @return          Absolute screen-space rectangle.
+///
+/// @code
+/// // Manually compute where a centred 400×300 panel would be placed.
+/// Rect r = resolve_panel_placement(
+///     PanelPlacement{ .anchor = Anchor::Center, .size = {400.0f, 300.0f} },
+///     1280, 720);
+/// // r == Rect{ 440.0f, 210.0f, 400.0f, 300.0f }
+/// @endcode
 Rect resolve_panel_placement(const PanelPlacement& p, uint32_t screen_w, uint32_t screen_h);
 
 } // namespace xebble

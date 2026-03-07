@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <string_view>
 
 namespace xebble {
 
@@ -35,7 +36,7 @@ constexpr uint32_t ATLAS_H = ROWS * GLYPH_H;
 std::vector<uint8_t> generate_pixels();
 
 /// @brief Get the charset string (ASCII 32-126).
-std::string charset();
+std::u8string charset();
 
 /// @brief Create a BitmapFont from the embedded font data.
 std::expected<std::unique_ptr<BitmapFont>, Error> create_font(vk::Context& ctx);

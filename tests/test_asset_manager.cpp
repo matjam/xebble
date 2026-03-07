@@ -1,7 +1,13 @@
 #include <gtest/gtest.h>
 #include <xebble/asset_manager.hpp>
 
+#include <string_view>
+
 using namespace xebble;
+
+static std::string_view sv(const std::u8string& s) {
+    return {reinterpret_cast<const char*>(s.data()), s.size()};
+}
 
 TEST(ManifestParser, ParseSpriteSheet) {
     auto toml_str = R"(
@@ -29,7 +35,7 @@ TEST(ManifestParser, ParseBitmapFont) {
     ASSERT_TRUE(manifest.bitmap_fonts.contains("default"));
     EXPECT_EQ(manifest.bitmap_fonts["default"].glyph_width, 8u);
     EXPECT_EQ(manifest.bitmap_fonts["default"].glyph_height, 8u);
-    EXPECT_EQ(manifest.bitmap_fonts["default"].charset, " !#$");
+    EXPECT_EQ(sv(manifest.bitmap_fonts["default"].charset), " !#$");
 }
 
 TEST(ManifestParser, ParseFont) {

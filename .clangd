@@ -1,0 +1,13 @@
+CompileFlags:
+  CompilationDatabase: build/debug
+  Add:
+    - --stdlib=libc++
+    - -std=c++2b
+    - -I/Users/matjam/src/xebble/include
+    - -isystem/Users/matjam/src/xebble/build/debug/vcpkg_installed/arm64-osx/include
+
+Index:
+  Background: Build
+
+Diagnostics:
+  UnusedIncludes: None

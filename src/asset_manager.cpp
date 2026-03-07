@@ -40,7 +40,10 @@ Manifest parse_manifest(std::string_view toml_str) {
             entry.path = t["path"].value_or(std::string{});
             entry.glyph_width = t["glyph_width"].value_or(uint32_t{0});
             entry.glyph_height = t["glyph_height"].value_or(uint32_t{0});
-            entry.charset = t["charset"].value_or(std::string{});
+            {
+                auto cs = t["charset"].value_or(std::string{});
+                entry.charset = std::u8string(cs.begin(), cs.end());
+            }
         }
     }
 

@@ -141,11 +141,11 @@ std::vector<uint8_t> generate_pixels() {
     return pixels;
 }
 
-std::string charset() {
-    std::string cs;
+std::u8string charset() {
+    std::u8string cs;
     cs.reserve(NUM_CHARS);
     for (int ch = FIRST_CHAR; ch <= LAST_CHAR; ++ch) {
-        cs.push_back(static_cast<char>(ch));
+        cs.push_back(static_cast<char8_t>(ch));
     }
     return cs;
 }

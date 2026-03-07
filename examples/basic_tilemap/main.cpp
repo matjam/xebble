@@ -55,7 +55,7 @@ struct ItemInfo { std::string name; };
 struct GameState {
     Dungeon dungeon;
     int items_collected = 0;
-    std::string message = "Welcome to the dungeon. Use WASD or arrow keys to move.";
+    std::u8string message = u8"Welcome to the dungeon. Use WASD or arrow keys to move.";
     bool needs_rebuild = true;
 };
 
@@ -91,7 +91,7 @@ private:
         auto& state = world.resource<GameState>();
         state.dungeon = generate_dungeon();
         state.items_collected = 0;
-        state.message = "Welcome to the dungeon. Use WASD or arrow keys to move.";
+        state.message = u8"Welcome to the dungeon. Use WASD or arrow keys to move.";
         state.needs_rebuild = false;
 
         // Clear old entities
@@ -192,7 +192,7 @@ private:
             int ny = tile_y + dy;
 
             if (!state.dungeon.is_walkable(nx, ny)) {
-                state.message = "You bump into a wall.";
+                state.message = u8"You bump into a wall.";
                 return;
             }
 
@@ -202,7 +202,7 @@ private:
                 int mx = static_cast<int>(mpos.x) / TILE_SIZE;
                 int my = static_cast<int>(mpos.y) / TILE_SIZE;
                 if (mx == nx && my == ny) {
-                    state.message = std::format("You see a {}.", info.name);
+                    { auto s = std::format("You see a {}.", info.name); state.message = std::u8string(s.begin(), s.end()); }
                     blocked = true;
                 }
             });
@@ -218,7 +218,7 @@ private:
                 int iy = static_cast<int>(ipos.y) / TILE_SIZE;
                 if (ix == nx && iy == ny) {
                     state.items_collected++;
-                    state.message = std::format("You picked up {}.", info.name);
+                    { auto s = std::format("You picked up {}.", info.name); state.message = std::u8string(s.begin(), s.end()); }
                     world.destroy(ie);
                     picked_up = true;
                 }
@@ -227,13 +227,13 @@ private:
             if (!picked_up) {
                 uint32_t feat = state.dungeon.feature_tiles[ny * state.dungeon.width + nx];
                 if (feat == tiles::STAIRS_DOWN)
-                    state.message = "You see a staircase leading down.";
+                    state.message = u8"You see a staircase leading down.";
                 else if (feat == tiles::STAIRS_UP)
-                    state.message = "You see a staircase leading up.";
+                    state.message = u8"You see a staircase leading up.";
                 else if (feat == tiles::OPEN_DOOR)
-                    state.message = "You pass through a doorway.";
+                    state.message = u8"You pass through a doorway.";
                 else
-                    state.message = "";
+                    state.message = u8"";
             }
 
             // Update camera
@@ -255,9 +255,9 @@ public:
         });
 
         ui.panel("hud", {.anchor = xebble::Anchor::Bottom, .size = {1.0f, 32}}, [&](auto& p) {
-            p.text(std::format("Pos:({},{}) Items:{} [R]egen [Esc]ape",
-                               player_x, player_y, state.items_collected),
-                   {.color = {255, 255, 150}});
+            { auto s = std::format("Pos:({},{}) Items:{} [R]egen [Esc]ape",
+                               player_x, player_y, state.items_collected);
+              p.text(std::u8string(s.begin(), s.end()), {.color = {255, 255, 150}}); }
             if (!state.message.empty())
                 p.text(state.message, {.color = {200, 200, 200}});
         });

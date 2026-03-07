@@ -19,7 +19,15 @@ add_library(xebble STATIC
     world.cpp
     builtin_systems.cpp
     embedded_font.cpp
+    embedded_petme64.cpp
+    embedded_petme642y.cpp
+    embedded_berkelium64.cpp
+    embedded_fonts_helpers.cpp
     ui.cpp
+    rng.cpp
+    grid.cpp
+    fov.cpp
+    pathfinding.cpp
 )
 
 target_include_directories(xebble PUBLIC
