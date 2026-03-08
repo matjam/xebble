@@ -8,6 +8,7 @@
 #include <xebble/world.hpp>
 
 #include <algorithm>
+#include <ranges>
 
 namespace xebble {
 
@@ -136,9 +137,13 @@ void UIContext::begin_frame(std::vector<Event>& events, const Renderer& renderer
         }
     }
 
-    // Determine hot widget from prev_rects_
+    // Determine hot widget from prev_rects_.
+    // Widgets are registered in draw order: containers first, children last.
+    // We want the most-specific (innermost) hit, so we scan in reverse and
+    // take the last match — i.e. the child registered latest wins over its
+    // parent container.
     hot_id_.clear();
-    for (auto& wr : prev_rects_) {
+    for (const auto& wr : std::views::reverse(prev_rects_)) {
         if (mouse_pos_.x >= wr.rect.x && mouse_pos_.x <= wr.rect.x + wr.rect.w &&
             mouse_pos_.y >= wr.rect.y && mouse_pos_.y <= wr.rect.y + wr.rect.h) {
             hot_id_ = wr.id;
