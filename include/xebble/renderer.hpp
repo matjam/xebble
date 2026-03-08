@@ -104,7 +104,8 @@ struct RendererConfig {
     uint32_t virtual_width = 960;          ///< Virtual framebuffer width  in pixels.
     uint32_t virtual_height = 540;         ///< Virtual framebuffer height in pixels.
     bool vsync = true;                     ///< Enable vertical sync (prevents tearing).
-    bool nearest_filter = true;            ///< Nearest-neighbor blit — keeps pixels sharp.
+    bool nearest_sample = true;            ///< Use nearest-neighbour sampling on blit (keeps
+                                           ///< pixel edges sharp). Set false for bilinear.
     ScaleMode scale_mode = ScaleMode::Fit; ///< How to handle aspect ratio mismatch.
 };
 

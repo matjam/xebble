@@ -828,11 +828,6 @@ void Renderer::end_frame() {
 
     const bool crop = (impl.config.scale_mode == ScaleMode::Crop);
     float scale = crop ? std::max(sw / vw, sh / vh) : std::min(sw / vw, sh / vh);
-    if (impl.config.nearest_filter) {
-        scale = std::floor(scale);
-        if (scale < 1.0f)
-            scale = 1.0f;
-    }
     float scaled_w = vw * scale;
     float scaled_h = vh * scale;
     float offset_x = (sw - scaled_w) / 2.0f;
