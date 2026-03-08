@@ -201,6 +201,18 @@ public:
     /// @endcode
     void set_display_mode(const DisplayMode& mode);
 
+    /// @brief Toggle fullscreen mode at runtime.
+    ///
+    /// When entering fullscreen the window is placed on the primary monitor
+    /// at its current preferred video mode. When leaving fullscreen the window
+    /// is restored to its previous windowed size and position.
+    ///
+    /// @code
+    /// window.set_fullscreen(true);   // enter fullscreen
+    /// window.set_fullscreen(false);  // return to windowed
+    /// @endcode
+    void set_fullscreen(bool fullscreen);
+
     /// @brief Underlying `GLFWwindow*` for Vulkan surface creation.
     [[nodiscard]] GLFWwindow* native_handle() const;
 

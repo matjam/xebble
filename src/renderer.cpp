@@ -914,6 +914,22 @@ void Renderer::set_display_mode(const DisplayMode& mode) {
     // No need to touch the virtual resolution here — that is a separate concern.
 }
 
+void Renderer::set_fullscreen(bool fullscreen) {
+    impl_->window->set_fullscreen(fullscreen);
+    // The resulting window resize event will trigger a proactive swapchain
+    // recreate in begin_frame() — no explicit action needed here.
+}
+
+void Renderer::set_nearest_sample(bool nearest) {
+    auto& impl = *impl_;
+    if (impl.config.nearest_sample == nearest)
+        return;
+    impl.config.nearest_sample = nearest;
+    // Queue an offscreen recreate so the new sampler filter is baked in.
+    // Reuse the current virtual resolution dimensions.
+    impl.pending_virtual_resolution = {impl.config.virtual_width, impl.config.virtual_height};
+}
+
 void Renderer::handle_resize() {
     auto& impl = *impl_;
     vkDeviceWaitIdle(impl.context->device());

@@ -312,6 +312,34 @@ public:
     /// @endcode
     void set_display_mode(const DisplayMode& mode);
 
+    /// @brief Toggle fullscreen mode at runtime.
+    ///
+    /// Delegates to `Window::set_fullscreen()`. The swapchain is recreated
+    /// automatically on the next frame once the window resize event fires.
+    ///
+    /// @code
+    /// renderer.set_fullscreen(true);   // enter fullscreen
+    /// renderer.set_fullscreen(false);  // return to windowed
+    /// @endcode
+    void set_fullscreen(bool fullscreen);
+
+    /// @brief Switch the blit sampler filter at runtime.
+    ///
+    /// When `nearest` is true the offscreen framebuffer is blitted to the
+    /// swapchain with nearest-neighbour filtering — giving hard pixel edges at
+    /// any integer scale. When false (the default) bilinear filtering is used
+    /// for smooth scaling at non-integer ratios.
+    ///
+    /// Internally this queues an offscreen framebuffer recreate (which rebakes
+    /// the sampler), taking effect at the start of the next frame.
+    ///
+    /// @code
+    /// // Crisp pixel art at a 2x pixel-perfect scale:
+    /// renderer.set_nearest_sample(true);
+    /// renderer.set_virtual_resolution(960, 540);
+    /// @endcode
+    void set_nearest_sample(bool nearest);
+
     /// @brief Notify the renderer that the window framebuffer has been resized.
     ///
     /// Call this immediately after receiving a `EventType::WindowResize` event

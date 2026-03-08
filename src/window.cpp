@@ -59,6 +59,13 @@ struct Window::Impl {
     /// framebuffer-to-pixel mapping.
     bool retina_disabled = false;
 
+    // Saved windowed geometry so we can restore it when leaving fullscreen.
+    int windowed_x = 100;
+    int windowed_y = 100;
+    int windowed_w = 1280;
+    int windowed_h = 720;
+    bool is_fullscreen = false;
+
     ~Impl() {
         if (window) {
             glfwDestroyWindow(window);
@@ -291,6 +298,29 @@ void Window::set_display_mode(const DisplayMode& mode) {
 
 GLFWwindow* Window::native_handle() const {
     return impl_->window;
+}
+
+void Window::set_fullscreen(bool fullscreen) {
+    if (impl_->is_fullscreen == fullscreen) {
+        return;
+    }
+
+    if (fullscreen) {
+        // Save current windowed geometry before switching.
+        glfwGetWindowPos(impl_->window, &impl_->windowed_x, &impl_->windowed_y);
+        glfwGetWindowSize(impl_->window, &impl_->windowed_w, &impl_->windowed_h);
+
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        glfwSetWindowMonitor(impl_->window, monitor, 0, 0, mode->width, mode->height,
+                             mode->refreshRate);
+        log(LogLevel::Info, "Window: entered fullscreen");
+    } else {
+        glfwSetWindowMonitor(impl_->window, nullptr, impl_->windowed_x, impl_->windowed_y,
+                             impl_->windowed_w, impl_->windowed_h, GLFW_DONT_CARE);
+        log(LogLevel::Info, "Window: returned to windowed");
+    }
+    impl_->is_fullscreen = fullscreen;
 }
 
 } // namespace xebble

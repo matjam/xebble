@@ -5,7 +5,8 @@
 ///   - Enumerating native display modes via Window::available_display_modes()
 ///   - Generating pixel-perfect (integer-scaled) virtual resolutions from the
 ///     native display size (1/2, 1/3, 1/4 divisors labelled "pixel perfect")
-///   - Fullscreen and VSync checkboxes
+///   - Nearest-neighbour blit filter auto-selected for pixel-perfect modes
+///   - Fullscreen and VSync checkboxes wired to Renderer::set_fullscreen()
 ///   - Applying settings (virtual resolution + display mode) via Renderer
 ///   - Reverting to previous settings on Cancel
 
@@ -26,6 +27,7 @@ namespace {
 struct ResolutionEntry {
     uint32_t width;
     uint32_t height;
+    bool pixel_perfect;  // true for divisor >= 2 of a native resolution
     std::u8string label; // e.g. u8"960x540  (pixel perfect x2)"
 };
 
@@ -82,7 +84,7 @@ std::vector<ResolutionEntry> build_resolution_list() {
                 }
             }
             if (!dup) {
-                entries.push_back({w, h, std::u8string(s.begin(), s.end())});
+                entries.push_back({w, h, d >= 2, std::u8string(s.begin(), s.end())});
             }
         }
     }
@@ -215,7 +217,7 @@ public:
 
                      p.text(u8""); // spacer
 
-                     // Show the pending selection label for clarity.
+                     // Show pending selection details.
                      if (!state.resolutions.empty()) {
                          const auto& sel =
                              state.resolutions[static_cast<size_t>(state.pending_res_index)];
@@ -223,6 +225,13 @@ public:
                          p.text(u8"Selected resolution:", {.color = {160, 160, 160}});
                          p.text(std::u8string(dim.begin(), dim.end()), {.color = {220, 220, 220}});
                          p.text(sel.label, {.color = {140, 200, 140}});
+
+                         // Indicate the blit filter that will be applied.
+                         if (sel.pixel_perfect) {
+                             p.text(u8"Filter: nearest (crisp)", {.color = {140, 220, 255}});
+                         } else {
+                             p.text(u8"Filter: bilinear (smooth)", {.color = {180, 180, 180}});
+                         }
                      }
 
                      p.text(u8""); // spacer
@@ -277,17 +286,25 @@ private:
 
         const auto& sel = state.resolutions[static_cast<size_t>(state.pending_res_index)];
 
-        // Apply virtual resolution change.
+        // Set blit filter: nearest for pixel-perfect, bilinear otherwise.
+        renderer.set_nearest_sample(sel.pixel_perfect);
+
+        // Apply virtual resolution change (queued; fires next begin_frame).
         renderer.set_virtual_resolution(sel.width, sel.height);
+
+        // Apply fullscreen toggle.
+        renderer.set_fullscreen(state.pending_fullscreen);
 
         // Record what was applied.
         state.applied_res_index = state.pending_res_index;
         state.applied_fullscreen = state.pending_fullscreen;
         state.applied_vsync = state.pending_vsync;
 
-        const auto msg = std::format("Applied: {}x{}  fullscreen={}  vsync={}", sel.width,
-                                     sel.height, state.applied_fullscreen ? "on" : "off",
-                                     state.applied_vsync ? "on" : "off");
+        const auto filter_str =
+            sel.pixel_perfect ? std::string("nearest") : std::string("bilinear");
+        const auto msg = std::format(
+            "Applied: {}x{}  filter={}  fullscreen={}  vsync={}", sel.width, sel.height, filter_str,
+            state.applied_fullscreen ? "on" : "off", state.applied_vsync ? "on" : "off");
         state.status_msg = std::u8string(msg.begin(), msg.end());
     }
 };
