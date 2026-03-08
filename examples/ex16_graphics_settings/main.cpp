@@ -162,6 +162,11 @@ std::vector<ResolutionEntry> build_resolution_list() {
                 continue;
             }
 
+            // A sub-resolution is pixel-perfect if the fit scale is an integer
+            // on every axis against at least one native — use is_pixel_perfect()
+            // rather than d>=2 so that e.g. a native entry that happens to be
+            // an exact integer multiple of another native is also flagged.
+            const bool pp = is_pixel_perfect(w, h, natives);
             std::string s;
             if (d == 1) {
                 s = std::format("{}x{}  (native)", w, h);
@@ -169,7 +174,7 @@ std::vector<ResolutionEntry> build_resolution_list() {
                 s = std::format("{}x{}  (pixel perfect x{})", w, h, d);
             }
             pp_entries.push_back(
-                {w, h, d >= 2, std::u8string(s.begin(), s.end()), aspect_ratio_str(w, h)});
+                {w, h, pp, std::u8string(s.begin(), s.end()), aspect_ratio_str(w, h)});
         }
     }
     std::ranges::sort(pp_entries, [](const ResolutionEntry& a, const ResolutionEntry& b) {
