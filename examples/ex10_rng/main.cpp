@@ -182,7 +182,7 @@ private:
         xebble::Rng rng(demo.seed);
         // Advance to a mid-stream point, then save.
         for (int i = 0; i < 50; ++i)
-            rng.roll_die(6);
+            (void)rng.roll_die(6);
         demo.checkpoint = rng.save();
         demo.has_checkpoint = true;
         demo.replay_a = rng.roll_die(20);

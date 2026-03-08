@@ -59,7 +59,7 @@ public:
         fill_deco_layer(*map);
 
         // Attach it to an entity.
-        world.build_entity().with(xebble::TileMapLayer{map, /*z_order=*/0.0f}).build();
+        (void)world.build_entity().with(xebble::TileMapLayer{map, /*z_order=*/0.0f}).build();
     }
 
     void update(xebble::World& world, float dt) override {

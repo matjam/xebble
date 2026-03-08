@@ -109,7 +109,7 @@ std::expected<BitmapFont, Error> BitmapFont::load_pcf(vk::Context& ctx,
     // Square-ish atlas: each glyph occupies one cell_w × cell_h slot.
     size_t num_glyphs = metrics.size();
     uint32_t cols = 1;
-    while (cols * cols < num_glyphs)
+    while (static_cast<size_t>(cols) * cols < num_glyphs)
         ++cols;
     uint32_t rows_atlas = (static_cast<uint32_t>(num_glyphs) + cols - 1) / cols;
     uint32_t atlas_w = cols * cell_w;
@@ -406,7 +406,7 @@ std::expected<BitmapFont, Error> BitmapFont::load_bdf(vk::Context& ctx,
 
     size_t num_glyphs = bf.glyphs.size();
     uint32_t cols = 1;
-    while (cols * cols < num_glyphs)
+    while (static_cast<size_t>(cols) * cols < num_glyphs)
         ++cols;
     uint32_t rows_atlas = (static_cast<uint32_t>(num_glyphs) + cols - 1) / cols;
     uint32_t atlas_w = cols * cell_w;

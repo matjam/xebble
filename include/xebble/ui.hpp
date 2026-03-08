@@ -280,7 +280,7 @@ public:
     /// if (p.button("Quit",  ButtonStyle{ .color = {100, 30, 30, 255} }))
     ///     request_quit();
     /// @endcode
-    bool button(std::u8string_view label, ButtonStyle style = {});
+    [[nodiscard]] bool button(std::u8string_view label, ButtonStyle style = {});
 
     /// @brief Draw a labelled toggle checkbox. Modifies @p value in place.
     ///
@@ -324,7 +324,8 @@ public:
     ///     start_game_with_name(player_name);
     /// }
     /// @endcode
-    bool text_input(std::string_view id, std::u8string& value, TextInputStyle style = {});
+    [[nodiscard]] bool text_input(std::string_view id, std::u8string& value,
+                                  TextInputStyle style = {});
 
     /// @brief Lay out child widgets horizontally on a single row.
     ///
@@ -564,6 +565,7 @@ public:
 ///     1280, 720);
 /// // r == Rect{ 440.0f, 210.0f, 400.0f, 300.0f }
 /// @endcode
-Rect resolve_panel_placement(const PanelPlacement& p, uint32_t screen_w, uint32_t screen_h);
+[[nodiscard]] Rect resolve_panel_placement(const PanelPlacement& p, uint32_t screen_w,
+                                           uint32_t screen_h);
 
 } // namespace xebble

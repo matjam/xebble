@@ -22,7 +22,7 @@ public:
     /// @param device Vulkan logical device.
     /// @param max_sets Maximum number of descriptor sets that can be allocated.
     /// @param pool_sizes Array of pool size entries describing the pool capacity.
-    static std::expected<DescriptorPool, Error>
+    [[nodiscard]] static std::expected<DescriptorPool, Error>
     create(VkDevice device, uint32_t max_sets, std::vector<VkDescriptorPoolSize> pool_sizes);
 
     ~DescriptorPool();
@@ -33,9 +33,9 @@ public:
 
     /// @brief Allocate a descriptor set from this pool.
     /// @param layout The descriptor set layout to allocate with.
-    std::expected<VkDescriptorSet, Error> allocate(VkDescriptorSetLayout layout);
+    [[nodiscard]] std::expected<VkDescriptorSet, Error> allocate(VkDescriptorSetLayout layout);
 
-    VkDescriptorPool handle() const;
+    [[nodiscard]] VkDescriptorPool handle() const;
 
 private:
     struct Impl;
@@ -46,7 +46,7 @@ private:
 /// @brief Create a descriptor set layout with a single combined image sampler at binding 0.
 /// @param device Vulkan logical device.
 /// @param stage Shader stage flags for the binding.
-std::expected<VkDescriptorSetLayout, Error>
+[[nodiscard]] std::expected<VkDescriptorSetLayout, Error>
 create_single_texture_layout(VkDevice device,
                              VkShaderStageFlags stage = VK_SHADER_STAGE_FRAGMENT_BIT);
 

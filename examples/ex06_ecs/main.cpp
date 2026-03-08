@@ -100,7 +100,7 @@ public:
         for (int i = 0; i < 5; ++i) {
             float angle = static_cast<float>(i) * (6.2831853f / 5.0f);
             float r = 80.0f;
-            world.build_entity()
+            (void)world.build_entity()
                 .with(xebble::Position{304.0f + r * std::cos(angle), 164.0f + r * std::sin(angle)})
                 .with(xebble::Sprite{&*sheet_, pixel_atlas::TILE_RED, 2.0f})
                 .with(Velocity{std::cos(angle + 1.5f) * 40.0f, std::sin(angle + 1.5f) * 40.0f})
@@ -154,7 +154,7 @@ public:
                     float x = rng_.range(0, 640) * 1.0f;
                     float y = rng_.range(0, 360) * 1.0f;
                     uint32_t tile = bulk_tiles_[rng_.range(0, 6)];
-                    world.build_entity()
+                    (void)world.build_entity()
                         .with(xebble::Position{x, y})
                         .with(xebble::Sprite{&*sheet_, tile, 3.0f})
                         .with(Velocity{std::cos(angle) * speed, std::sin(angle) * speed})
@@ -206,7 +206,7 @@ public:
         if (stats.spawn_timer >= 0.3f) {
             stats.spawn_timer = 0.0f;
             float angle = static_cast<float>(stats.particles_born) * 0.7f;
-            world.build_entity()
+            (void)world.build_entity()
                 .with(xebble::Position{304.0f, 164.0f})
                 .with(xebble::Sprite{&*sheet_, pixel_atlas::TILE_YELLOW, 1.0f, {220, 220, 50, 200}})
                 .with(Velocity{std::cos(angle) * 60.0f, std::sin(angle) * 60.0f})

@@ -226,7 +226,7 @@ private:
     void spawn_entities(xebble::World& world) {
         static xebble::Rng rng(77);
         for (int i = 0; i < 4; ++i) {
-            world.build_entity()
+            (void)world.build_entity()
                 .with(HP{rng.range(5, 20), 20})
                 .with(Gold{rng.range(0, 100)})
                 .with(SerialPos{rng.range(10, 630) * 1.0f, rng.range(10, 350) * 1.0f})

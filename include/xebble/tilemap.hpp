@@ -125,7 +125,7 @@ public:
     ///     if (*tile == TILE_LAVA) apply_lava_damage(player);
     /// }
     /// @endcode
-    std::optional<uint32_t> tile_at(uint32_t layer, uint32_t x, uint32_t y) const;
+    [[nodiscard]] std::optional<uint32_t> tile_at(uint32_t layer, uint32_t x, uint32_t y) const;
 
     /// @brief Replace an entire layer with tiles from a flat span.
     ///
@@ -144,9 +144,9 @@ public:
     /// Useful for clearing the effects layer at the start of each turn.
     void clear_layer(uint32_t layer);
 
-    uint32_t width() const { return width_; }
-    uint32_t height() const { return height_; }
-    uint32_t layer_count() const { return layer_count_; }
+    [[nodiscard]] uint32_t width() const { return width_; }
+    [[nodiscard]] uint32_t height() const { return height_; }
+    [[nodiscard]] uint32_t layer_count() const { return layer_count_; }
 
 private:
     uint32_t width_;
@@ -211,7 +211,7 @@ public:
     void set_tile(uint32_t layer, uint32_t x, uint32_t y, std::nullopt_t);
 
     /// @brief Get the tile index at (x, y) on the given layer.
-    std::optional<uint32_t> tile_at(uint32_t layer, uint32_t x, uint32_t y) const;
+    [[nodiscard]] std::optional<uint32_t> tile_at(uint32_t layer, uint32_t x, uint32_t y) const;
 
     /// @brief Replace an entire layer from a flat span of tile indices.
     void set_layer(uint32_t layer, std::span<const uint32_t> tile_indices);
@@ -231,16 +231,16 @@ public:
     /// @endcode
     void set_offset(Vec2 offset);
 
-    Vec2 offset() const { return offset_; }
-    uint32_t layer_count() const { return data_.layer_count(); }
-    uint32_t width() const { return data_.width(); }
-    uint32_t height() const { return data_.height(); }
+    [[nodiscard]] Vec2 offset() const { return offset_; }
+    [[nodiscard]] uint32_t layer_count() const { return data_.layer_count(); }
+    [[nodiscard]] uint32_t width() const { return data_.width(); }
+    [[nodiscard]] uint32_t height() const { return data_.height(); }
 
     /// @brief Access the underlying pure-data layer for game-logic queries.
-    const TileMapData& data() const { return data_; }
+    [[nodiscard]] const TileMapData& data() const { return data_; }
 
     /// @brief Access the spritesheet used for rendering.
-    const SpriteSheet& sheet() const { return *sheet_; }
+    [[nodiscard]] const SpriteSheet& sheet() const { return *sheet_; }
 
 private:
     const SpriteSheet* sheet_;

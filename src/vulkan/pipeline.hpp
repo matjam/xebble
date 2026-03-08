@@ -28,8 +28,8 @@ public:
     Pipeline(const Pipeline&) = delete;
     Pipeline& operator=(const Pipeline&) = delete;
 
-    VkPipeline handle() const;
-    VkPipelineLayout layout() const;
+    [[nodiscard]] VkPipeline handle() const;
+    [[nodiscard]] VkPipelineLayout layout() const;
 
     /// @brief Create the sprite rendering pipeline.
     /// @param device Vulkan logical device.
@@ -37,7 +37,7 @@ public:
     /// @param descriptor_set_layout Layout for texture descriptor (binding 0).
     /// @param vert_path Path to compiled sprite.vert.spv.
     /// @param frag_path Path to compiled sprite.frag.spv.
-    static std::expected<Pipeline, Error> create_sprite_pipeline(
+    [[nodiscard]] static std::expected<Pipeline, Error> create_sprite_pipeline(
         VkDevice device, VkRenderPass render_pass, VkDescriptorSetLayout descriptor_set_layout,
         const std::filesystem::path& vert_path, const std::filesystem::path& frag_path);
 
@@ -47,7 +47,7 @@ public:
     /// @param descriptor_set_layout Layout for texture descriptor (binding 0).
     /// @param vert_path Path to compiled blit.vert.spv.
     /// @param frag_path Path to compiled blit.frag.spv.
-    static std::expected<Pipeline, Error> create_blit_pipeline(
+    [[nodiscard]] static std::expected<Pipeline, Error> create_blit_pipeline(
         VkDevice device, VkRenderPass render_pass, VkDescriptorSetLayout descriptor_set_layout,
         const std::filesystem::path& vert_path, const std::filesystem::path& frag_path);
 

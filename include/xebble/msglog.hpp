@@ -157,13 +157,13 @@ public:
     // -----------------------------------------------------------------------
 
     /// @brief True if no messages have been pushed.
-    bool empty() const { return messages_.empty(); }
+    [[nodiscard]] bool empty() const { return messages_.empty(); }
 
     /// @brief Total number of messages currently stored.
-    size_t size() const { return messages_.size(); }
+    [[nodiscard]] size_t size() const { return messages_.size(); }
 
     /// @brief Maximum number of messages retained.
-    size_t capacity() const { return capacity_; }
+    [[nodiscard]] size_t capacity() const { return capacity_; }
 
     /// @brief Clear all messages.
     void clear() {
@@ -174,12 +174,12 @@ public:
     /// @brief Return the most recently added message.
     ///
     /// @pre `!empty()`
-    const LogMessage& newest() const { return messages_.back(); }
+    [[nodiscard]] const LogMessage& newest() const { return messages_.back(); }
 
     /// @brief Return the oldest retained message.
     ///
     /// @pre `!empty()`
-    const LogMessage& oldest() const { return messages_.front(); }
+    [[nodiscard]] const LogMessage& oldest() const { return messages_.front(); }
 
     /// @brief Access a message by index (0 = oldest).
     const LogMessage& operator[](size_t i) const { return messages_[i]; }
@@ -195,7 +195,7 @@ public:
     ///     y += line_h;
     /// }
     /// @endcode
-    std::vector<const LogMessage*> visible(size_t n) const {
+    [[nodiscard]] std::vector<const LogMessage*> visible(size_t n) const {
         std::vector<const LogMessage*> out;
         size_t start = messages_.size() > n ? messages_.size() - n : 0;
         for (size_t i = start; i < messages_.size(); ++i)
@@ -209,8 +209,8 @@ public:
     /// // Show only combat events.
     /// for (auto* msg : log.filtered("combat", 8)) { … }
     /// @endcode
-    std::vector<const LogMessage*> filtered(const std::string& category,
-                                            size_t max_results = SIZE_MAX) const {
+    [[nodiscard]] std::vector<const LogMessage*> filtered(const std::string& category,
+                                                          size_t max_results = SIZE_MAX) const {
         std::vector<const LogMessage*> out;
         for (auto it = messages_.rbegin(); it != messages_.rend() && out.size() < max_results; ++it)
             if (it->category == category)
@@ -220,7 +220,7 @@ public:
     }
 
     /// @brief Read-only access to all messages (oldest first).
-    const std::deque<LogMessage>& messages() const { return messages_; }
+    [[nodiscard]] const std::deque<LogMessage>& messages() const { return messages_; }
 
 private:
     size_t capacity_;

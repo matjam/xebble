@@ -25,10 +25,9 @@ public:
     /// @param memory_usage VMA memory usage hint (e.g. VMA_MEMORY_USAGE_AUTO).
     /// @param flags VMA allocation create flags (e.g.
     /// VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT).
-    static std::expected<Buffer, Error> create(VmaAllocator allocator, VkDeviceSize size,
-                                               VkBufferUsageFlags usage,
-                                               VmaMemoryUsage memory_usage,
-                                               VmaAllocationCreateFlags flags = 0);
+    [[nodiscard]] static std::expected<Buffer, Error>
+    create(VmaAllocator allocator, VkDeviceSize size, VkBufferUsageFlags usage,
+           VmaMemoryUsage memory_usage, VmaAllocationCreateFlags flags = 0);
 
     ~Buffer();
     Buffer(Buffer&&) noexcept;
@@ -46,15 +45,15 @@ public:
     /// Only valid for host-visible buffers created with
     /// VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.
     /// Caller is responsible for calling flush() after writing.
-    void* mapped_ptr() const;
+    [[nodiscard]] void* mapped_ptr() const;
 
     /// @brief Flush a range of the buffer to make writes visible to the GPU.
     /// @param offset Byte offset from the start of the buffer.
     /// @param size Number of bytes to flush.
     void flush(VkDeviceSize offset, VkDeviceSize size);
 
-    VkBuffer handle() const;
-    VkDeviceSize size() const;
+    [[nodiscard]] VkBuffer handle() const;
+    [[nodiscard]] VkDeviceSize size() const;
 
 private:
     struct Impl;

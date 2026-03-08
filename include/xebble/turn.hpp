@@ -109,13 +109,13 @@ public:
     enum class Phase { Player, Monsters };
 
     /// @brief Return the current phase.
-    Phase phase() const { return phase_; }
+    [[nodiscard]] Phase phase() const { return phase_; }
 
     /// @brief True during the player's action window.
-    bool is_player_turn() const { return phase_ == Phase::Player; }
+    [[nodiscard]] bool is_player_turn() const { return phase_ == Phase::Player; }
 
     /// @brief True during the monsters' action window.
-    bool is_monster_turn() const { return phase_ == Phase::Monsters; }
+    [[nodiscard]] bool is_monster_turn() const { return phase_ == Phase::Monsters; }
 
     /// @brief End the player phase; advance to the monster phase.
     ///
@@ -147,7 +147,7 @@ public:
     }
 
     /// @brief Total number of full rounds completed (incremented after player turn ends).
-    uint64_t turn() const { return turn_; }
+    [[nodiscard]] uint64_t turn() const { return turn_; }
 
 private:
     Phase phase_ = Phase::Player;
@@ -200,7 +200,7 @@ public:
     void set_threshold(int t) { threshold_ = t; }
 
     /// @brief Return the current energy threshold.
-    int threshold() const { return threshold_; }
+    [[nodiscard]] int threshold() const { return threshold_; }
 
     /// @brief Register an actor with a given speed.
     ///
@@ -233,7 +233,7 @@ public:
     }
 
     /// @brief True if at least one actor has reached the action threshold.
-    bool has_ready() const {
+    [[nodiscard]] bool has_ready() const {
         for (auto& a : actors_)
             if (a.energy >= threshold_)
                 return true;
@@ -243,7 +243,7 @@ public:
     /// @brief Return the ID of the highest-energy ready actor.
     ///
     /// @pre `has_ready()` must be true.
-    uint64_t next_actor() const {
+    [[nodiscard]] uint64_t next_actor() const {
         const Actor* best = nullptr;
         for (auto& a : actors_)
             if (a.energy >= threshold_ && (!best || a.energy > best->energy))
@@ -273,10 +273,10 @@ public:
     }
 
     /// @brief Return all actors (read-only).
-    const std::vector<Actor>& actors() const { return actors_; }
+    [[nodiscard]] const std::vector<Actor>& actors() const { return actors_; }
 
     /// @brief Number of registered actors.
-    size_t size() const { return actors_.size(); }
+    [[nodiscard]] size_t size() const { return actors_.size(); }
 
 private:
     std::vector<Actor> actors_;
@@ -361,21 +361,21 @@ public:
     }
 
     /// @brief True if no actors are registered.
-    bool empty() const { return queue_.empty(); }
+    [[nodiscard]] bool empty() const { return queue_.empty(); }
 
     /// @brief Number of actors in the queue.
-    size_t size() const { return queue_.size(); }
+    [[nodiscard]] size_t size() const { return queue_.size(); }
 
     /// @brief Return the ID of the actor whose turn it currently is.
     ///
     /// @pre `!empty()`
-    uint64_t current() const {
+    [[nodiscard]] uint64_t current() const {
         assert(!queue_.empty());
         return queue_[current_].id;
     }
 
     /// @brief Return the initiative of the current actor.
-    int current_initiative() const {
+    [[nodiscard]] int current_initiative() const {
         assert(!queue_.empty());
         return queue_[current_].initiative;
     }
@@ -392,10 +392,10 @@ public:
     }
 
     /// @brief Index of the current actor within the sorted queue (0 = highest init).
-    size_t current_index() const { return current_; }
+    [[nodiscard]] size_t current_index() const { return current_; }
 
     /// @brief Read-only view of all entries in initiative order.
-    const std::vector<Entry>& entries() const { return queue_; }
+    [[nodiscard]] const std::vector<Entry>& entries() const { return queue_; }
 
 private:
     std::vector<Entry> queue_;

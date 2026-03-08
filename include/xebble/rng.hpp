@@ -185,7 +185,7 @@ public:
     /// int same_result = resolve_combat(attacker, defender, rng);
     /// assert(result == same_result);
     /// @endcode
-    RngState save() const noexcept { return {state_, inc_}; }
+    [[nodiscard]] RngState save() const noexcept { return {state_, inc_}; }
 
     /// @brief Restore a previously saved state, rewinding the stream.
     ///
@@ -205,10 +205,10 @@ public:
     ///
     /// The raw output of one PCG32 step. Use this when you need bits directly
     /// or are building a higher-level distribution on top of the generator.
-    uint32_t next_u32() noexcept { return next_raw(); }
+    [[nodiscard]] uint32_t next_u32() noexcept { return next_raw(); }
 
     /// @brief Return a uniformly distributed `uint64_t` (two PCG32 steps).
-    uint64_t next_u64() noexcept {
+    [[nodiscard]] uint64_t next_u64() noexcept {
         uint64_t lo = next_raw();
         uint64_t hi = next_raw();
         return (hi << 32u) | lo;
@@ -224,13 +224,13 @@ public:
     /// float t = rng.next_float();
     /// Color c = lerp(color_a, color_b, t);
     /// @endcode
-    float next_float() noexcept {
+    [[nodiscard]] float next_float() noexcept {
         // Multiply by 2^-32 to map [0, 2^32) -> [0, 1).
         return static_cast<float>(next_raw()) * 2.3283064365386963e-10f;
     }
 
     /// @brief Return a uniformly distributed `double` in [0.0, 1.0).
-    double next_double() noexcept {
+    [[nodiscard]] double next_double() noexcept {
         return static_cast<double>(next_u64()) * 5.421010862427522e-20;
     }
 
@@ -258,7 +258,7 @@ public:
     /// // Negative ranges are fine.
     /// int temperature = rng.range(-20, 40);
     /// @endcode
-    int32_t range(int32_t min, int32_t max) noexcept {
+    [[nodiscard]] int32_t range(int32_t min, int32_t max) noexcept {
         if (min == max)
             return min;
         uint32_t span = static_cast<uint32_t>(max - min) + 1u;
@@ -281,7 +281,7 @@ public:
     /// int idx = rng.range((int)items.size() - 1);
     /// auto& item = items[idx];
     /// @endcode
-    int32_t range(int32_t max) noexcept { return range(0, max); }
+    [[nodiscard]] int32_t range(int32_t max) noexcept { return range(0, max); }
 
     // -----------------------------------------------------------------------
     // Dice
@@ -296,7 +296,7 @@ public:
     /// int d20   = rng.roll_die(20);  // 1..20
     /// int d100  = rng.roll_die(100); // 1..100  (percentile roll)
     /// @endcode
-    int32_t roll_die(int32_t faces) noexcept {
+    [[nodiscard]] int32_t roll_die(int32_t faces) noexcept {
         if (faces <= 1)
             return 1;
         return range(1, faces);
@@ -312,7 +312,7 @@ public:
     /// int stat  = rng.roll_dice(3, 6);   // 3d6 — classic D&D ability score
     /// int burst = rng.roll_dice(4, 8);   // 4d8 — burst fire damage
     /// @endcode
-    int32_t roll_dice(int32_t count, int32_t faces) noexcept {
+    [[nodiscard]] int32_t roll_dice(int32_t count, int32_t faces) noexcept {
         int32_t total = 0;
         for (int32_t i = 0; i < count; ++i)
             total += roll_die(faces);
@@ -352,7 +352,7 @@ public:
     /// std::string_view dmg = weapon["damage"].value_or("1d4");
     /// int damage = rng.roll(dmg);
     /// @endcode
-    int32_t roll(std::string_view expr);
+    [[nodiscard]] int32_t roll(std::string_view expr);
 
     // -----------------------------------------------------------------------
     // Weighted selection
@@ -382,10 +382,10 @@ public:
     /// size_t pick = rng.weighted_index(weights);
     /// // pick == 0 about 60% of the time, etc.
     /// @endcode
-    size_t weighted_index(std::span<const float> weights);
+    [[nodiscard]] size_t weighted_index(std::span<const float> weights);
 
     /// @brief Vector overload for weighted_index.
-    size_t weighted_index(const std::vector<float>& weights) {
+    [[nodiscard]] size_t weighted_index(const std::vector<float>& weights) {
         return weighted_index(std::span<const float>(weights));
     }
 
@@ -414,7 +414,7 @@ public:
     /// Tile t = rng.weighted_choice(tile_weights, tile_types);
     /// @endcode
     template<typename T>
-    T weighted_choice(std::span<const float> weights, std::span<const T> values) {
+    [[nodiscard]] T weighted_choice(std::span<const float> weights, std::span<const T> values) {
         if (weights.size() != values.size())
             throw std::invalid_argument("weights and values must have the same length");
         return values[weighted_index(weights)];
@@ -422,7 +422,8 @@ public:
 
     /// @brief Vector overload for weighted_choice.
     template<typename T>
-    T weighted_choice(const std::vector<float>& weights, const std::vector<T>& values) {
+    [[nodiscard]] T weighted_choice(const std::vector<float>& weights,
+                                    const std::vector<T>& values) {
         return weighted_choice(std::span<const float>(weights), std::span<const T>(values));
     }
 
@@ -479,7 +480,7 @@ public:
     /// // Randomly mirror a prefab room horizontally.
     /// if (rng.coin_flip()) room.flip_horizontal();
     /// @endcode
-    bool coin_flip() noexcept { return (next_raw() & 1u) != 0u; }
+    [[nodiscard]] bool coin_flip() noexcept { return (next_raw() & 1u) != 0u; }
 
     /// @brief Return `true` with probability 1/@p n.
     ///
@@ -495,7 +496,7 @@ public:
     /// // Each step has a 1-in-6 chance of making a noise.
     /// if (rng.one_in(6)) { alert_nearby_monsters(player_pos); }
     /// @endcode
-    bool one_in(int32_t n) noexcept { return range(1, n) == 1; }
+    [[nodiscard]] bool one_in(int32_t n) noexcept { return range(1, n) == 1; }
 
     /// @brief Return `true` with probability @p probability.
     ///
@@ -512,7 +513,7 @@ public:
     /// float hit_chance = 0.5f + attacker.level * 0.05f;
     /// if (rng.chance(hit_chance)) { land_hit(attacker, defender); }
     /// @endcode
-    bool chance(float probability) noexcept { return next_float() < probability; }
+    [[nodiscard]] bool chance(float probability) noexcept { return next_float() < probability; }
 
 private:
     uint64_t state_ = 0;

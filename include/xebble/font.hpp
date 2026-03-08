@@ -126,16 +126,16 @@ public:
     void add_glyph(uint32_t codepoint, uint32_t tile_index);
 
     /// @brief Return the tile index for a char (treats as Latin-1 codepoint).
-    std::optional<uint32_t> glyph_index(char ch) const;
+    [[nodiscard]] std::optional<uint32_t> glyph_index(char ch) const;
 
     /// @brief Return the tile index for a Unicode codepoint.
-    std::optional<uint32_t> glyph_index(uint32_t codepoint) const;
+    [[nodiscard]] std::optional<uint32_t> glyph_index(uint32_t codepoint) const;
 
-    uint32_t glyph_width() const { return glyph_width_; }
-    uint32_t glyph_height() const { return glyph_height_; }
+    [[nodiscard]] uint32_t glyph_width() const { return glyph_width_; }
+    [[nodiscard]] uint32_t glyph_height() const { return glyph_height_; }
 
     /// @brief The ordered charset string (empty for PCF fonts).
-    const std::string& charset() const { return charset_; }
+    [[nodiscard]] const std::string& charset() const { return charset_; }
 
 private:
     uint32_t glyph_width_;
@@ -198,7 +198,7 @@ public:
     /// @param glyph_width   PNG only: width of each glyph cell in pixels.
     /// @param glyph_height  PNG only: height of each glyph cell in pixels.
     /// @param charset       PNG only: ordered charset as a UTF-8 string.
-    static std::expected<BitmapFont, Error>
+    [[nodiscard]] static std::expected<BitmapFont, Error>
     load(vk::Context& ctx, const std::filesystem::path& path,
          BitmapFontFormat fmt = BitmapFontFormat::Auto, uint32_t glyph_width = 0,
          uint32_t glyph_height = 0, std::u8string_view charset = {});
@@ -208,8 +208,8 @@ public:
     /// @param sheet    The glyph atlas (moved in).
     /// @param charset  Ordered charset as a UTF-8 string; each decoded codepoint
     ///                 maps to one tile.
-    static std::expected<BitmapFont, Error> from_spritesheet(SpriteSheet sheet,
-                                                             std::u8string_view charset);
+    [[nodiscard]] static std::expected<BitmapFont, Error>
+    from_spritesheet(SpriteSheet sheet, std::u8string_view charset);
 
     /// @brief Create a bitmap font from a spritesheet and a pre-built data layer.
     ///
@@ -218,7 +218,8 @@ public:
     ///
     /// @param sheet  The glyph atlas (moved in).
     /// @param data   Pre-populated BitmapFontData (moved in).
-    static std::expected<BitmapFont, Error> from_data(SpriteSheet sheet, BitmapFontData data);
+    [[nodiscard]] static std::expected<BitmapFont, Error> from_data(SpriteSheet sheet,
+                                                                    BitmapFontData data);
 
     ~BitmapFont();
     BitmapFont(BitmapFont&&) noexcept;
@@ -227,30 +228,30 @@ public:
     BitmapFont& operator=(const BitmapFont&) = delete;
 
     /// @brief Return the spritesheet tile index for a char (Latin-1 codepoint).
-    std::optional<uint32_t> glyph_index(char ch) const;
+    [[nodiscard]] std::optional<uint32_t> glyph_index(char ch) const;
 
     /// @brief Return the spritesheet tile index for a Unicode codepoint.
-    std::optional<uint32_t> glyph_index(uint32_t codepoint) const;
+    [[nodiscard]] std::optional<uint32_t> glyph_index(uint32_t codepoint) const;
 
     /// @brief Access the underlying glyph atlas spritesheet.
-    const SpriteSheet& sheet() const;
+    [[nodiscard]] const SpriteSheet& sheet() const;
 
     /// @brief Access the pure-data font layer.
-    const BitmapFontData& data() const;
+    [[nodiscard]] const BitmapFontData& data() const;
 
-    uint32_t glyph_width() const;  ///< Width of each glyph in pixels.
-    uint32_t glyph_height() const; ///< Height of each glyph in pixels.
+    [[nodiscard]] uint32_t glyph_width() const;  ///< Width of each glyph in pixels.
+    [[nodiscard]] uint32_t glyph_height() const; ///< Height of each glyph in pixels.
 
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
     BitmapFont() = default;
 
-    static std::expected<BitmapFont, Error> load_pcf(vk::Context& ctx,
-                                                     const std::filesystem::path& path);
+    [[nodiscard]] static std::expected<BitmapFont, Error>
+    load_pcf(vk::Context& ctx, const std::filesystem::path& path);
 
-    static std::expected<BitmapFont, Error> load_bdf(vk::Context& ctx,
-                                                     const std::filesystem::path& path);
+    [[nodiscard]] static std::expected<BitmapFont, Error>
+    load_bdf(vk::Context& ctx, const std::filesystem::path& path);
 };
 
 // ---------------------------------------------------------------------------
@@ -320,8 +321,8 @@ public:
     /// @param ctx         Vulkan context.
     /// @param font_path   Path to a `.ttf` font file.
     /// @param pixel_size  Rasterization size in pixels (e.g. 12, 14, 16, 24).
-    static std::expected<Font, Error> load(vk::Context& ctx, const std::filesystem::path& font_path,
-                                           uint32_t pixel_size);
+    [[nodiscard]] static std::expected<Font, Error>
+    load(vk::Context& ctx, const std::filesystem::path& font_path, uint32_t pixel_size);
 
     /// @brief Load a PCF bitmap font as a proportional `Font`.
     ///
@@ -335,8 +336,8 @@ public:
     ///
     /// @param ctx         Vulkan context.
     /// @param font_path   Path to a `.pcf` file.
-    static std::expected<Font, Error> load_pcf(vk::Context& ctx,
-                                               const std::filesystem::path& font_path);
+    [[nodiscard]] static std::expected<Font, Error>
+    load_pcf(vk::Context& ctx, const std::filesystem::path& font_path);
 
     /// @brief Construct a `Font` from a pre-built atlas texture and glyph map.
     ///
@@ -350,10 +351,9 @@ public:
     /// @param ascender     Distance from baseline to top of cell in pixels.
     ///                     Defaults to `line_height` if omitted (safe for fonts
     ///                     without descenders).
-    static std::expected<Font, Error> from_atlas(Texture atlas,
-                                                 std::unordered_map<uint32_t, GlyphMetrics> glyphs,
-                                                 uint32_t pixel_size, float line_height,
-                                                 float ascender = 0.0f);
+    [[nodiscard]] static std::expected<Font, Error>
+    from_atlas(Texture atlas, std::unordered_map<uint32_t, GlyphMetrics> glyphs,
+               uint32_t pixel_size, float line_height, float ascender = 0.0f);
 
     /// @brief Load a BDF bitmap font as a proportional `Font`.
     ///
@@ -364,8 +364,8 @@ public:
     ///
     /// @param ctx         Vulkan context.
     /// @param font_path   Path to a `.bdf` file.
-    static std::expected<Font, Error> load_bdf(vk::Context& ctx,
-                                               const std::filesystem::path& font_path);
+    [[nodiscard]] static std::expected<Font, Error>
+    load_bdf(vk::Context& ctx, const std::filesystem::path& font_path);
 
     ~Font();
     Font(Font&&) noexcept;
@@ -376,27 +376,27 @@ public:
     /// @brief Get layout metrics for a character (Latin-1 codepoint).
     ///
     /// @return Glyph metrics, or `std::nullopt` if not present.
-    std::optional<GlyphMetrics> glyph(char ch) const;
+    [[nodiscard]] std::optional<GlyphMetrics> glyph(char ch) const;
 
     /// @brief Get layout metrics for a Unicode codepoint.
     ///
     /// @return Glyph metrics, or `std::nullopt` if not present.
-    std::optional<GlyphMetrics> glyph(uint32_t codepoint) const;
+    [[nodiscard]] std::optional<GlyphMetrics> glyph(uint32_t codepoint) const;
 
     /// @brief The GPU texture atlas holding all rasterized glyphs.
-    const Texture& texture() const;
+    [[nodiscard]] const Texture& texture() const;
 
     /// @brief The pixel size this font was rasterized at.
-    uint32_t pixel_size() const;
+    [[nodiscard]] uint32_t pixel_size() const;
 
     /// @brief Recommended line height in pixels (advance between baselines).
-    float line_height() const;
+    [[nodiscard]] float line_height() const;
 
     /// @brief Distance from the top of the cell to the baseline, in pixels.
     ///
     /// Equal to the font's ascender metric.  Use this as the vertical offset
     /// when placing glyphs: `glyph_y = cell_y + ascender() - bearing_y`.
-    float ascender() const;
+    [[nodiscard]] float ascender() const;
 
 private:
     struct Impl;

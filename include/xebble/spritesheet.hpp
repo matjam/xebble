@@ -99,9 +99,9 @@ public:
     ///     return 1;
     /// }
     /// @endcode
-    static std::expected<SpriteSheet, Error> load(vk::Context& ctx,
-                                                  const std::filesystem::path& image_path,
-                                                  uint32_t tile_width, uint32_t tile_height);
+    [[nodiscard]] static std::expected<SpriteSheet, Error>
+    load(vk::Context& ctx, const std::filesystem::path& image_path, uint32_t tile_width,
+         uint32_t tile_height);
 
     /// @brief Create a spritesheet from an already-loaded `Texture`.
     ///
@@ -111,8 +111,8 @@ public:
     /// @param texture      The atlas texture (taken by move).
     /// @param tile_width   Width of each tile in pixels.
     /// @param tile_height  Height of each tile in pixels.
-    static std::expected<SpriteSheet, Error> from_texture(Texture texture, uint32_t tile_width,
-                                                          uint32_t tile_height);
+    [[nodiscard]] static std::expected<SpriteSheet, Error>
+    from_texture(Texture texture, uint32_t tile_width, uint32_t tile_height);
 
     ~SpriteSheet();
     SpriteSheet(SpriteSheet&&) noexcept;
@@ -135,7 +135,7 @@ public:
     ///                     1, 1, 1, 1};
     /// renderer.submit_instances({&inst, 1}, sheet.texture());
     /// @endcode
-    Rect region(uint32_t index) const;
+    [[nodiscard]] Rect region(uint32_t index) const;
 
     /// @brief Get the normalised UV rect for a tile by column and row.
     ///
@@ -148,7 +148,7 @@ public:
     /// // The stone floor tile lives at column 2, row 1.
     /// Rect uv = sheet.region(2, 1);
     /// @endcode
-    Rect region(uint32_t col, uint32_t row) const;
+    [[nodiscard]] Rect region(uint32_t col, uint32_t row) const;
 
     /// @brief Calculate a UV region without needing a SpriteSheet instance.
     ///
@@ -159,22 +159,24 @@ public:
     /// @param tile_width    Tile width in pixels.
     /// @param tile_height   Tile height in pixels.
     /// @param index         Linear tile index.
-    static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height, uint32_t tile_width,
-                                 uint32_t tile_height, uint32_t index);
+    [[nodiscard]] static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height,
+                                               uint32_t tile_width, uint32_t tile_height,
+                                               uint32_t index);
 
     /// @brief Calculate a UV region by (col, row) without a SpriteSheet instance.
-    static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height, uint32_t tile_width,
-                                 uint32_t tile_height, uint32_t col, uint32_t row);
+    [[nodiscard]] static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height,
+                                               uint32_t tile_width, uint32_t tile_height,
+                                               uint32_t col, uint32_t row);
 
-    uint32_t columns() const;     ///< Number of tile columns (sheet_width / tile_width).
-    uint32_t rows() const;        ///< Number of tile rows    (sheet_height / tile_height).
-    uint32_t tile_width() const;  ///< Width of each tile in pixels.
-    uint32_t tile_height() const; ///< Height of each tile in pixels.
+    [[nodiscard]] uint32_t columns() const; ///< Number of tile columns (sheet_width / tile_width).
+    [[nodiscard]] uint32_t rows() const; ///< Number of tile rows    (sheet_height / tile_height).
+    [[nodiscard]] uint32_t tile_width() const;  ///< Width of each tile in pixels.
+    [[nodiscard]] uint32_t tile_height() const; ///< Height of each tile in pixels.
 
     /// @brief Access the underlying GPU texture.
     ///
     /// Pass `sheet.texture()` to `Renderer::submit_instances()`.
-    const Texture& texture() const;
+    [[nodiscard]] const Texture& texture() const;
 
 private:
     struct Impl;

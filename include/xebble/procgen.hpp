@@ -73,7 +73,7 @@ struct BSPNode {
     std::unique_ptr<BSPNode> right = nullptr; ///< Right/bottom child (or null for leaf).
 
     /// @brief True if this node is a leaf (no further splits).
-    bool is_leaf() const { return !left && !right; }
+    [[nodiscard]] bool is_leaf() const { return !left && !right; }
 
     /// @brief Visit every leaf node depth-first.
     template<typename Fn>
@@ -160,7 +160,7 @@ inline void bsp_split(BSPNode& node, Rng& rng, int min_size = 6) {
 /// // Smooth 5× with the classic cave threshold.
 /// for (int i = 0; i < 5; ++i) cave = cellular_step(cave, 4);
 /// @endcode
-inline Grid<bool> cellular_step(const Grid<bool>& grid, int birth_threshold = 4) {
+[[nodiscard]] inline Grid<bool> cellular_step(const Grid<bool>& grid, int birth_threshold = 4) {
     Grid<bool> result(grid.width(), grid.height(), true);
 
     for (int y = 0; y < grid.height(); ++y) {
@@ -246,8 +246,9 @@ inline void drunkard_walk(Grid<bool>& grid, IVec2 origin, int steps, Rng& rng) {
 ///     rect_for_each(r, [&](IVec2 p){ map[p] = Tile::Floor; });
 /// connect_rooms(rooms, map, rng);
 /// @endcode
-inline std::vector<IRect> place_rooms(const Grid<bool>& grid, int min_w, int max_w, int min_h,
-                                      int max_h, Rng& rng, int attempts = 30) {
+[[nodiscard]] inline std::vector<IRect> place_rooms(const Grid<bool>& grid, int min_w, int max_w,
+                                                    int min_h, int max_h, Rng& rng,
+                                                    int attempts = 30) {
     std::vector<IRect> rooms;
 
     for (int attempt = 0; attempt < attempts; ++attempt) {

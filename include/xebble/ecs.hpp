@@ -106,13 +106,13 @@ constexpr uint32_t INDEX_BITS = 20;
 constexpr uint32_t INDEX_MASK = (1u << INDEX_BITS) - 1;
 constexpr uint32_t GEN_SHIFT = INDEX_BITS;
 
-inline uint32_t entity_index(Entity e) {
+[[nodiscard]] inline uint32_t entity_index(Entity e) {
     return e.id & INDEX_MASK;
 }
-inline uint32_t entity_gen(Entity e) {
+[[nodiscard]] inline uint32_t entity_gen(Entity e) {
     return e.id >> GEN_SHIFT;
 }
-inline Entity make_entity(uint32_t index, uint32_t gen) {
+[[nodiscard]] inline Entity make_entity(uint32_t index, uint32_t gen) {
     return Entity{(gen << GEN_SHIFT) | (index & INDEX_MASK)};
 }
 } // namespace ecs_detail
@@ -156,7 +156,7 @@ public:
     }
 
     /// @brief Return true if @p e is a live entity (index and generation both match).
-    bool alive(Entity e) const {
+    [[nodiscard]] bool alive(Entity e) const {
         uint32_t idx = ecs_detail::entity_index(e);
         return idx < generation_.size() && generation_[idx] == ecs_detail::entity_gen(e);
     }
@@ -184,7 +184,7 @@ class IComponentPool {
 public:
     virtual ~IComponentPool() = default;
     virtual void remove(Entity e) = 0;
-    virtual bool has(Entity e) const = 0;
+    [[nodiscard]] virtual bool has(Entity e) const = 0;
     /// @brief Remove all entries from this pool (used by World::restore()).
     virtual void clear_all() = 0;
     /// @brief Append all entities in this pool to @p out (used by World to rebuild bitmasks).
@@ -233,18 +233,22 @@ public:
     }
 
     /// @brief Return true if entity @p e currently has this component.
-    bool has(Entity e) const override {
+    [[nodiscard]] bool has(Entity e) const override {
         uint32_t idx = ecs_detail::entity_index(e);
         return idx < sparse_.size() && sparse_[idx] != EMPTY;
     }
 
-    T& get(Entity e) { return dense_components_[sparse_[ecs_detail::entity_index(e)]]; }
-    const T& get(Entity e) const { return dense_components_[sparse_[ecs_detail::entity_index(e)]]; }
+    [[nodiscard]] T& get(Entity e) {
+        return dense_components_[sparse_[ecs_detail::entity_index(e)]];
+    }
+    [[nodiscard]] const T& get(Entity e) const {
+        return dense_components_[sparse_[ecs_detail::entity_index(e)]];
+    }
 
-    size_t size() const { return dense_entities_.size(); }
-    Entity dense_entity(size_t i) const { return dense_entities_[i]; }
-    T& dense_component(size_t i) { return dense_components_[i]; }
-    const T& dense_component(size_t i) const { return dense_components_[i]; }
+    [[nodiscard]] size_t size() const { return dense_entities_.size(); }
+    [[nodiscard]] Entity dense_entity(size_t i) const { return dense_entities_[i]; }
+    [[nodiscard]] T& dense_component(size_t i) { return dense_components_[i]; }
+    [[nodiscard]] const T& dense_component(size_t i) const { return dense_components_[i]; }
 
     /// @brief Remove all entries from this pool.
     void clear_all() override {

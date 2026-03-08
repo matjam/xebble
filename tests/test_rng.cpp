@@ -100,7 +100,7 @@ TEST(Rng, ConstructFromState) {
 TEST(Rng, SavedStateEquality) {
     Rng a(42), b(42);
     EXPECT_EQ(a.save(), b.save());
-    a.next_u32();
+    (void)a.next_u32();
     EXPECT_NE(a.save(), b.save());
 }
 
@@ -274,27 +274,27 @@ TEST(Rng, RollExprDeterministic) {
 
 TEST(Rng, RollExprEmpty_Throws) {
     Rng rng(60);
-    EXPECT_THROW(rng.roll(""), std::invalid_argument);
+    EXPECT_THROW((void)rng.roll(""), std::invalid_argument);
 }
 
 TEST(Rng, RollExprMissingD_Throws) {
     Rng rng(61);
-    EXPECT_THROW(rng.roll("3"), std::invalid_argument);
+    EXPECT_THROW((void)rng.roll("3"), std::invalid_argument);
 }
 
 TEST(Rng, RollExprMissingFaces_Throws) {
     Rng rng(62);
-    EXPECT_THROW(rng.roll("3d"), std::invalid_argument);
+    EXPECT_THROW((void)rng.roll("3d"), std::invalid_argument);
 }
 
 TEST(Rng, RollExprTrailingGarbage_Throws) {
     Rng rng(63);
-    EXPECT_THROW(rng.roll("2d6x"), std::invalid_argument);
+    EXPECT_THROW((void)rng.roll("2d6x"), std::invalid_argument);
 }
 
 TEST(Rng, RollExprMissingModValue_Throws) {
     Rng rng(64);
-    EXPECT_THROW(rng.roll("1d6+"), std::invalid_argument);
+    EXPECT_THROW((void)rng.roll("1d6+"), std::invalid_argument);
 }
 
 // ---------------------------------------------------------------------------
@@ -334,13 +334,13 @@ TEST(Rng, WeightedIndexAllZeroFallback) {
 TEST(Rng, WeightedIndexEmptyThrows) {
     Rng rng(73);
     std::vector<float> w;
-    EXPECT_THROW(rng.weighted_index(w), std::invalid_argument);
+    EXPECT_THROW((void)rng.weighted_index(w), std::invalid_argument);
 }
 
 TEST(Rng, WeightedIndexNegativeWeightThrows) {
     Rng rng(74);
     std::vector<float> w = {1.0f, -1.0f, 2.0f};
-    EXPECT_THROW(rng.weighted_index(w), std::invalid_argument);
+    EXPECT_THROW((void)rng.weighted_index(w), std::invalid_argument);
 }
 
 TEST(Rng, WeightedChoiceReturnsCorrectValue) {
@@ -356,7 +356,7 @@ TEST(Rng, WeightedChoiceSizeMismatchThrows) {
     Rng rng(81);
     std::vector<float> w = {1.0f, 2.0f};
     std::vector<int> v = {10};
-    EXPECT_THROW(rng.weighted_choice(w, v), std::invalid_argument);
+    EXPECT_THROW((void)rng.weighted_choice(w, v), std::invalid_argument);
 }
 
 // ---------------------------------------------------------------------------

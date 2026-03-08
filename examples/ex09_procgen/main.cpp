@@ -116,7 +116,7 @@ public:
         world.add_resource(GenState{});
 
         tilemap_ = std::make_shared<xebble::TileMap>(*sheet_, MAP_W, MAP_H, 1);
-        world.build_entity()
+        (void)world.build_entity()
             .with(xebble::TileMapLayer{tilemap_, 0.0f})
             .with(xebble::Position{OX, OY})
             .build();

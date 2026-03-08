@@ -220,65 +220,65 @@ public:
 
     /// @name Factory methods (used internally by Window)
     /// @{
-    static Event key_press(Key key, Modifiers mods) {
+    [[nodiscard]] static Event key_press(Key key, Modifiers mods) {
         Event e;
         e.type = EventType::KeyPress;
         e.data_ = KeyData{key, mods};
         return e;
     }
-    static Event key_release(Key key, Modifiers mods) {
+    [[nodiscard]] static Event key_release(Key key, Modifiers mods) {
         Event e;
         e.type = EventType::KeyRelease;
         e.data_ = KeyData{key, mods};
         return e;
     }
-    static Event key_repeat(Key key, Modifiers mods) {
+    [[nodiscard]] static Event key_repeat(Key key, Modifiers mods) {
         Event e;
         e.type = EventType::KeyRepeat;
         e.data_ = KeyData{key, mods};
         return e;
     }
-    static Event mouse_press(MouseButton button, Modifiers mods, Vec2 pos) {
+    [[nodiscard]] static Event mouse_press(MouseButton button, Modifiers mods, Vec2 pos) {
         Event e;
         e.type = EventType::MousePress;
         e.data_ = MouseButtonData{button, mods, pos};
         return e;
     }
-    static Event mouse_release(MouseButton button, Modifiers mods, Vec2 pos) {
+    [[nodiscard]] static Event mouse_release(MouseButton button, Modifiers mods, Vec2 pos) {
         Event e;
         e.type = EventType::MouseRelease;
         e.data_ = MouseButtonData{button, mods, pos};
         return e;
     }
-    static Event mouse_move(Vec2 pos) {
+    [[nodiscard]] static Event mouse_move(Vec2 pos) {
         Event e;
         e.type = EventType::MouseMove;
         e.data_ = MouseMoveData{pos};
         return e;
     }
-    static Event mouse_scroll(float dx, float dy) {
+    [[nodiscard]] static Event mouse_scroll(float dx, float dy) {
         Event e;
         e.type = EventType::MouseScroll;
         e.data_ = MouseScrollData{dx, dy};
         return e;
     }
-    static Event window_resize(uint32_t w, uint32_t h) {
+    [[nodiscard]] static Event window_resize(uint32_t w, uint32_t h) {
         Event e;
         e.type = EventType::WindowResize;
         e.data_ = ResizeData{w, h};
         return e;
     }
-    static Event window_focus_gained() {
+    [[nodiscard]] static Event window_focus_gained() {
         Event e;
         e.type = EventType::WindowFocusGained;
         return e;
     }
-    static Event window_focus_lost() {
+    [[nodiscard]] static Event window_focus_lost() {
         Event e;
         e.type = EventType::WindowFocusLost;
         return e;
     }
-    static Event window_close() {
+    [[nodiscard]] static Event window_close() {
         Event e;
         e.type = EventType::WindowClose;
         return e;
@@ -292,19 +292,23 @@ public:
     /// @{
 
     /// @brief Access key event data. Valid for KeyPress, KeyRelease, KeyRepeat.
-    const KeyData& key() const { return std::get<KeyData>(data_); }
+    [[nodiscard]] const KeyData& key() const { return std::get<KeyData>(data_); }
 
     /// @brief Access mouse button data. Valid for MousePress, MouseRelease.
-    const MouseButtonData& mouse_button() const { return std::get<MouseButtonData>(data_); }
+    [[nodiscard]] const MouseButtonData& mouse_button() const {
+        return std::get<MouseButtonData>(data_);
+    }
 
     /// @brief Access mouse move data. Valid for MouseMove.
-    const MouseMoveData& mouse_move() const { return std::get<MouseMoveData>(data_); }
+    [[nodiscard]] const MouseMoveData& mouse_move() const { return std::get<MouseMoveData>(data_); }
 
     /// @brief Access scroll data. Valid for MouseScroll.
-    const MouseScrollData& mouse_scroll() const { return std::get<MouseScrollData>(data_); }
+    [[nodiscard]] const MouseScrollData& mouse_scroll() const {
+        return std::get<MouseScrollData>(data_);
+    }
 
     /// @brief Access resize data. Valid for WindowResize.
-    const ResizeData& resize() const { return std::get<ResizeData>(data_); }
+    [[nodiscard]] const ResizeData& resize() const { return std::get<ResizeData>(data_); }
     /// @}
 
 private:

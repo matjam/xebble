@@ -79,7 +79,7 @@ std::expected<void, Error> transition_image_layout(VkDevice device, VkCommandPoo
 
 std::expected<Texture, Error> Texture::create_from_pixels(vk::Context& ctx, const uint8_t* pixels,
                                                           uint32_t width, uint32_t height) {
-    VkDeviceSize image_size = width * height * 4;
+    VkDeviceSize image_size = static_cast<VkDeviceSize>(width) * height * 4;
 
     // Create staging buffer
     auto staging = vk::Buffer::create(ctx.allocator(), image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,

@@ -233,7 +233,7 @@ private:
             float vx = std::cos(angle) * BOID_SPEED;
             float vy = std::sin(angle) * BOID_SPEED;
             uint32_t tile = boid_tiles[i % 6];
-            world.build_entity()
+            (void)world.build_entity()
                 .with(
                     xebble::Position{rng_.range(0, (int)VW) * 1.0f, rng_.range(0, (int)VH) * 1.0f})
                 .with(xebble::Sprite{&*sheet_, tile, 1.0f})
@@ -389,7 +389,7 @@ private:
             float angle = rng_.range(0, 628) * 0.01f;
             float spd = rng_.range(30, (int)PARTICLE_SPEED);
             float life = rng_.range(20, 70) * 0.01f;
-            world.build_entity()
+            (void)world.build_entity()
                 .with(xebble::Position{x, y})
                 .with(xebble::Sprite{&*sheet_, pixel_atlas::TILE_YELLOW, 5.0f,
                                      xebble::Color{255, 220, 80, 255}})
@@ -441,7 +441,7 @@ private:
         // One entity per palette tile, displayed along the top of the screen.
         for (uint32_t t = 0; t < pixel_atlas::NUM_TILES; ++t) {
             float x = t * (VW / pixel_atlas::NUM_TILES) + 4.0f;
-            world.build_entity()
+            (void)world.build_entity()
                 .with(xebble::Position{x, 8.0f})
                 .with(xebble::Sprite{&*sheet_, t, 10.0f})
                 .with(AtlasTicker{float(t) * 0.1f}) // staggered phase

@@ -33,13 +33,13 @@ constexpr uint32_t ATLAS_W = CHARS_PER_ROW * GLYPH_W;
 constexpr uint32_t ATLAS_H = ROWS * GLYPH_H;
 
 /// @brief Generate RGBA pixel data for the embedded font atlas.
-std::vector<uint8_t> generate_pixels();
+[[nodiscard]] std::vector<uint8_t> generate_pixels();
 
 /// @brief Get the charset string (ASCII 32-126).
-std::u8string charset();
+[[nodiscard]] std::u8string charset();
 
 /// @brief Create a BitmapFont from the embedded font data.
-std::expected<std::unique_ptr<BitmapFont>, Error> create_font(vk::Context& ctx);
+[[nodiscard]] std::expected<std::unique_ptr<BitmapFont>, Error> create_font(vk::Context& ctx);
 
 } // namespace embedded_font
 } // namespace xebble

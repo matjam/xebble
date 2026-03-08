@@ -63,7 +63,7 @@ namespace petme64 {
 ///
 /// Covers 3800+ codepoints including full Latin, box-drawing (U+2500),
 /// block elements, C64 Private Use Area graphics, and legacy symbols.
-std::expected<BitmapFont, Error> create(vk::Context& ctx);
+[[nodiscard]] std::expected<BitmapFont, Error> create(vk::Context& ctx);
 } // namespace petme64
 
 // ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ namespace petme642y {
 /// @brief Create the PetMe642Y embedded bitmap font (8×16 cells).
 ///
 /// Double-height version of PetMe64. Same codepoint coverage, taller glyphs.
-std::expected<BitmapFont, Error> create(vk::Context& ctx);
+[[nodiscard]] std::expected<BitmapFont, Error> create(vk::Context& ctx);
 } // namespace petme642y
 
 // ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ namespace berkelium64 {
 ///
 /// Variable-width pixel font with 288 codepoints covering Latin and
 /// common symbols. Use as a `Font` with per-glyph advance/bearing metrics.
-std::expected<Font, Error> create(vk::Context& ctx);
+[[nodiscard]] std::expected<Font, Error> create(vk::Context& ctx);
 } // namespace berkelium64
 
 // ---------------------------------------------------------------------------

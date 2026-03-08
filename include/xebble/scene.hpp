@@ -201,7 +201,7 @@ struct SceneTransition {
     // -----------------------------------------------------------------------
 
     /// @brief No pending transition (default state).
-    static SceneTransition none() { return {}; }
+    [[nodiscard]] static SceneTransition none() { return {}; }
 
     /// @brief Push a new scene on top of the current one.
     ///
@@ -222,8 +222,8 @@ struct SceneTransition {
     /// world.resource<SceneTransition>() =
     ///     SceneTransition::push("inventory", player_entity, DrawBelow::Yes);
     /// @endcode
-    static SceneTransition push(std::string name, std::any payload = {},
-                                DrawBelow draw_below = DrawBelow::No) {
+    [[nodiscard]] static SceneTransition push(std::string name, std::any payload = {},
+                                              DrawBelow draw_below = DrawBelow::No) {
         SceneTransition t;
         t.kind = Kind::Push;
         t.scene_name = std::move(name);
@@ -245,7 +245,7 @@ struct SceneTransition {
     /// // Close the pause menu with no payload.
     /// world.resource<SceneTransition>() = SceneTransition::pop();
     /// @endcode
-    static SceneTransition pop(std::any payload = {}) {
+    [[nodiscard]] static SceneTransition pop(std::any payload = {}) {
         SceneTransition t;
         t.kind = Kind::Pop;
         t.payload = std::move(payload);
@@ -263,7 +263,7 @@ struct SceneTransition {
     /// world.resource<SceneTransition>() =
     ///     SceneTransition::replace("game_over");
     /// @endcode
-    static SceneTransition replace(std::string name, std::any payload = {}) {
+    [[nodiscard]] static SceneTransition replace(std::string name, std::any payload = {}) {
         SceneTransition t;
         t.kind = Kind::Replace;
         t.scene_name = std::move(name);
@@ -280,7 +280,7 @@ struct SceneTransition {
     /// world.resource<SceneTransition>() =
     ///     SceneTransition::pop_to("title");
     /// @endcode
-    static SceneTransition pop_to(std::string name, std::any payload = {}) {
+    [[nodiscard]] static SceneTransition pop_to(std::string name, std::any payload = {}) {
         SceneTransition t;
         t.kind = Kind::PopTo;
         t.scene_name = std::move(name);
@@ -296,7 +296,7 @@ struct SceneTransition {
     /// world.resource<SceneTransition>() =
     ///     SceneTransition::pop_all_and_push("gameplay", chosen_seed);
     /// @endcode
-    static SceneTransition pop_all_and_push(std::string name, std::any payload = {}) {
+    [[nodiscard]] static SceneTransition pop_all_and_push(std::string name, std::any payload = {}) {
         SceneTransition t;
         t.kind = Kind::PopAllAndPush;
         t.scene_name = std::move(name);
@@ -305,7 +305,7 @@ struct SceneTransition {
     }
 
     /// @brief True if this is not the default no-op state.
-    bool pending() const { return kind != Kind::None; }
+    [[nodiscard]] bool pending() const { return kind != Kind::None; }
 };
 
 // ---------------------------------------------------------------------------
@@ -381,7 +381,7 @@ public:
     ///
     /// Called internally by `run()`. Asserts if `set_initial()` was not called
     /// or the named scene does not exist.
-    World build_initial() const {
+    [[nodiscard]] World build_initial() const {
         assert(!initial_name_.empty() && "SceneRouter: set_initial() not called");
         return build(initial_name_, initial_payload_);
     }
@@ -390,17 +390,19 @@ public:
     ///
     /// Called internally by the scene stack when processing transitions.
     /// Asserts if the scene name is not registered.
-    World build(const std::string& name, const std::any& payload = {}) const {
+    [[nodiscard]] World build(const std::string& name, const std::any& payload = {}) const {
         auto it = factories_.find(name);
         assert(it != factories_.end() && "SceneRouter: unknown scene name");
         return it->second(payload);
     }
 
     /// @brief Return true if a scene with @p name has been registered.
-    bool has_scene(const std::string& name) const { return factories_.contains(name); }
+    [[nodiscard]] bool has_scene(const std::string& name) const {
+        return factories_.contains(name);
+    }
 
     /// @brief Return the initial scene name (empty if not set).
-    const std::string& initial_name() const { return initial_name_; }
+    [[nodiscard]] const std::string& initial_name() const { return initial_name_; }
 
 private:
     std::unordered_map<std::string, Factory> factories_;
@@ -438,10 +440,10 @@ public:
     }
 
     /// @brief Return true if there are no scenes on the stack.
-    bool empty() const { return frames_.empty(); }
+    [[nodiscard]] bool empty() const { return frames_.empty(); }
 
     /// @brief Return a reference to the top-scene's World.
-    World& top_world() {
+    [[nodiscard]] World& top_world() {
         assert(!frames_.empty());
         return frames_.back().world;
     }

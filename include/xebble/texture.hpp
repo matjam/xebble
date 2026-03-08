@@ -73,7 +73,8 @@ public:
     ///     return 1;
     /// }
     /// @endcode
-    static std::expected<Texture, Error> load(vk::Context& ctx, const std::filesystem::path& path);
+    [[nodiscard]] static std::expected<Texture, Error> load(vk::Context& ctx,
+                                                            const std::filesystem::path& path);
 
     /// @brief Load a texture from in-memory encoded image data.
     ///
@@ -90,8 +91,8 @@ public:
     /// auto tex   = Texture::load_from_memory(renderer.context(),
     ///                                         bytes.data(), bytes.size());
     /// @endcode
-    static std::expected<Texture, Error> load_from_memory(vk::Context& ctx, const uint8_t* data,
-                                                          size_t size);
+    [[nodiscard]] static std::expected<Texture, Error>
+    load_from_memory(vk::Context& ctx, const uint8_t* data, size_t size);
 
     /// @brief Create an empty texture suitable for use as a render target.
     ///
@@ -104,9 +105,10 @@ public:
     /// @param height  Height in pixels.
     /// @param format  Vulkan image format (e.g. `VK_FORMAT_R8G8B8A8_UNORM`).
     /// @param usage   Additional `VkImageUsageFlags` beyond `SAMPLED | TRANSFER_DST`.
-    static std::expected<Texture, Error> create_empty(vk::Context& ctx, uint32_t width,
-                                                      uint32_t height, VkFormat format,
-                                                      VkImageUsageFlags usage = 0);
+    [[nodiscard]] static std::expected<Texture, Error> create_empty(vk::Context& ctx,
+                                                                    uint32_t width, uint32_t height,
+                                                                    VkFormat format,
+                                                                    VkImageUsageFlags usage = 0);
 
     /// @brief Create a texture from a raw RGBA pixel buffer in CPU memory.
     ///
@@ -132,8 +134,8 @@ public:
     /// auto tex = Texture::create_from_pixels(renderer.context(),
     ///                                         pixels.data(), W, H).value();
     /// @endcode
-    static std::expected<Texture, Error> create_from_pixels(vk::Context& ctx, const uint8_t* pixels,
-                                                            uint32_t width, uint32_t height);
+    [[nodiscard]] static std::expected<Texture, Error>
+    create_from_pixels(vk::Context& ctx, const uint8_t* pixels, uint32_t width, uint32_t height);
 
     ~Texture();
     Texture(Texture&&) noexcept;
@@ -141,11 +143,11 @@ public:
     Texture(const Texture&) = delete;
     Texture& operator=(const Texture&) = delete;
 
-    uint32_t width() const;         ///< Texture width in pixels.
-    uint32_t height() const;        ///< Texture height in pixels.
-    VkImage image() const;          ///< Underlying Vulkan image handle.
-    VkImageView image_view() const; ///< Image view used for sampling.
-    VkSampler sampler() const;      ///< Sampler handle (nearest-neighbor by default).
+    [[nodiscard]] uint32_t width() const;         ///< Texture width in pixels.
+    [[nodiscard]] uint32_t height() const;        ///< Texture height in pixels.
+    [[nodiscard]] VkImage image() const;          ///< Underlying Vulkan image handle.
+    [[nodiscard]] VkImageView image_view() const; ///< Image view used for sampling.
+    [[nodiscard]] VkSampler sampler() const;      ///< Sampler handle (nearest-neighbor by default).
 
 private:
     struct Impl;

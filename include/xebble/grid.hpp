@@ -127,18 +127,18 @@ struct IRect {
     /// @brief Exclusive right edge: the first column to the right of this rect.
     ///
     /// Iterating `for (int x = r.x; x < r.right(); ++x)` visits every column.
-    int32_t right() const noexcept { return x + w; }
+    [[nodiscard]] int32_t right() const noexcept { return x + w; }
 
     /// @brief Exclusive bottom edge: the first row below this rect.
     ///
     /// Iterating `for (int y = r.y; y < r.bottom(); ++y)` visits every row.
-    int32_t bottom() const noexcept { return y + h; }
+    [[nodiscard]] int32_t bottom() const noexcept { return y + h; }
 
     /// @brief True if the rectangle has positive area (w > 0 && h > 0).
     ///
     /// Use this to check whether an intersect() or rect_clamp() result is
     /// non-empty before iterating over it.
-    bool valid() const noexcept { return w > 0 && h > 0; }
+    [[nodiscard]] bool valid() const noexcept { return w > 0 && h > 0; }
 
     /// @brief True if @p pos is inside this rectangle.
     ///
@@ -150,7 +150,7 @@ struct IRect {
     /// r.contains({3, 3});   // true  — last valid cell
     /// r.contains({4, 0});   // false — right edge is excluded
     /// @endcode
-    bool contains(IVec2 pos) const noexcept {
+    [[nodiscard]] bool contains(IVec2 pos) const noexcept {
         return pos.x >= x && pos.x < right() && pos.y >= y && pos.y < bottom();
     }
 
@@ -166,7 +166,7 @@ struct IRect {
     /// IRect c{10, 10, 2, 2};
     /// IRect none = a.intersect(c);    // valid() == false — no overlap
     /// @endcode
-    IRect intersect(IRect other) const noexcept {
+    [[nodiscard]] IRect intersect(IRect other) const noexcept {
         int32_t nx = std::max(x, other.x);
         int32_t ny = std::max(y, other.y);
         int32_t nr = std::min(right(), other.right());
@@ -190,7 +190,7 @@ struct IRect {
     /// // Shrink by 1 to get an inner margin (e.g. keep monsters away from walls).
     /// IRect inner = room.expand(-1);      // {6, 6, 6, 4}
     /// @endcode
-    IRect expand(int32_t delta) const noexcept {
+    [[nodiscard]] IRect expand(int32_t delta) const noexcept {
         return {x - delta, y - delta, w + 2 * delta, h + 2 * delta};
     }
 };
@@ -268,10 +268,10 @@ public:
         assert(width > 0 && height > 0);
     }
 
-    int32_t width() const noexcept { return width_; }
-    int32_t height() const noexcept { return height_; }
+    [[nodiscard]] int32_t width() const noexcept { return width_; }
+    [[nodiscard]] int32_t height() const noexcept { return height_; }
     /// @brief Total number of cells (width * height).
-    size_t size() const noexcept { return cells_.size(); }
+    [[nodiscard]] size_t size() const noexcept { return cells_.size(); }
 
     /// @brief Return true if @p pos lies within [0, width) × [0, height).
     ///
@@ -283,7 +283,7 @@ public:
     ///     process_tile(map[click]);
     /// }
     /// @endcode
-    bool in_bounds(IVec2 pos) const noexcept {
+    [[nodiscard]] bool in_bounds(IVec2 pos) const noexcept {
         return pos.x >= 0 && pos.x < width_ && pos.y >= 0 && pos.y < height_;
     }
 
@@ -293,7 +293,7 @@ public:
     ///
     /// Useful when interfacing with renderer APIs that expect a flat array
     /// (e.g. uploading tile indices to a TileMap layer as a span).
-    size_t index_of(IVec2 pos) const noexcept {
+    [[nodiscard]] size_t index_of(IVec2 pos) const noexcept {
         return static_cast<size_t>(pos.y * width_ + pos.x);
     }
 
@@ -327,12 +327,12 @@ public:
     ///     cell->get() = Tile::Crater;
     /// }
     /// @endcode
-    std::optional<std::reference_wrapper<T>> at(IVec2 pos) noexcept {
+    [[nodiscard]] std::optional<std::reference_wrapper<T>> at(IVec2 pos) noexcept {
         if (!in_bounds(pos))
             return std::nullopt;
         return cells_[index_of(pos)];
     }
-    std::optional<std::reference_wrapper<const T>> at(IVec2 pos) const noexcept {
+    [[nodiscard]] std::optional<std::reference_wrapper<const T>> at(IVec2 pos) const noexcept {
         if (!in_bounds(pos))
             return std::nullopt;
         return cells_[index_of(pos)];
@@ -361,8 +361,8 @@ public:
     /// // ... fill indices ...
     /// tilemap.set_layer(0, std::span(indices.data(), indices.size()));
     /// @endcode
-    const T* data() const noexcept { return cells_.data(); }
-    T* data() noexcept { return cells_.data(); }
+    [[nodiscard]] const T* data() const noexcept { return cells_.data(); }
+    [[nodiscard]] T* data() noexcept { return cells_.data(); }
 
     /// @brief Iterator range over all cells in row-major order.
     ///
@@ -409,15 +409,15 @@ public:
         assert(width > 0 && height > 0);
     }
 
-    int32_t width() const noexcept { return width_; }
-    int32_t height() const noexcept { return height_; }
-    size_t size() const noexcept { return cells_.size(); }
+    [[nodiscard]] int32_t width() const noexcept { return width_; }
+    [[nodiscard]] int32_t height() const noexcept { return height_; }
+    [[nodiscard]] size_t size() const noexcept { return cells_.size(); }
 
-    bool in_bounds(IVec2 pos) const noexcept {
+    [[nodiscard]] bool in_bounds(IVec2 pos) const noexcept {
         return pos.x >= 0 && pos.x < width_ && pos.y >= 0 && pos.y < height_;
     }
 
-    size_t index_of(IVec2 pos) const noexcept {
+    [[nodiscard]] size_t index_of(IVec2 pos) const noexcept {
         return static_cast<size_t>(pos.y * width_ + pos.x);
     }
 
@@ -430,12 +430,12 @@ public:
         return reinterpret_cast<const bool&>(cells_[index_of(pos)]);
     }
 
-    std::optional<std::reference_wrapper<bool>> at(IVec2 pos) noexcept {
+    [[nodiscard]] std::optional<std::reference_wrapper<bool>> at(IVec2 pos) noexcept {
         if (!in_bounds(pos))
             return std::nullopt;
         return reinterpret_cast<bool&>(cells_[index_of(pos)]);
     }
-    std::optional<std::reference_wrapper<const bool>> at(IVec2 pos) const noexcept {
+    [[nodiscard]] std::optional<std::reference_wrapper<const bool>> at(IVec2 pos) const noexcept {
         if (!in_bounds(pos))
             return std::nullopt;
         return reinterpret_cast<const bool&>(cells_[index_of(pos)]);
@@ -445,8 +445,8 @@ public:
 
     // data() returns uint8_t* rather than bool* to avoid any aliasing issues.
     // Users relying on data() for bool grids should treat each byte as 0 or 1.
-    const uint8_t* data() const noexcept { return cells_.data(); }
-    uint8_t* data() noexcept { return cells_.data(); }
+    [[nodiscard]] const uint8_t* data() const noexcept { return cells_.data(); }
+    [[nodiscard]] uint8_t* data() noexcept { return cells_.data(); }
 
     // Iterators expose uint8_t references for performance; cast as needed.
     auto begin() noexcept { return cells_.begin(); }
@@ -498,7 +498,7 @@ private:
 ///     }
 /// }
 /// @endcode
-std::vector<IVec2> neighbors4(IVec2 pos, int32_t grid_w, int32_t grid_h);
+[[nodiscard]] std::vector<IVec2> neighbors4(IVec2 pos, int32_t grid_w, int32_t grid_h);
 
 /// @brief Return the up-to-8 neighbours (cardinal + diagonal) of @p pos that
 ///        lie within a grid of the given dimensions.
@@ -533,7 +533,7 @@ std::vector<IVec2> neighbors4(IVec2 pos, int32_t grid_w, int32_t grid_h);
 ///     return dst;
 /// }
 /// @endcode
-std::vector<IVec2> neighbors8(IVec2 pos, int32_t grid_w, int32_t grid_h);
+[[nodiscard]] std::vector<IVec2> neighbors8(IVec2 pos, int32_t grid_w, int32_t grid_h);
 
 /// @brief Grid<T> overload — deduces width and height from the grid.
 ///
@@ -543,11 +543,11 @@ std::vector<IVec2> neighbors8(IVec2 pos, int32_t grid_w, int32_t grid_h);
 /// for (IVec2 nb : neighbors8(player, map)) { ... }
 /// @endcode
 template<typename T>
-std::vector<IVec2> neighbors4(IVec2 pos, const Grid<T>& g) {
+[[nodiscard]] std::vector<IVec2> neighbors4(IVec2 pos, const Grid<T>& g) {
     return neighbors4(pos, g.width(), g.height());
 }
 template<typename T>
-std::vector<IVec2> neighbors8(IVec2 pos, const Grid<T>& g) {
+[[nodiscard]] std::vector<IVec2> neighbors8(IVec2 pos, const Grid<T>& g) {
     return neighbors8(pos, g.width(), g.height());
 }
 
@@ -590,7 +590,7 @@ std::vector<IVec2> neighbors8(IVec2 pos, const Grid<T>& g) {
 ///     }
 /// }
 /// @endcode
-std::vector<IVec2> line(IVec2 a, IVec2 b);
+[[nodiscard]] std::vector<IVec2> line(IVec2 a, IVec2 b);
 
 // ---------------------------------------------------------------------------
 // Distance metrics
@@ -614,7 +614,7 @@ std::vector<IVec2> line(IVec2 a, IVec2 b);
 /// // Check whether a monster is adjacent (including diagonals).
 /// if (dist_chebyshev(player, monster_pos) == 1) { /* adjacent */ }
 /// @endcode
-int32_t dist_chebyshev(IVec2 a, IVec2 b) noexcept;
+[[nodiscard]] int32_t dist_chebyshev(IVec2 a, IVec2 b) noexcept;
 
 /// @brief Manhattan (taxicab) distance: |dx| + |dy|.
 ///
@@ -636,7 +636,7 @@ int32_t dist_chebyshev(IVec2 a, IVec2 b) noexcept;
 /// // Warn the player when a monster is within striking range.
 /// if (dist_manhattan(player, monster_pos) <= 2) { warn("Monster nearby!"); }
 /// @endcode
-int32_t dist_manhattan(IVec2 a, IVec2 b) noexcept;
+[[nodiscard]] int32_t dist_manhattan(IVec2 a, IVec2 b) noexcept;
 
 /// @brief Euclidean (straight-line) distance, returned as a float.
 ///
@@ -660,7 +660,7 @@ int32_t dist_manhattan(IVec2 a, IVec2 b) noexcept;
 ///     }
 /// }
 /// @endcode
-float dist_euclidean(IVec2 a, IVec2 b) noexcept;
+[[nodiscard]] float dist_euclidean(IVec2 a, IVec2 b) noexcept;
 
 // ---------------------------------------------------------------------------
 // Flood fill
@@ -715,8 +715,8 @@ float dist_euclidean(IVec2 a, IVec2 b) noexcept;
 ///     /*eight_way=*/true);
 /// @endcode
 template<typename Passable>
-std::vector<IVec2> flood_fill(IVec2 origin, int32_t grid_w, int32_t grid_h, Passable&& passable,
-                              bool eight_way = false) {
+[[nodiscard]] std::vector<IVec2> flood_fill(IVec2 origin, int32_t grid_w, int32_t grid_h,
+                                            Passable&& passable, bool eight_way = false) {
     if (origin.x < 0 || origin.x >= grid_w || origin.y < 0 || origin.y >= grid_h)
         return {};
 
@@ -752,8 +752,8 @@ std::vector<IVec2> flood_fill(IVec2 origin, int32_t grid_w, int32_t grid_h, Pass
 ///     [&](IVec2 p){ return map[p] == Tile::Floor; });
 /// @endcode
 template<typename T, typename Passable>
-std::vector<IVec2> flood_fill(IVec2 origin, const Grid<T>& grid, Passable&& passable,
-                              bool eight_way = false) {
+[[nodiscard]] std::vector<IVec2> flood_fill(IVec2 origin, const Grid<T>& grid, Passable&& passable,
+                                            bool eight_way = false) {
     return flood_fill(origin, grid.width(), grid.height(), std::forward<Passable>(passable),
                       eight_way);
 }
@@ -784,7 +784,7 @@ std::vector<IVec2> flood_fill(IVec2 origin, const Grid<T>& grid, Passable&& pass
 ///     stamp_prefab(actual_area, map);
 /// }
 /// @endcode
-IRect rect_clamp(IRect r, int32_t grid_w, int32_t grid_h) noexcept;
+[[nodiscard]] IRect rect_clamp(IRect r, int32_t grid_w, int32_t grid_h) noexcept;
 
 /// @brief Grid<T> overload — deduces grid bounds from the grid object.
 ///
@@ -792,7 +792,7 @@ IRect rect_clamp(IRect r, int32_t grid_w, int32_t grid_h) noexcept;
 /// IRect safe = rect_clamp(camera_rect, map);
 /// @endcode
 template<typename T>
-IRect rect_clamp(IRect r, const Grid<T>& grid) noexcept {
+[[nodiscard]] IRect rect_clamp(IRect r, const Grid<T>& grid) noexcept {
     return rect_clamp(r, grid.width(), grid.height());
 }
 

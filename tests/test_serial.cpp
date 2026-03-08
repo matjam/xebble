@@ -152,9 +152,9 @@ TEST(Serial_RoundTrip, SingleEntitySingleComponent) {
 
 TEST(Serial_RoundTrip, MultipleEntities) {
     xebble::World src = make_world();
-    src.build_entity().with(TestPos{1.0f, 2.0f}).build();
-    src.build_entity().with(TestPos{3.0f, 4.0f}).build();
-    src.build_entity().with(TestPos{5.0f, 6.0f}).build();
+    (void)src.build_entity().with(TestPos{1.0f, 2.0f}).build();
+    (void)src.build_entity().with(TestPos{3.0f, 4.0f}).build();
+    (void)src.build_entity().with(TestPos{5.0f, 6.0f}).build();
 
     auto blob = src.snapshot();
 
@@ -177,7 +177,7 @@ TEST(Serial_RoundTrip, MultipleEntities) {
 
 TEST(Serial_RoundTrip, MultipleComponentsOnOneEntity) {
     xebble::World src = make_world();
-    src.build_entity()
+    (void)src.build_entity()
         .with(TestPos{10.0f, 20.0f})
         .with(TestHealth{15, 30})
         .with(TestTag{1})
@@ -249,8 +249,8 @@ TEST(Serial_RoundTrip, ResourceRoundTrip) {
 TEST(Serial_RoundTrip, RngStateResourceRoundTrip) {
     xebble::World src = make_world();
     xebble::Rng rng(12345u);
-    rng.next_u32(); // advance a few times
-    rng.next_u32();
+    (void)rng.next_u32(); // advance a few times
+    (void)rng.next_u32();
     xebble::RngState state = rng.save();
     src.add_serializable_resource(state);
 
@@ -271,8 +271,8 @@ TEST(Serial_RoundTrip, RngStateResourceRoundTrip) {
 TEST(Serial_RoundTrip, ComponentsAndResourcesTogether) {
     xebble::World src = make_world();
     src.add_serializable_resource(TestScore{42});
-    src.build_entity().with(TestPos{1.0f, 2.0f}).build();
-    src.build_entity().with(TestHealth{10, 20}).build();
+    (void)src.build_entity().with(TestPos{1.0f, 2.0f}).build();
+    (void)src.build_entity().with(TestHealth{10, 20}).build();
 
     auto blob = src.snapshot();
 
@@ -296,14 +296,14 @@ TEST(Serial_RoundTrip, ComponentsAndResourcesTogether) {
 TEST(Serial_RoundTrip, SecondRestoreClearsFirstRestore) {
     // Build world with 3 entities.
     xebble::World src = make_world();
-    src.build_entity().with(TestPos{1.0f, 0.0f}).build();
-    src.build_entity().with(TestPos{2.0f, 0.0f}).build();
-    src.build_entity().with(TestPos{3.0f, 0.0f}).build();
+    (void)src.build_entity().with(TestPos{1.0f, 0.0f}).build();
+    (void)src.build_entity().with(TestPos{2.0f, 0.0f}).build();
+    (void)src.build_entity().with(TestPos{3.0f, 0.0f}).build();
     auto blob3 = src.snapshot();
 
     // Snapshot a world with only 1 entity.
     xebble::World src2 = make_world();
-    src2.build_entity().with(TestPos{99.0f, 0.0f}).build();
+    (void)src2.build_entity().with(TestPos{99.0f, 0.0f}).build();
     auto blob1 = src2.snapshot();
 
     xebble::World dst = make_world();
@@ -362,7 +362,7 @@ TEST(Serial_Corrupt, WrongVersionReturnsError) {
 
 TEST(Serial_Corrupt, TruncatedBlobReturnsError) {
     xebble::World src = make_world();
-    src.build_entity().with(TestPos{1.0f, 2.0f}).build();
+    (void)src.build_entity().with(TestPos{1.0f, 2.0f}).build();
     auto blob = src.snapshot();
     blob.resize(blob.size() / 2); // truncate to half
 
@@ -380,7 +380,7 @@ TEST(Serial_Compat, UnknownPoolInBlobIsSkipped) {
     xebble::World src;
     src.register_serializable_component<TestPos>();
     src.register_serializable_component<TestHealth>();
-    src.build_entity().with(TestPos{7.0f, 8.0f}).with(TestHealth{5, 10}).build();
+    (void)src.build_entity().with(TestPos{7.0f, 8.0f}).with(TestHealth{5, 10}).build();
     auto blob = src.snapshot();
 
     // Destination does NOT register TestPos — should skip it gracefully.
@@ -404,7 +404,7 @@ TEST(Serial_Compat, UnknownPoolInBlobIsSkipped) {
 TEST(Serial_BuiltIn, PositionRoundTrip) {
     xebble::World src;
     src.register_serializable_component<xebble::Position>();
-    src.build_entity().with(xebble::Position{3.14f, 2.71f}).build();
+    (void)src.build_entity().with(xebble::Position{3.14f, 2.71f}).build();
 
     auto blob = src.snapshot();
 

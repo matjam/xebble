@@ -150,7 +150,8 @@ public:
     ///     return 1;
     /// }
     /// @endcode
-    static std::expected<Renderer, Error> create(Window& window, const RendererConfig& config);
+    [[nodiscard]] static std::expected<Renderer, Error> create(Window& window,
+                                                               const RendererConfig& config);
 
     ~Renderer();
     Renderer(Renderer&&) noexcept;
@@ -169,7 +170,7 @@ public:
     ///     renderer.end_frame();
     /// }
     /// @endcode
-    bool begin_frame();
+    [[nodiscard]] bool begin_frame();
 
     /// @brief Finish the frame — flush all batched draw commands and present.
     ///
@@ -207,7 +208,7 @@ public:
     /// @param count  Minimum number of SpriteInstance slots required.
     /// @return Pointer to the start of mapped instance memory, or nullptr
     ///         if the buffer could not be grown.
-    SpriteInstance* map_instance_buffer(uint32_t count);
+    [[nodiscard]] SpriteInstance* map_instance_buffer(uint32_t count);
 
     /// @brief Record a draw batch referencing data already written to the
     ///        instance buffer via `map_instance_buffer()`.
@@ -231,10 +232,10 @@ public:
     /// Use this to track per-frame-slot state when writing directly to
     /// instance buffers (e.g. knowing which slots need a full rewrite
     /// after a structural rebuild).
-    uint32_t current_frame_index() const;
+    [[nodiscard]] uint32_t current_frame_index() const;
 
     /// @brief Number of frame-in-flight slots (currently 2).
-    static constexpr uint32_t frames_in_flight() { return 2; }
+    [[nodiscard]] static constexpr uint32_t frames_in_flight() { return 2; }
 
     /// @brief Set the letterbox/pillarbox border colour (default black).
     ///
@@ -248,16 +249,16 @@ public:
     ///
     /// Use this for smooth animations and interpolation in `draw()` systems.
     /// Use the fixed `dt` parameter in `update()` for physics and game logic.
-    float delta_time() const;
+    [[nodiscard]] float delta_time() const;
 
     /// @brief Seconds elapsed since the renderer was created.
-    float elapsed_time() const;
+    [[nodiscard]] float elapsed_time() const;
 
     /// @brief Total number of frames rendered since creation.
-    uint64_t frame_count() const;
+    [[nodiscard]] uint64_t frame_count() const;
 
-    uint32_t virtual_width() const;  ///< Virtual framebuffer width in pixels.
-    uint32_t virtual_height() const; ///< Virtual framebuffer height in pixels.
+    [[nodiscard]] uint32_t virtual_width() const;  ///< Virtual framebuffer width in pixels.
+    [[nodiscard]] uint32_t virtual_height() const; ///< Virtual framebuffer height in pixels.
 
     /// @brief Change the virtual resolution at runtime.
     ///
@@ -298,13 +299,13 @@ public:
     ///     }
     /// }
     /// @endcode
-    Vec2 screen_to_virtual(Vec2 screen_pos) const;
+    [[nodiscard]] Vec2 screen_to_virtual(Vec2 screen_pos) const;
 
     /// @brief Access the Vulkan context for texture and spritesheet creation.
     ///
     /// Pass this to `Texture::load()`, `SpriteSheet::load()`, `Font::load()`,
     /// and `AssetManager::create()`.
-    vk::Context& context();
+    [[nodiscard]] vk::Context& context();
 
 private:
     struct Impl;

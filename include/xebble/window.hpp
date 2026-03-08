@@ -146,14 +146,14 @@ public:
     /// for (auto& m : modes)
     ///     std::cout << m.label << '\n';
     /// @endcode
-    static std::vector<DisplayMode> available_display_modes();
+    [[nodiscard]] static std::vector<DisplayMode> available_display_modes();
 
     /// @brief Create a new window and initialise GLFW if needed.
     ///
     /// @param config  Window settings.
     /// @return The window, or an `Error` if GLFW initialisation or window
     ///         creation failed (e.g. no display available).
-    static std::expected<Window, Error> create(const WindowConfig& config);
+    [[nodiscard]] static std::expected<Window, Error> create(const WindowConfig& config);
 
     ~Window();
     Window(Window&& other) noexcept;
@@ -162,7 +162,7 @@ public:
     Window& operator=(const Window&) = delete;
 
     /// @brief Return true if the OS or user has requested the window to close.
-    bool should_close() const;
+    [[nodiscard]] bool should_close() const;
 
     /// @brief Collect all pending OS events into the internal queue.
     ///
@@ -172,22 +172,22 @@ public:
     /// @brief Span of events collected during the most recent `poll_events()`.
     ///
     /// The span is invalidated by the next call to `poll_events()`.
-    std::span<const Event> events() const;
+    [[nodiscard]] std::span<const Event> events() const;
 
     /// @brief HiDPI content scale (e.g. 2.0 on Retina displays).
     ///
     /// Returns 1.0 when a `DisplayMode` was specified in `WindowConfig`
     /// (platform HiDPI scaling is disabled in that case).
-    float content_scale() const;
+    [[nodiscard]] float content_scale() const;
 
     /// @brief Framebuffer size in physical pixels.
     ///
     /// When a `DisplayMode` is active this equals the mode's pixel dimensions
     /// directly (no HiDPI multiplication).
-    std::pair<uint32_t, uint32_t> framebuffer_size() const;
+    [[nodiscard]] std::pair<uint32_t, uint32_t> framebuffer_size() const;
 
     /// @brief Window size in screen coordinates (independent of HiDPI).
-    std::pair<uint32_t, uint32_t> window_size() const;
+    [[nodiscard]] std::pair<uint32_t, uint32_t> window_size() const;
 
     /// @brief Switch to a different native-pixel display mode at runtime.
     ///
@@ -202,7 +202,7 @@ public:
     void set_display_mode(const DisplayMode& mode);
 
     /// @brief Underlying `GLFWwindow*` for Vulkan surface creation.
-    GLFWwindow* native_handle() const;
+    [[nodiscard]] GLFWwindow* native_handle() const;
 
 private:
     struct Impl;

@@ -30,8 +30,8 @@ public:
     /// @param ctx The Vulkan context (provides device, surface, queues).
     /// @param window The GLFW window (provides framebuffer extent).
     /// @param vsync Whether to use vsync (FIFO) or prefer mailbox.
-    static std::expected<Swapchain, Error> create(const Context& ctx, GLFWwindow* window,
-                                                  bool vsync);
+    [[nodiscard]] static std::expected<Swapchain, Error> create(const Context& ctx,
+                                                                GLFWwindow* window, bool vsync);
 
     ~Swapchain();
     Swapchain(Swapchain&&) noexcept;
@@ -41,7 +41,7 @@ public:
 
     /// @brief Acquire the next swapchain image. Signals the given semaphore.
     /// @return The image index, or an Error if the swapchain is out of date.
-    std::expected<uint32_t, Error> acquire_next_image(VkSemaphore signal_semaphore);
+    [[nodiscard]] std::expected<uint32_t, Error> acquire_next_image(VkSemaphore signal_semaphore);
 
     /// @brief Present the given image. Waits on the given semaphore.
     /// @return VK_SUCCESS, VK_SUBOPTIMAL_KHR, or VK_ERROR_OUT_OF_DATE_KHR.
@@ -50,11 +50,11 @@ public:
     /// @brief Recreate the swapchain (e.g. after window resize).
     std::expected<void, Error> recreate(GLFWwindow* window, bool vsync);
 
-    VkSwapchainKHR handle() const;
-    VkFormat image_format() const;
-    VkExtent2D extent() const;
-    const std::vector<VkImageView>& image_views() const;
-    uint32_t image_count() const;
+    [[nodiscard]] VkSwapchainKHR handle() const;
+    [[nodiscard]] VkFormat image_format() const;
+    [[nodiscard]] VkExtent2D extent() const;
+    [[nodiscard]] const std::vector<VkImageView>& image_views() const;
+    [[nodiscard]] uint32_t image_count() const;
 
 private:
     struct Impl;

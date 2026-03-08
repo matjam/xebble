@@ -29,7 +29,7 @@ public:
     /// @brief Create the Vulkan context from an existing GLFW window.
     /// @param window The GLFW window to create a Vulkan surface for.
     /// @return The context, or an Error if Vulkan initialization failed.
-    static std::expected<Context, Error> create(GLFWwindow* window);
+    [[nodiscard]] static std::expected<Context, Error> create(GLFWwindow* window);
 
     ~Context();
     Context(Context&&) noexcept;
@@ -37,16 +37,16 @@ public:
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
 
-    VkInstance instance() const;
-    VkPhysicalDevice physical_device() const;
-    VkDevice device() const;
-    VkQueue graphics_queue() const;
-    VkQueue present_queue() const;
-    uint32_t graphics_queue_family() const;
-    uint32_t present_queue_family() const;
-    VkSurfaceKHR surface() const;
-    VmaAllocator allocator() const;
-    VkCommandPool command_pool() const;
+    [[nodiscard]] VkInstance instance() const;
+    [[nodiscard]] VkPhysicalDevice physical_device() const;
+    [[nodiscard]] VkDevice device() const;
+    [[nodiscard]] VkQueue graphics_queue() const;
+    [[nodiscard]] VkQueue present_queue() const;
+    [[nodiscard]] uint32_t graphics_queue_family() const;
+    [[nodiscard]] uint32_t present_queue_family() const;
+    [[nodiscard]] VkSurfaceKHR surface() const;
+    [[nodiscard]] VmaAllocator allocator() const;
+    [[nodiscard]] VkCommandPool command_pool() const;
 
 private:
     struct Impl;

@@ -180,7 +180,7 @@ struct Manifest {
 /// Manifest m = parse_manifest(src);
 /// assert(m.spritesheets.count("tiles") == 1);
 /// @endcode
-Manifest parse_manifest(std::string_view toml_str);
+[[nodiscard]] Manifest parse_manifest(std::string_view toml_str);
 
 /// @brief Manages loaded assets keyed by manifest name.
 ///
@@ -251,7 +251,8 @@ public:
     /// }
     /// AssetManager assets = std::move(*result);
     /// @endcode
-    static std::expected<AssetManager, Error> create(vk::Context& ctx, const AssetConfig& config);
+    [[nodiscard]] static std::expected<AssetManager, Error> create(vk::Context& ctx,
+                                                                   const AssetConfig& config);
 
     ~AssetManager();
     AssetManager(AssetManager&&) noexcept;
@@ -281,7 +282,7 @@ public:
     /// const Font& hud = assets.get<Font>("hud");
     /// @endcode
     template<typename T>
-    const T& get(std::string_view name) const {
+    [[nodiscard]] const T& get(std::string_view name) const {
         auto it = assets_.find(std::string(name));
         auto ptr = std::static_pointer_cast<T>(it->second);
         return *ptr;
@@ -298,7 +299,7 @@ public:
     ///     // Use DLC tiles...
     /// }
     /// @endcode
-    bool has(std::string_view name) const;
+    [[nodiscard]] bool has(std::string_view name) const;
 
     /// @brief Read raw file bytes from the asset sources.
     ///
@@ -317,7 +318,7 @@ public:
     /// }
     /// Map map = Map::deserialize(*bytes);
     /// @endcode
-    std::expected<std::vector<uint8_t>, Error> read_raw(std::string_view path) const;
+    [[nodiscard]] std::expected<std::vector<uint8_t>, Error> read_raw(std::string_view path) const;
 
 private:
     struct Impl;

@@ -192,10 +192,10 @@ concept HasResourceName = requires { ResourceName<T>::value; };
 class ISerializablePool : public virtual IComponentPool {
 public:
     /// @brief Stable name key as declared in `ComponentName<T>::value`.
-    virtual std::string_view component_name() const = 0;
+    [[nodiscard]] virtual std::string_view component_name() const = 0;
 
     /// @brief Number of bytes per serialized record: sizeof(uint32_t) + sizeof(T).
-    virtual size_t bytes_per_record() const = 0;
+    [[nodiscard]] virtual size_t bytes_per_record() const = 0;
 
     /// @brief Append all (entity_slot : uint32_t, T : sizeof(T)) pairs to @p out.
     ///        Sets @p record_count_out to the number of records written.
@@ -214,8 +214,7 @@ public:
     ///        Used by World::restore() to clear stale state before re-populating.
     virtual void drain() = 0;
 
-    /// @brief Fill @p out with the dense entity handles currently in this pool.
-    virtual void enumerate_entities(std::vector<Entity>& out) const = 0;
+    // enumerate_entities() is inherited from IComponentPool (virtual base).
 };
 
 // ---------------------------------------------------------------------------
@@ -232,11 +231,13 @@ class SerializableComponentPool : public ComponentPool<T>, public ISerializableP
 public:
     // IComponentPool pure virtuals delegated to ComponentPool<T>
     void remove(Entity e) override { ComponentPool<T>::remove(e); }
-    bool has(Entity e) const override { return ComponentPool<T>::has(e); }
+    [[nodiscard]] bool has(Entity e) const override { return ComponentPool<T>::has(e); }
 
-    std::string_view component_name() const override { return ComponentName<T>::value; }
+    [[nodiscard]] std::string_view component_name() const override {
+        return ComponentName<T>::value;
+    }
 
-    size_t bytes_per_record() const override { return sizeof(uint32_t) + sizeof(T); }
+    [[nodiscard]] size_t bytes_per_record() const override { return sizeof(uint32_t) + sizeof(T); }
 
     void serialize_all(std::vector<uint8_t>& out, uint32_t& record_count_out) const override {
         record_count_out = static_cast<uint32_t>(this->size());

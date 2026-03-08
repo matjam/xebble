@@ -83,6 +83,8 @@ struct Window::Impl {
         case GLFW_REPEAT:
             impl->event_queue.push_back(Event::key_repeat(k, m));
             break;
+        default:
+            break;
         }
     }
 
@@ -99,6 +101,8 @@ struct Window::Impl {
             break;
         case GLFW_RELEASE:
             impl->event_queue.push_back(Event::mouse_release(btn, m, pos));
+            break;
+        default:
             break;
         }
     }

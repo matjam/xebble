@@ -127,10 +127,10 @@ private:
             }
         }
 
-        world.build_entity().with<xebble::TileMapLayer>({tilemap, 0.0f}).build();
+        (void)world.build_entity().with<xebble::TileMapLayer>({tilemap, 0.0f}).build();
 
         // Create player
-        world.build_entity()
+        (void)world.build_entity()
             .with<PlayerTag>({})
             .with<xebble::Position>({static_cast<float>(dg.player_start_x * TILE_SIZE),
                                      static_cast<float>(dg.player_start_y * TILE_SIZE)})
@@ -141,7 +141,7 @@ private:
         for (auto& ent : dg.entities) {
             if (!ent.is_monster)
                 continue;
-            world.build_entity()
+            (void)world.build_entity()
                 .with<xebble::Position>(
                     {static_cast<float>(ent.x * TILE_SIZE), static_cast<float>(ent.y * TILE_SIZE)})
                 .with<xebble::Sprite>({sheet_, ent.tile, 2.0f})
@@ -153,7 +153,7 @@ private:
         for (auto& ent : dg.entities) {
             if (ent.is_monster)
                 continue;
-            world.build_entity()
+            (void)world.build_entity()
                 .with<xebble::Position>(
                     {static_cast<float>(ent.x * TILE_SIZE), static_cast<float>(ent.y * TILE_SIZE)})
                 .with<xebble::Sprite>({sheet_, ent.tile, 1.0f})

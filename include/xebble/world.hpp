@@ -105,7 +105,7 @@ public:
     EntityBuilder& with(T value);
 
     /// @brief Finalise the entity and return its handle.
-    Entity build() { return entity_; }
+    [[nodiscard]] Entity build() { return entity_; }
 
 private:
     World& world_;
@@ -130,7 +130,7 @@ public:
     /// world.add<Position>(e, {0.0f, 0.0f});
     /// world.add<Sprite>(e, {&sheet, TILE_WALL});
     /// @endcode
-    Entity create_entity() {
+    [[nodiscard]] Entity create_entity() {
         Entity e = allocator_.create();
         ensure_mask_slot(ecs_detail::entity_index(e));
         return e;
@@ -145,7 +145,7 @@ public:
     ///     .with(Health{5, 5})
     ///     .build();
     /// @endcode
-    EntityBuilder build_entity() { return EntityBuilder(*this, create_entity()); }
+    [[nodiscard]] EntityBuilder build_entity() { return EntityBuilder(*this, create_entity()); }
 
     /// @brief Queue entity @p e for destruction at the end of the current tick.
     ///
@@ -161,12 +161,12 @@ public:
     void destroy(Entity e) { pending_destroy_.push_back(e); }
 
     /// @brief Return true if entity @p e is alive (not yet destroyed).
-    bool alive(Entity e) const { return allocator_.alive(e); }
+    [[nodiscard]] bool alive(Entity e) const { return allocator_.alive(e); }
 
     /// @brief Monotonically increasing counter bumped whenever the set of
     ///        entities or their components changes (add, remove, destroy, restore).
     ///        Systems can cache this value and skip work when it hasn't changed.
-    uint64_t generation() const { return generation_; }
+    [[nodiscard]] uint64_t generation() const { return generation_; }
 
     /// @brief Manually bump the generation counter to signal that component
     ///        data (not structure) has changed — e.g. after modifying Position
@@ -260,12 +260,12 @@ public:
     /// world.get<Health>(target).hp -= damage;
     /// @endcode
     template<typename T>
-    T& get(Entity e) {
+    [[nodiscard]] T& get(Entity e) {
         return get_pool<T>().get(e);
     }
 
     template<typename T>
-    const T& get(Entity e) const {
+    [[nodiscard]] const T& get(Entity e) const {
         return get_pool<T>().get(e);
     }
 
@@ -275,7 +275,7 @@ public:
     /// if (world.has<Poisoned>(e)) apply_poison_tick(world, e);
     /// @endcode
     template<typename T>
-    bool has(Entity e) const {
+    [[nodiscard]] bool has(Entity e) const {
         return test_mask_bit(ecs_detail::entity_index(e), ecs_detail::component_id<T>());
     }
 
@@ -291,12 +291,12 @@ public:
     ///     process(pool.dense_entity(i), pool.dense_component(i));
     /// @endcode
     template<typename T>
-    ComponentPool<T>& pool() {
+    [[nodiscard]] ComponentPool<T>& pool() {
         return get_pool<T>();
     }
 
     template<typename T>
-    const ComponentPool<T>& pool() const {
+    [[nodiscard]] const ComponentPool<T>& pool() const {
         return get_pool<T>();
     }
 
@@ -433,18 +433,18 @@ public:
     /// auto& evts = world.resource<EventQueue>().events;
     /// @endcode
     template<typename T>
-    T& resource() {
+    [[nodiscard]] T& resource() {
         return std::any_cast<T&>(resources_.at(ecs_detail::component_id<T>()));
     }
 
     template<typename T>
-    const T& resource() const {
+    [[nodiscard]] const T& resource() const {
         return std::any_cast<const T&>(resources_.at(ecs_detail::component_id<T>()));
     }
 
     /// @brief Return true if a resource of type T has been added.
     template<typename T>
-    bool has_resource() const {
+    [[nodiscard]] bool has_resource() const {
         return resources_.contains(ecs_detail::component_id<T>());
     }
 
@@ -517,7 +517,7 @@ public:
     /// std::ofstream f("save.bin", std::ios::binary);
     /// f.write(reinterpret_cast<const char*>(blob.data()), blob.size());
     /// @endcode
-    std::vector<uint8_t> snapshot() const;
+    [[nodiscard]] std::vector<uint8_t> snapshot() const;
 
     /// @brief Restore world state from a blob produced by `snapshot()`.
     ///
@@ -533,7 +533,7 @@ public:
     /// if (auto r = world.restore(blob); !r)
     ///     log_error(r.error().message);
     /// @endcode
-    std::expected<void, Error> restore(std::span<const uint8_t> blob);
+    [[nodiscard]] std::expected<void, Error> restore(std::span<const uint8_t> blob);
 
 private:
     template<typename T>

@@ -155,7 +155,7 @@ TEST(SceneRouter, BuildForwardsPayload) {
         return World{};
     });
     r.set_initial("scene", 7);
-    r.build_initial();
+    (void)r.build_initial();
     EXPECT_EQ(received, 7);
 }
 
