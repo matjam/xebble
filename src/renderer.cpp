@@ -810,13 +810,24 @@ void Renderer::end_frame() {
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, impl.blit_pipeline->handle());
 
-    // Calculate letterboxed viewport
+    // Calculate scaled viewport and scissor.
+    //
+    // Fit  (ScaleMode::Fit):  scale = min(sw/vw, sh/vh)
+    //   The entire virtual canvas fits inside the window; empty bars appear on
+    //   the shorter axis (letterbox / pillarbox).  Scissor covers the full
+    //   window so the border clear colour fills the bars.
+    //
+    // Crop (ScaleMode::Crop): scale = max(sw/vw, sh/vh)
+    //   The canvas fills the window; the excess on the longer axis is cropped.
+    //   The viewport is offset so the crop is symmetric (centred).  The scissor
+    //   is clamped to the window so Vulkan never writes outside the surface.
     float sw = static_cast<float>(impl.swapchain->extent().width);
     float sh = static_cast<float>(impl.swapchain->extent().height);
     float vw = static_cast<float>(impl.config.virtual_width);
     float vh = static_cast<float>(impl.config.virtual_height);
 
-    float scale = std::min(sw / vw, sh / vh);
+    const bool crop = (impl.config.scale_mode == ScaleMode::Crop);
+    float scale = crop ? std::max(sw / vw, sh / vh) : std::min(sw / vw, sh / vh);
     if (impl.config.nearest_filter) {
         scale = std::floor(scale);
         if (scale < 1.0f)
@@ -839,6 +850,8 @@ void Renderer::end_frame() {
     blit_viewport.maxDepth = 1.0f;
     vkCmdSetViewport(cmd, 0, 1, &blit_viewport);
 
+    // Scissor: in Fit mode cover the whole window (bars get the clear colour);
+    // in Crop mode clamp to the window so the overflowing viewport is clipped.
     VkRect2D blit_scissor{{0, 0}, impl.swapchain->extent()};
     vkCmdSetScissor(cmd, 0, 1, &blit_scissor);
 

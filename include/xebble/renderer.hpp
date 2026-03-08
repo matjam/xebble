@@ -2,9 +2,10 @@
 /// @brief Vulkan-backed 2D renderer with a fixed virtual resolution.
 ///
 /// The Renderer renders to an offscreen framebuffer at the configured
-/// **virtual resolution** (e.g. 320×180), then blits it to the swapchain with
-/// nearest-neighbor filtering and automatic letterboxing/pillarboxing so the
-/// pixel-art content always appears sharp regardless of window size.
+/// **virtual resolution** (e.g. 960×540 — half 1080p), then blits it to the
+/// swapchain maintaining the correct aspect ratio. The scaling behaviour is
+/// controlled by `ScaleMode`: `Fit` letterboxes/pillarboxes so the entire
+/// canvas is always visible; `Crop` fills the window and crops the edges.
 ///
 /// The internal pipeline uses two frames in flight for optimal GPU utilisation.
 /// All draw calls between `begin_frame()` and `end_frame()` are batched by
@@ -32,11 +33,12 @@
 /// renderer scales it up to the actual window at display time.
 ///
 /// @code
-/// // Configure a 320×180 virtual screen (16:9 at 2× for a 640×360 window).
+/// // Configure a 960×540 virtual screen (half 1080p, clean 2× on a 1920×1080 display).
 /// RendererConfig cfg;
-/// cfg.virtual_width  = 320;
-/// cfg.virtual_height = 180;
+/// cfg.virtual_width  = 960;
+/// cfg.virtual_height = 540;
 /// cfg.vsync          = true;
+/// cfg.scale_mode     = ScaleMode::Fit; // or ScaleMode::Crop
 /// @endcode
 ///
 /// ## Coordinate conversion
@@ -70,15 +72,40 @@ class Context;
 }
 
 // ---------------------------------------------------------------------------
+// ScaleMode
+// ---------------------------------------------------------------------------
+
+/// @brief How the virtual framebuffer is scaled to fit the window.
+///
+/// Both modes maintain the exact aspect ratio of the virtual resolution and
+/// center the image in the window. They differ only in how they handle windows
+/// whose aspect ratio does not match the virtual canvas:
+///
+/// - **Fit**  — the entire canvas is always visible; empty bars fill the gaps
+///              (letterbox or pillarbox). Safe for all content.
+/// - **Crop** — the canvas fills the entire window; edges that fall outside
+///              the window area are cropped. No bars, but some content may be
+///              invisible near the edges.
+///
+/// For pixel-art games a common approach is to use **Fit** so nothing is ever
+/// hidden, and to design the virtual canvas with a 16:9 ratio that matches the
+/// majority of modern displays.
+enum class ScaleMode {
+    Fit,  ///< Letterbox / pillarbox — entire canvas visible, bars on short sides.
+    Crop, ///< Fill window — canvas edges cropped on long sides, no bars.
+};
+
+// ---------------------------------------------------------------------------
 // RendererConfig
 // ---------------------------------------------------------------------------
 
 /// @brief Configuration for `Renderer::create()`.
 struct RendererConfig {
-    uint32_t virtual_width = 640;  ///< Virtual framebuffer width  in pixels.
-    uint32_t virtual_height = 360; ///< Virtual framebuffer height in pixels.
-    bool vsync = true;             ///< Enable vertical sync (prevents tearing).
-    bool nearest_filter = true;    ///< Nearest-neighbor blit — keeps pixels sharp.
+    uint32_t virtual_width = 960;          ///< Virtual framebuffer width  in pixels.
+    uint32_t virtual_height = 540;         ///< Virtual framebuffer height in pixels.
+    bool vsync = true;                     ///< Enable vertical sync (prevents tearing).
+    bool nearest_filter = true;            ///< Nearest-neighbor blit — keeps pixels sharp.
+    ScaleMode scale_mode = ScaleMode::Fit; ///< How to handle aspect ratio mismatch.
 };
 
 /// @brief A named resolution option (for a settings menu, for example).
