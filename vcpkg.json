@@ -20,7 +20,7 @@
     "shaderc",
     "glm",
     "tomlplusplus",
-    "minizip-ng",
+    "miniz",
     "gtest"
   ]
 }

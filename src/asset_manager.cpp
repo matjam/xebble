@@ -11,10 +11,7 @@
 #include <toml++/toml.hpp>
 
 #include <fstream>
-#include <minizip-ng/mz.h>
-#include <minizip-ng/mz_strm.h>
-#include <minizip-ng/mz_zip.h>
-#include <minizip-ng/mz_zip_rw.h>
+#include <miniz/miniz.h>
 
 namespace xebble {
 
@@ -89,52 +86,24 @@ struct AssetManager::Impl {
             return std::unexpected(Error{"No archive available"});
         }
 
-        void* reader = mz_zip_reader_create();
-        if (!reader) {
-            return std::unexpected(Error{"Failed to create ZIP reader"});
-        }
-
-        int32_t err = mz_zip_reader_open_file(reader, archive_path.string().c_str());
-        if (err != MZ_OK) {
-            mz_zip_reader_delete(&reader);
+        mz_zip_archive zip{};
+        if (mz_zip_reader_init_file(&zip, archive_path.string().c_str(), 0) == MZ_FALSE) {
             return std::unexpected(Error{"Failed to open archive: " + archive_path.string()});
         }
 
-        std::string path_str(path);
-        err = mz_zip_reader_locate_entry(reader, path_str.c_str(), 0);
-        if (err != MZ_OK) {
-            mz_zip_reader_close(reader);
-            mz_zip_reader_delete(&reader);
+        const std::string path_str(path);
+        size_t out_size = 0;
+        void* buf = mz_zip_reader_extract_file_to_heap(&zip, path_str.c_str(), &out_size, 0);
+
+        mz_zip_reader_end(&zip);
+
+        if (buf == nullptr) {
             return std::unexpected(Error{"Entry not found in archive: " + path_str});
         }
 
-        mz_zip_file* file_info = nullptr;
-        err = mz_zip_reader_entry_get_info(reader, &file_info);
-        if (err != MZ_OK || !file_info) {
-            mz_zip_reader_close(reader);
-            mz_zip_reader_delete(&reader);
-            return std::unexpected(Error{"Failed to get entry info: " + path_str});
-        }
-
-        err = mz_zip_reader_entry_open(reader);
-        if (err != MZ_OK) {
-            mz_zip_reader_close(reader);
-            mz_zip_reader_delete(&reader);
-            return std::unexpected(Error{"Failed to open entry: " + path_str});
-        }
-
-        std::vector<uint8_t> data(static_cast<size_t>(file_info->uncompressed_size));
-        int32_t bytes_read =
-            mz_zip_reader_entry_read(reader, data.data(), static_cast<int32_t>(data.size()));
-
-        mz_zip_reader_entry_close(reader);
-        mz_zip_reader_close(reader);
-        mz_zip_reader_delete(&reader);
-
-        if (bytes_read < 0 || static_cast<size_t>(bytes_read) != data.size()) {
-            return std::unexpected(Error{"Failed to read entry: " + path_str});
-        }
-
+        std::vector<uint8_t> data(static_cast<uint8_t*>(buf),
+                                  static_cast<uint8_t*>(buf) + out_size);
+        mz_free(buf);
         return data;
     }
 

@@ -45,7 +45,7 @@ target_link_libraries(xebble PUBLIC
     freetype
     glm::glm
     tomlplusplus::tomlplusplus
-    MINIZIP::minizip-ng
+    miniz::miniz
 )
 
 # stb is header-only, add include path

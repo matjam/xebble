@@ -31,7 +31,7 @@ find_package(Stb REQUIRED)
 find_package(freetype CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(tomlplusplus CONFIG REQUIRED)
-find_package(minizip-ng CONFIG REQUIRED)
+find_package(miniz CONFIG REQUIRED)
 find_package(GTest CONFIG REQUIRED)
 
 # shaderc for shader compilation
