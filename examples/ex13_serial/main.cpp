@@ -151,7 +151,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& state = world.resource<SerialState>();
         auto& ui    = world.resource<xebble::UIContext>();
 
@@ -200,6 +200,7 @@ public:
                 p.text(u8"ex13 \u2014 Serialization  |  [Esc] Quit",
                        {.color = {200, 200, 200}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 
 private:

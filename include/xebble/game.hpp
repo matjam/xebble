@@ -39,7 +39,6 @@
 ///             .archive   = "assets.zip",
 ///             .manifest  = "assets/manifest.toml",
 ///         },
-///         .fixed_timestep = 1.0f / 60.0f,
 ///     };
 ///
 ///     return xebble::run(std::move(world), cfg);
@@ -106,14 +105,12 @@ namespace xebble {
 ///         .directory = "assets",
 ///         .manifest  = "assets/manifest.toml",
 ///     },
-///     .fixed_timestep = 1.0f / 60.0f,   // 60 logic ticks per second
 /// };
 /// @endcode
 struct GameConfig {
     WindowConfig   window;                   ///< Window title, size, and display options.
     RendererConfig renderer;                 ///< Renderer capacity and pipeline settings.
     AssetConfig    assets;                   ///< Manifest, directory, and optional archive paths.
-    float fixed_timestep = 1.0f / 60.0f;   ///< Fixed update timestep in seconds (default 60 Hz).
 };
 
 /// @brief Create built-in systems and run the main game loop.
@@ -124,7 +121,7 @@ struct GameConfig {
 /// 2. Creates the `AssetManager` and loads all manifest assets.
 /// 3. Installs built-in systems (sprite batch, UI input/flush, etc.).
 /// 4. Stores the `Window`, `Renderer`, and `AssetManager` as World resources.
-/// 5. Runs the loop: poll input → fixed update(s) → draw → present.
+/// 5. Runs the loop: poll input → update(dt) → draw → present.
 /// 6. Destroys all GPU resources and closes the window on exit.
 ///
 /// @param world   ECS world pre-populated with component registrations and

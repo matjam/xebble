@@ -52,6 +52,7 @@
 
 #include <xebble/types.hpp>
 #include <xebble/texture.hpp>
+#include <xebble/window.hpp>
 #include <expected>
 #include <memory>
 #include <span>
@@ -59,7 +60,6 @@
 
 namespace xebble {
 
-class Window;
 class SpriteSheet;
 struct TileMap;
 struct TextBlock;
@@ -193,6 +193,50 @@ public:
     void submit_instances(std::span<const SpriteInstance> instances,
                           const Texture& texture, float z_order = 0.0f);
 
+    /// @brief Ensure the instance buffer can hold at least @p count instances
+    ///        and return a pointer to the mapped memory for direct writes.
+    ///
+    /// The caller writes `SpriteInstance` data directly into the returned
+    /// buffer, then calls `commit_direct_instances()` to record draw batches
+    /// and flush the written region.
+    ///
+    /// This avoids the intermediate staging vector and memcpy used by
+    /// `submit_instances()`.
+    ///
+    /// @param count  Minimum number of SpriteInstance slots required.
+    /// @return Pointer to the start of mapped instance memory, or nullptr
+    ///         if the buffer could not be grown.
+    SpriteInstance* map_instance_buffer(uint32_t count);
+
+    /// @brief Record a draw batch referencing data already written to the
+    ///        instance buffer via `map_instance_buffer()`.
+    ///
+    /// @param texture        Atlas texture to sample from.
+    /// @param z_order        Draw order — lower values are drawn first.
+    /// @param first_instance Offset (in instances, not bytes) into the buffer.
+    /// @param instance_count Number of instances in this batch.
+    void record_batch(const Texture& texture, float z_order,
+                      uint32_t first_instance, uint32_t instance_count);
+
+    /// @brief Flush the instance buffer after direct writes and mark the
+    ///        total number of instances written.
+    ///
+    /// Must be called after all `record_batch()` calls for this frame.
+    /// @param total_instances  Total number of instances written to the buffer.
+    void flush_instance_buffer(uint32_t total_instances);
+
+    /// @brief Index of the current frame-in-flight slot (0 or 1).
+    ///
+    /// Use this to track per-frame-slot state when writing directly to
+    /// instance buffers (e.g. knowing which slots need a full rewrite
+    /// after a structural rebuild).
+    uint32_t current_frame_index() const;
+
+    /// @brief Number of frame-in-flight slots (currently 2).
+    static constexpr uint32_t frames_in_flight() { return 2; }
+
+
+
     /// @brief Set the letterbox/pillarbox border colour (default black).
     ///
     /// @code
@@ -215,6 +259,30 @@ public:
 
     uint32_t virtual_width()  const;  ///< Virtual framebuffer width in pixels.
     uint32_t virtual_height() const;  ///< Virtual framebuffer height in pixels.
+
+    /// @brief Change the virtual resolution at runtime.
+    ///
+    /// The new resolution takes effect at the start of the next `begin_frame()`
+    /// call (after GPU idle + offscreen framebuffer recreation). Use this from
+    /// a settings menu to let the player choose their preferred virtual canvas.
+    ///
+    /// @code
+    /// renderer.set_virtual_resolution(320, 180);
+    /// @endcode
+    void set_virtual_resolution(uint32_t width, uint32_t height);
+
+    /// @brief Switch to a native-pixel display mode at runtime.
+    ///
+    /// Resizes the window via `Window::set_display_mode()` so the framebuffer
+    /// matches the requested pixel dimensions, then queues a virtual-resolution
+    /// update to 1920×1080 (the default logical canvas). The swapchain is
+    /// recreated automatically on the next frame from the resulting resize event.
+    ///
+    /// @code
+    /// auto modes = Window::available_display_modes();
+    /// renderer.set_display_mode(modes[0]);
+    /// @endcode
+    void set_display_mode(const DisplayMode& mode);
 
     /// @brief Convert a screen-space position to virtual pixel coordinates.
     ///

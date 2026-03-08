@@ -28,6 +28,7 @@ void World::tick_draw(Renderer& renderer) {
 }
 
 void World::flush_destroyed() {
+    bool any_destroyed = false;
     for (Entity e : pending_destroy_) {
         if (!allocator_.alive(e)) continue;
         for (auto& pool : pools_) {
@@ -35,9 +36,12 @@ void World::flush_destroyed() {
                 pool->remove(e);
             }
         }
+        clear_mask(ecs_detail::entity_index(e));
         allocator_.destroy(e);
+        any_destroyed = true;
     }
     pending_destroy_.clear();
+    if (any_destroyed) ++generation_;
 }
 
 // ---------------------------------------------------------------------------
@@ -175,6 +179,7 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
         if (pool_ptr) pool_ptr->clear_all();
     }
     allocator_.reset();
+    component_masks_.clear();
 
     // ---- Read entity table ----
     // The saved slots are the canonical indices we want restored entities to
@@ -273,6 +278,25 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
         offset += data_len;
     }
 
+    // ---- Rebuild component bitmasks ----
+    // Pools were populated by deserialize_all() which calls pool->add()
+    // directly — those calls bypass World::add<T>() and therefore don't
+    // set bitmask bits.  Rebuild the full mask from every pool.
+    {
+        std::vector<Entity> ents;
+        for (uint32_t pool_id = 0; pool_id < pools_.size(); ++pool_id) {
+            if (!pools_[pool_id]) continue;
+            ents.clear();
+            pools_[pool_id]->enumerate_entities(ents);
+            for (Entity e : ents) {
+                uint32_t slot = ecs_detail::entity_index(e);
+                ensure_mask_slot(slot);
+                set_mask_bit(slot, pool_id);
+            }
+        }
+    }
+
+    ++generation_;
     return {};
 }
 

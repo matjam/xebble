@@ -54,7 +54,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui    = world.resource<xebble::UIContext>();
         auto& state = world.resource<UIState>();
 
@@ -135,6 +135,7 @@ public:
                                 {.color = {160, 160, 160}});
                      });
         }
+        xebble::debug_overlay(world, renderer);
     }
 };
 

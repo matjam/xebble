@@ -79,7 +79,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& demo = world.resource<RngDemo>();
         auto& ui   = world.resource<xebble::UIContext>();
 
@@ -131,6 +131,7 @@ public:
                 p.text(u8"ex10 \u2014 RNG  |  [Esc] Quit",
                        {.color = {200, 200, 200}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 
 private:

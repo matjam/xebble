@@ -183,6 +183,8 @@ public:
     virtual bool has(Entity e) const = 0;
     /// @brief Remove all entries from this pool (used by World::restore()).
     virtual void clear_all() = 0;
+    /// @brief Append all entities in this pool to @p out (used by World to rebuild bitmasks).
+    virtual void enumerate_entities(std::vector<Entity>& out) const = 0;
 };
 
 /// @brief Sparse-set storage for components of type T.
@@ -243,6 +245,11 @@ public:
         sparse_.clear();
         dense_entities_.clear();
         dense_components_.clear();
+    }
+
+    /// @brief Append all entities in this pool to @p out.
+    void enumerate_entities(std::vector<Entity>& out) const override {
+        out.insert(out.end(), dense_entities_.begin(), dense_entities_.end());
     }
 
 private:

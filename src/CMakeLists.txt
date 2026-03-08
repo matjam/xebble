@@ -1,6 +1,9 @@
 add_library(xebble STATIC
     log.cpp
     window.cpp
+    $<$<PLATFORM_ID:Darwin>:window_macos.cpp>
+    $<$<PLATFORM_ID:Windows>:window_windows.cpp>
+    $<$<PLATFORM_ID:Linux>:window_linux.cpp>
     vulkan/vma_impl.cpp
     vulkan/context.cpp
     vulkan/swapchain.cpp
@@ -24,6 +27,7 @@ add_library(xebble STATIC
     embedded_berkelium64.cpp
     embedded_fonts_helpers.cpp
     ui.cpp
+    debug.cpp
     rng.cpp
     grid.cpp
     fov.cpp

@@ -94,7 +94,7 @@ public:
         if (cam.y > max_cam_y) cam.y = max_cam_y;
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& cam = world.resource<xebble::Camera>();
         auto& ui  = world.resource<xebble::UIContext>();
 
@@ -106,6 +106,7 @@ public:
                 p.text(u8"WASD / Arrow keys to scroll  |  [Esc] Quit",
                        {.color = {160, 160, 160}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

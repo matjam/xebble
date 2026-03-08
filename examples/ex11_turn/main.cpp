@@ -92,7 +92,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ts = world.resource<TurnState>();
         auto& ui = world.resource<xebble::UIContext>();
 
@@ -137,6 +137,7 @@ public:
                 for (const auto& line : ts.log)
                     p.text(std::u8string(line.begin(), line.end()), {.color = {200, 200, 200}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 
 private:

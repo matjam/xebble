@@ -178,7 +178,7 @@ public:
         // (Demonstrated via dijkstra_step once per second.)
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui = world.resource<xebble::UIContext>();
         float dist = (dmap_.in_bounds(player_pos_) &&
                       dmap_[player_pos_] < xebble::PathCostInfinity)
@@ -195,6 +195,7 @@ public:
                                    (int)path_.size(), dist);
                   p.text(std::u8string(s.begin(), s.end()), {.color = {180, 220, 180}}); }
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

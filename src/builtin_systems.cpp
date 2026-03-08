@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <vector>
 
 namespace xebble {
@@ -79,70 +80,152 @@ void TileMapRenderSystem::draw(World& world, Renderer& renderer) {
 
 void SpriteRenderSystem::draw(World& world, Renderer& renderer) {
     auto& cam = world.resource<Camera>();
-    uint32_t vw = renderer.virtual_width();
-    uint32_t vh = renderer.virtual_height();
+    float fvw = static_cast<float>(renderer.virtual_width());
+    float fvh = static_cast<float>(renderer.virtual_height());
+    uint64_t gen = world.generation();
+    uint32_t fi = renderer.current_frame_index();
 
-    // Collect visible sprites
-    struct SpriteEntry {
-        float screen_x, screen_y;
-        const SpriteSheet* sheet;
-        uint32_t tile_index;
-        float z_order;
-        Color tint;
-        float scale;
-        float rotation;
-        float pivot_x, pivot_y;
+    if (gen != last_generation_) {
+        // Structural change — full rebuild directly into GPU mapped memory.
+        rebuild(world, renderer, cam.x, cam.y, fvw, fvh);
+        last_generation_ = gen;
+        // Mark the OTHER frame slot as dirty so it gets a full write
+        // next time it's used.
+        frame_dirty_[fi] = false;
+        frame_dirty_[fi ^ 1] = true;
+    } else if (frame_dirty_[fi]) {
+        // This frame slot hasn't been written since the last rebuild.
+        // The other slot got the rebuild data — we need a full write of
+        // all instance data into this slot's buffer, then patch positions.
+        SpriteInstance* dst = renderer.map_instance_buffer(instance_count_);
+        if (!dst) return;
+
+        // Copy the full instance data from the other frame's buffer.
+        uint32_t other = fi ^ 1;
+        const auto* src = static_cast<const SpriteInstance*>(
+            renderer.map_instance_buffer(instance_count_));
+        // Can't read from the other buffer easily — it might be in use by GPU.
+        // Instead, just do a full rebuild into this buffer too.
+        rebuild(world, renderer, cam.x, cam.y, fvw, fvh);
+        frame_dirty_[fi] = false;
+    } else {
+        // Position-only frame: patch just pos_x/pos_y at stride directly
+        // into the mapped GPU buffer.
+        SpriteInstance* dst = renderer.map_instance_buffer(instance_count_);
+        if (!dst) return;
+
+        for (uint32_t i = 0; i < instance_count_; ++i) {
+            auto& pos = world.get<Position>(gpu_entities_[i]);
+            auto& spr = world.get<Sprite>(gpu_entities_[i]);
+            float tw = static_cast<float>(spr.sheet->tile_width());
+            float th = static_cast<float>(spr.sheet->tile_height());
+            dst[i].pos_x = (pos.x - cam.x) + spr.pivot_x * tw * spr.scale;
+            dst[i].pos_y = (pos.y - cam.y) + spr.pivot_y * th * spr.scale;
+        }
+
+        renderer.flush_instance_buffer(instance_count_);
+    }
+
+    if (instance_count_ == 0) return;
+
+    // Record batches (rebuild already flushed; position-only path flushed above).
+    for (auto& b : batch_runs_)
+        renderer.record_batch(*b.texture, b.z_order, b.first, b.count);
+}
+
+void SpriteRenderSystem::rebuild(World& world, Renderer& renderer,
+                                  float cam_x, float cam_y,
+                                  float fvw, float fvh) {
+    struct SortKey {
+        float          z_order;
+        const Texture* texture;
+        uint32_t       index;
     };
-    std::vector<SpriteEntry> entries;
 
-    world.each<Position, Sprite>([&](Entity, Position& pos, Sprite& spr) {
+    thread_local std::vector<SpriteInstance> instances;
+    thread_local std::vector<SortKey>       keys;
+    thread_local std::vector<Entity>        entities;
+    instances.clear();
+    keys.clear();
+    entities.clear();
+
+    world.each<Position, Sprite>([&](Entity e, Position& pos, Sprite& spr) {
         if (!spr.sheet) return;
-        float sx = pos.x - cam.x;
-        float sy = pos.y - cam.y;
+        float sx = pos.x - cam_x;
+        float sy = pos.y - cam_y;
         float tw = static_cast<float>(spr.sheet->tile_width());
         float th = static_cast<float>(spr.sheet->tile_height());
-        // Conservative cull: use scaled half-diagonal as radius so rotated
-        // sprites near the edge are never incorrectly discarded.
         float half_diag = 0.5f * std::sqrt(tw * tw + th * th) * std::abs(spr.scale);
         float cx = sx + tw * 0.5f;
         float cy = sy + th * 0.5f;
-        float fvw = static_cast<float>(vw);
-        float fvh = static_cast<float>(vh);
         if (cx + half_diag < 0 || cx - half_diag > fvw ||
             cy + half_diag < 0 || cy - half_diag > fvh)
             return;
-        entries.push_back({sx, sy, spr.sheet, spr.tile_index, spr.z_order,
-                           spr.tint, spr.scale, spr.rotation,
-                           spr.pivot_x, spr.pivot_y});
-    });
-
-    // Sort by z_order
-    std::sort(entries.begin(), entries.end(),
-              [](const auto& a, const auto& b) { return a.z_order < b.z_order; });
-
-    for (auto& e : entries) {
-        auto uv = e.sheet->region(e.tile_index);
-        float tw = static_cast<float>(e.sheet->tile_width());
-        float th = static_cast<float>(e.sheet->tile_height());
-        // pos_x/pos_y is the top-left of the unscaled tile in screen space.
-        // The shader interprets inPosition as the pivot point in world space,
-        // so we shift by pivot * tile_size to convert from top-left to pivot coords.
-        SpriteInstance inst{
-            .pos_x    = e.screen_x + e.pivot_x * tw * e.scale,
-            .pos_y    = e.screen_y + e.pivot_y * th * e.scale,
+        auto uv = spr.sheet->region(spr.tile_index);
+        auto idx = static_cast<uint32_t>(instances.size());
+        instances.push_back({
+            .pos_x    = sx + spr.pivot_x * tw * spr.scale,
+            .pos_y    = sy + spr.pivot_y * th * spr.scale,
             .uv_x = uv.x, .uv_y = uv.y, .uv_w = uv.w, .uv_h = uv.h,
             .quad_w   = tw, .quad_h = th,
-            .r = static_cast<float>(e.tint.r) / 255.0f,
-            .g = static_cast<float>(e.tint.g) / 255.0f,
-            .b = static_cast<float>(e.tint.b) / 255.0f,
-            .a = static_cast<float>(e.tint.a) / 255.0f,
-            .scale    = e.scale,
-            .rotation = e.rotation,
-            .pivot_x  = e.pivot_x,
-            .pivot_y  = e.pivot_y,
-        };
-        renderer.submit_instances({&inst, 1}, e.sheet->texture(), e.z_order);
+            .r = static_cast<float>(spr.tint.r) / 255.0f,
+            .g = static_cast<float>(spr.tint.g) / 255.0f,
+            .b = static_cast<float>(spr.tint.b) / 255.0f,
+            .a = static_cast<float>(spr.tint.a) / 255.0f,
+            .scale    = spr.scale,
+            .rotation = spr.rotation,
+            .pivot_x  = spr.pivot_x,
+            .pivot_y  = spr.pivot_y,
+        });
+        keys.push_back({spr.z_order, &spr.sheet->texture(), idx});
+        entities.push_back(e);
+    });
+
+    if (keys.empty()) {
+        gpu_entities_.clear();
+        batch_runs_.clear();
+        instance_count_ = 0;
+        return;
     }
+
+    // Sort compact keys.
+    std::sort(keys.begin(), keys.end(),
+              [](const SortKey& a, const SortKey& b) {
+                  if (a.z_order != b.z_order) return a.z_order < b.z_order;
+                  return a.texture < b.texture;
+              });
+
+    auto total = static_cast<uint32_t>(keys.size());
+
+    // Get mapped GPU buffer.
+    SpriteInstance* dst = renderer.map_instance_buffer(total);
+    if (!dst) return;
+
+    // Build sorted data directly into GPU buffer + gpu_entities_ + batch_runs_.
+    gpu_entities_.clear();
+    gpu_entities_.reserve(total);
+    batch_runs_.clear();
+
+    uint32_t write_pos = 0;
+    size_t i = 0;
+    while (i < keys.size()) {
+        size_t run_start = i;
+        const Texture* tex = keys[i].texture;
+        float z = keys[i].z_order;
+        while (i < keys.size() && keys[i].texture == tex && keys[i].z_order == z)
+            ++i;
+
+        uint32_t first = write_pos;
+        uint32_t count = static_cast<uint32_t>(i - run_start);
+        for (size_t j = run_start; j < i; ++j) {
+            dst[write_pos++] = instances[keys[j].index];
+            gpu_entities_.push_back(entities[keys[j].index]);
+        }
+        batch_runs_.push_back({tex, z, first, count});
+    }
+
+    instance_count_ = write_pos;
+    renderer.flush_instance_buffer(instance_count_);
 }
 
 } // namespace xebble

@@ -72,7 +72,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui = world.resource<xebble::UIContext>();
         ui.panel("hud", {.anchor = xebble::Anchor::Bottom, .size = {1.0f, 34}},
             [&](auto& p) {
@@ -81,6 +81,7 @@ public:
                 p.text(u8"A rainbow-tinted sprite bobbing with a sine wave.",
                        {.color = {160, 160, 160}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

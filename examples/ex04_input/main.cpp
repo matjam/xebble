@@ -115,7 +115,7 @@ public:
         spr.tint.a = alpha;
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui    = world.resource<xebble::UIContext>();
         auto& state = world.resource<InputState>();
         auto& pos   = world.get<xebble::Position>(player_);
@@ -130,6 +130,7 @@ public:
                 { auto s = std::format("Key: {}   Mouse: {}", state.last_key, state.last_mouse);
                   p.text(std::u8string(s.begin(), s.end()), {.color = {180, 180, 220}}); }
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

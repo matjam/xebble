@@ -48,6 +48,7 @@
 #include <expected>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <utility>
@@ -58,25 +59,63 @@ struct GLFWwindow;
 namespace xebble {
 
 // ---------------------------------------------------------------------------
+// DisplayMode
+//
+// A native hardware display mode expressed in physical pixels.
+// Enumerated by Window::available_display_modes() using platform-specific
+// APIs (CoreGraphics on macOS, EnumDisplaySettingsEx on Windows,
+// XRandR / wl_output on Linux).
+// ---------------------------------------------------------------------------
+
+/// @brief A native hardware display mode expressed in physical pixels.
+///
+/// Use `Window::available_display_modes()` to enumerate available modes and
+/// `Window::set_display_mode()` to switch at runtime.
+///
+/// On macOS pixel dimensions are obtained from `CGDisplayModeGetPixelWidth/Height()`
+/// so they always reflect the true hardware pixel count with no HiDPI scaling.
+struct DisplayMode {
+    uint32_t    pixel_width;   ///< Native pixel width.
+    uint32_t    pixel_height;  ///< Native pixel height.
+    std::string label;         ///< Human-readable, e.g. "1920x1080".
+};
+
+// ---------------------------------------------------------------------------
 // WindowConfig
 // ---------------------------------------------------------------------------
 
 /// @brief Configuration passed to `Window::create()`.
 ///
 /// @code
+/// // Traditional screen-coordinate window:
 /// WindowConfig cfg;
-/// cfg.title      = "Dungeon Explorer";
-/// cfg.width      = 1280;
-/// cfg.height     = 720;
-/// cfg.resizable  = true;   // allow the user to resize
-/// cfg.fullscreen = false;  // start windowed
+/// cfg.title  = "Dungeon Explorer";
+/// cfg.width  = 1280;
+/// cfg.height = 720;
+/// @endcode
+///
+/// A native-pixel display mode can be selected for a 1:1 framebuffer with
+/// no HiDPI scaling (macOS: disables `GLFW_COCOA_RETINA_FRAMEBUFFER`):
+///
+/// @code
+/// auto modes = Window::available_display_modes();
+/// WindowConfig cfg;
+/// cfg.title        = "Dungeon Explorer";
+/// cfg.display_mode = modes[0];
 /// @endcode
 struct WindowConfig {
     std::string title      = "Xebble";  ///< Title bar text.
-    uint32_t    width      = 1280;      ///< Initial width in screen coordinates (not pixels).
-    uint32_t    height     = 720;       ///< Initial height in screen coordinates.
+    uint32_t    width      = 1280;      ///< Initial width in screen coordinates (ignored when display_mode is set).
+    uint32_t    height     = 720;       ///< Initial height in screen coordinates (ignored when display_mode is set).
     bool        resizable  = true;      ///< Whether the user can resize the window.
     bool        fullscreen = false;     ///< Start in fullscreen mode.
+
+    /// @brief Optional native-pixel display mode.
+    ///
+    /// When set the window is sized to exactly these pixel dimensions with
+    /// platform HiDPI scaling disabled, giving `framebuffer_size() == pixel_width x pixel_height`.
+    /// `width` and `height` are ignored when this is populated.
+    std::optional<DisplayMode> display_mode;
 };
 
 // ---------------------------------------------------------------------------
@@ -90,19 +129,27 @@ struct WindowConfig {
 /// span that is valid until the next `poll_events()` call.
 class Window {
 public:
+    /// @brief Enumerate all native display modes for the primary monitor.
+    ///
+    /// Uses platform-specific APIs to obtain true hardware pixel dimensions:
+    /// - macOS: `CGDisplayCopyAllDisplayModes()` / `CGDisplayModeGetPixelWidth/Height()`
+    /// - Windows: `EnumDisplaySettingsEx()` (not yet implemented)
+    /// - Linux: XRandR / wl_output (not yet implemented)
+    ///
+    /// Modes are returned in descending order of pixel area (largest first).
+    ///
+    /// @code
+    /// auto modes = Window::available_display_modes();
+    /// for (auto& m : modes)
+    ///     std::cout << m.label << '\n';
+    /// @endcode
+    static std::vector<DisplayMode> available_display_modes();
+
     /// @brief Create a new window and initialise GLFW if needed.
     ///
     /// @param config  Window settings.
     /// @return The window, or an `Error` if GLFW initialisation or window
     ///         creation failed (e.g. no display available).
-    ///
-    /// @code
-    /// auto win = Window::create({.title = "My Game", .width = 1280, .height = 720});
-    /// if (!win) {
-    ///     std::cerr << "Window creation failed: " << win.error().message << '\n';
-    ///     return 1;
-    /// }
-    /// @endcode
     static std::expected<Window, Error> create(const WindowConfig& config);
 
     ~Window();
@@ -112,53 +159,46 @@ public:
     Window& operator=(const Window&) = delete;
 
     /// @brief Return true if the OS or user has requested the window to close.
-    ///
-    /// Check this in your game loop; when true, exit cleanly.
-    ///
-    /// @code
-    /// while (!window.should_close()) {
-    ///     window.poll_events();
-    ///     // ... update and draw ...
-    /// }
-    /// @endcode
     bool should_close() const;
 
     /// @brief Collect all pending OS events into the internal queue.
     ///
-    /// Must be called once per frame before reading `events()`. Clears the
-    /// previous frame's events first.
+    /// Must be called once per frame before reading `events()`.
     void poll_events();
 
     /// @brief Span of events collected during the most recent `poll_events()`.
     ///
     /// The span is invalidated by the next call to `poll_events()`.
-    ///
-    /// @code
-    /// window.poll_events();
-    /// for (const Event& e : window.events()) {
-    ///     // handle e ...
-    /// }
-    /// @endcode
     std::span<const Event> events() const;
 
-    /// @brief HiDPI content scale (e.g. 2.0 on Retina/HiDPI displays).
+    /// @brief HiDPI content scale (e.g. 2.0 on Retina displays).
     ///
-    /// The renderer uses this to size its swapchain correctly. You rarely
-    /// need this directly unless writing custom Vulkan code.
+    /// Returns 1.0 when a `DisplayMode` was specified in `WindowConfig`
+    /// (platform HiDPI scaling is disabled in that case).
     float content_scale() const;
 
-    /// @brief Framebuffer size in physical pixels (affected by content scale).
+    /// @brief Framebuffer size in physical pixels.
     ///
-    /// On a Retina display a 1280×720 window will have a 2560×1440 framebuffer.
+    /// When a `DisplayMode` is active this equals the mode's pixel dimensions
+    /// directly (no HiDPI multiplication).
     std::pair<uint32_t, uint32_t> framebuffer_size() const;
 
     /// @brief Window size in screen coordinates (independent of HiDPI).
     std::pair<uint32_t, uint32_t> window_size() const;
 
-    /// @brief Underlying `GLFWwindow*` for Vulkan surface creation.
+    /// @brief Switch to a different native-pixel display mode at runtime.
     ///
-    /// Used internally by `Renderer::create()`. Only needed if you are
-    /// creating your own Vulkan surface.
+    /// Resizes the window so its framebuffer matches the requested pixel
+    /// dimensions exactly. The renderer's swapchain will be recreated
+    /// automatically on the next frame via the resulting resize event.
+    ///
+    /// @code
+    /// auto modes = Window::available_display_modes();
+    /// window.set_display_mode(modes[1]);
+    /// @endcode
+    void set_display_mode(const DisplayMode& mode);
+
+    /// @brief Underlying `GLFWwindow*` for Vulkan surface creation.
     GLFWwindow* native_handle() const;
 
 private:

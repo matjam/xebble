@@ -102,9 +102,8 @@ public:
 
     /// @brief Called each fixed-timestep tick for game logic updates.
     ///
-    /// @p dt is the fixed timestep duration in seconds (set by
-    /// `GameConfig::fixed_timestep`, default 1/60 s). Do not use wall-clock
-    /// time for physics or AI — always use @p dt.
+    /// @p dt is the elapsed time since the last frame in seconds. Use this
+    /// value (not wall-clock time) for all movement and time-dependent logic.
     ///
     /// @code
     /// void update(World& world, float dt) override {

@@ -40,6 +40,18 @@ public:
     /// @param size Number of bytes to copy.
     void upload(const void* data, VkDeviceSize size);
 
+    /// @brief Return the persistently mapped pointer for direct writes.
+    ///
+    /// Only valid for host-visible buffers created with
+    /// VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT.
+    /// Caller is responsible for calling flush() after writing.
+    void* mapped_ptr() const;
+
+    /// @brief Flush a range of the buffer to make writes visible to the GPU.
+    /// @param offset Byte offset from the start of the buffer.
+    /// @param size Number of bytes to flush.
+    void flush(VkDeviceSize offset, VkDeviceSize size);
+
     VkBuffer handle() const;
     VkDeviceSize size() const;
 

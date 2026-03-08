@@ -147,7 +147,7 @@ public:
     }
 
     // -----------------------------------------------------------------------
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui = world.resource<xebble::UIContext>();
         ui.panel("hud", {.anchor = xebble::Anchor::Bottom, .size = {1.0f, 34}},
             [&](auto& p) {
@@ -159,6 +159,7 @@ public:
                     u8"Boids=200  Parallax=3 layers  Particles  Atlas ticker  |  [Esc] Quit",
                     {.color = {150, 150, 150}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 
 private:

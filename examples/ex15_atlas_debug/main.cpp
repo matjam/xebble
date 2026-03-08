@@ -152,6 +152,7 @@ public:
             { auto s = std::format("ASCENDER=7  LINE_HEIGHT=9  time={:.1f}s", time_);
               p.text(std::u8string(s.begin(), s.end()), {.color = {150, 150, 150}}); }
         });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

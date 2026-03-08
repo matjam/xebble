@@ -261,6 +261,7 @@ public:
             if (!state.message.empty())
                 p.text(state.message, {.color = {200, 200, 200}});
         });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

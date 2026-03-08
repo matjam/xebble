@@ -137,19 +137,14 @@ int run(World world, const GameConfig& config) {
     if (!inject_and_init(world, *h.renderer, *h.assets, shared_font))
         return 1;
 
-    float accumulator = 0.0f;
     while (!h.window->should_close()) {
         h.window->poll_events();
         auto raw = h.window->events();
         world.resource<EventQueue>().events.assign(raw.begin(), raw.end());
 
-        accumulator += h.renderer->delta_time();
-        while (accumulator >= config.fixed_timestep) {
-            world.tick_update(config.fixed_timestep);
-            accumulator -= config.fixed_timestep;
-        }
-
         if (h.renderer->begin_frame()) {
+            float dt = h.renderer->delta_time();
+            world.tick_update(dt);
             world.tick_draw(*h.renderer);
             h.renderer->end_frame();
         }
@@ -191,26 +186,22 @@ int run(SceneRouter router, const GameConfig& config) {
     });
     if (!init_ok) return 1;
 
-    float accumulator = 0.0f;
     while (!h.window->should_close() && !stack.empty()) {
         h.window->poll_events();
         auto raw = h.window->events();
         stack.top_world().resource<EventQueue>().events.assign(raw.begin(), raw.end());
 
-        accumulator += h.renderer->delta_time();
-        while (accumulator >= config.fixed_timestep) {
-            stack.tick_update(config.fixed_timestep);
-            // Apply any pending transition after the fixed tick.
+        if (!stack.empty() && h.renderer->begin_frame()) {
+            float dt = h.renderer->delta_time();
+            stack.tick_update(dt);
+            // Apply any pending transition after the tick.
             stack.apply_transition([&](World& w) {
                 if (!injector(w)) init_ok = false;
             });
             if (!init_ok) return 1;
-            accumulator -= config.fixed_timestep;
-            if (stack.empty()) break;
-        }
-
-        if (!stack.empty() && h.renderer->begin_frame()) {
-            stack.tick_draw(*h.renderer);
+            if (!stack.empty()) {
+                stack.tick_draw(*h.renderer);
+            }
             h.renderer->end_frame();
         }
     }

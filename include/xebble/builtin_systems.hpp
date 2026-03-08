@@ -37,9 +37,16 @@
 /// | 50.0+         | HUD and UI overlays |
 #pragma once
 
+#include <xebble/ecs.hpp>
+#include <xebble/renderer.hpp>
 #include <xebble/system.hpp>
 
+#include <cstdint>
+#include <vector>
+
 namespace xebble {
+
+class Texture;
 
 /// @brief Renders all entities that have a `TileMapLayer` component.
 ///
@@ -107,6 +114,37 @@ class SpriteRenderSystem : public System {
 public:
     /// @brief Submit all Position+Sprite entities to the renderer.
     void draw(World& world, Renderer& renderer) override;
+
+private:
+    /// Batch metadata for submitting a contiguous run of instances.
+    struct BatchRun {
+        const Texture* texture = nullptr;
+        float          z_order = 0.0f;
+        uint32_t       first   = 0;
+        uint32_t       count   = 0;
+    };
+
+    /// World::generation() at the time the sorted order was last rebuilt.
+    uint64_t last_generation_ = UINT64_MAX;
+
+    /// Parallel array: maps each GPU buffer slot to the entity handle so
+    /// we can look up Position for position-only patching.
+    std::vector<Entity>    gpu_entities_;
+
+    /// Batch runs (same (texture, z_order) group).
+    std::vector<BatchRun>  batch_runs_;
+
+    /// Per frame-slot: true if this slot's buffer needs a full rewrite
+    /// (either first use or the other slot was rebuilt since last use).
+    bool frame_dirty_[2] = {true, true};
+
+    /// Number of instances last written.
+    uint32_t instance_count_ = 0;
+
+    /// Full rebuild: iterate Position+Sprite, compute all fields, sort,
+    /// write directly to the mapped GPU buffer.
+    void rebuild(World& world, Renderer& renderer,
+                 float cam_x, float cam_y, float fvw, float fvh);
 };
 
 } // namespace xebble

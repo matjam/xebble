@@ -94,7 +94,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ls = world.resource<LogState>();
         auto& ui = world.resource<xebble::UIContext>();
 
@@ -151,6 +151,7 @@ public:
                                    ls.auto_spam ? "AUTO-SPAM ON" : "auto-spam off");
                   p.text(std::u8string(s.begin(), s.end()), {.color = {200, 200, 200}}); }
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

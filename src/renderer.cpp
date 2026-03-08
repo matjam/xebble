@@ -26,13 +26,16 @@
 namespace xebble {
 
 static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-static constexpr uint32_t MAX_INSTANCES_PER_BATCH = 65536;
+static constexpr uint32_t INITIAL_INSTANCE_CAPACITY = 65536;
 
-/// @brief A batch of sprite instances sharing the same texture.
+/// @brief Metadata for a batch of sprite instances sharing the same texture.
+/// Instance data lives in Impl::staging_instances; this struct just records
+/// the range [first_instance, first_instance + instance_count).
 struct DrawBatch {
     const Texture* texture = nullptr;
     float z_order = 0.0f;
-    std::vector<SpriteInstance> instances;
+    uint32_t first_instance = 0;
+    uint32_t instance_count = 0;
 };
 
 struct Renderer::Impl {
@@ -43,10 +46,12 @@ struct Renderer::Impl {
     std::optional<vk::Context> context;
     std::optional<vk::Swapchain> swapchain;
 
-    // Offscreen framebuffer
-    std::optional<Texture> offscreen_texture;
+    // Offscreen framebuffers — one per frame in flight so that frame N's blit
+    // (which samples the offscreen texture) cannot race with frame N+1's
+    // offscreen render pass (which writes to it).
+    std::vector<std::optional<Texture>> offscreen_textures;
     VkRenderPass offscreen_render_pass = VK_NULL_HANDLE;
-    VkFramebuffer offscreen_framebuffer = VK_NULL_HANDLE;
+    std::vector<VkFramebuffer> offscreen_framebuffers;
 
     // Swapchain framebuffers
     VkRenderPass swapchain_render_pass = VK_NULL_HANDLE;
@@ -60,8 +65,8 @@ struct Renderer::Impl {
     VkDescriptorSetLayout texture_layout = VK_NULL_HANDLE;
     std::optional<vk::DescriptorPool> descriptor_pool;
 
-    // Offscreen descriptor set (for blit)
-    VkDescriptorSet offscreen_descriptor = VK_NULL_HANDLE;
+    // Offscreen descriptor sets (for blit) — one per frame in flight.
+    std::vector<VkDescriptorSet> offscreen_descriptors;
 
     // Per-frame sync
     std::vector<VkCommandBuffer> command_buffers;
@@ -69,13 +74,22 @@ struct Renderer::Impl {
     std::vector<VkSemaphore> render_finished_semaphores;
     std::vector<VkFence> in_flight_fences;
 
-    // Per-frame instance buffers
+    // Per-swapchain-image: which frame-slot fence last targeted this image.
+    // Prevents a second frame slot from writing to a swapchain image that is
+    // still being rendered to by the other frame slot.
+    std::vector<VkFence> images_in_flight;
+
+    // Per-frame instance buffers (grow on demand)
     std::vector<vk::Buffer> instance_buffers;
+    uint32_t instance_capacity = INITIAL_INSTANCE_CAPACITY;  // current capacity per buffer
 
     // Draw state
     uint32_t current_frame = 0;
     uint32_t current_image_index = 0;
-    std::vector<DrawBatch> batches;
+    std::vector<DrawBatch> batches;          // direct-write batches (absolute offsets)
+    std::vector<DrawBatch> staging_batches;  // submit_instances batches (staging-relative offsets)
+    std::vector<SpriteInstance> staging_instances;  // flat buffer for submit_instances() path
+    uint32_t direct_write_count_ = 0;  // non-zero when map_instance_buffer() was used this frame
 
     // Texture descriptor cache
     std::unordered_map<VkImageView, VkDescriptorSet> texture_descriptors;
@@ -96,14 +110,17 @@ struct Renderer::Impl {
     float blit_offset_x = 0.0f;
     float blit_offset_y = 0.0f;
 
+    // Pending virtual resolution change (applied at next begin_frame)
+    std::optional<std::pair<uint32_t, uint32_t>> pending_virtual_resolution;
+
     ~Impl() {
         if (!context || !context->device()) return;
         vkDeviceWaitIdle(context->device());
 
         for (auto fb : swapchain_framebuffers)
             vkDestroyFramebuffer(context->device(), fb, nullptr);
-        if (offscreen_framebuffer)
-            vkDestroyFramebuffer(context->device(), offscreen_framebuffer, nullptr);
+        for (auto fb : offscreen_framebuffers)
+            if (fb) vkDestroyFramebuffer(context->device(), fb, nullptr);
         if (offscreen_render_pass)
             vkDestroyRenderPass(context->device(), offscreen_render_pass, nullptr);
         if (swapchain_render_pass)
@@ -155,13 +172,35 @@ struct Renderer::Impl {
             subpass.colorAttachmentCount = 1;
             subpass.pColorAttachments = &ref;
 
-            VkSubpassDependency dep{};
-            dep.srcSubpass = VK_SUBPASS_EXTERNAL;
-            dep.dstSubpass = 0;
-            dep.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            dep.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            dep.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            // Two dependencies:
+            //
+            // dep[0] — entry: wait for the previous frame's blit pass fragment
+            //   shader to finish reading the texture before we start writing to
+            //   it again as a colour attachment.
+            //
+            // dep[1] — exit: ensure the colour attachment write and the
+            //   implicit SHADER_READ_ONLY_OPTIMAL layout transition are both
+            //   complete and visible to the blit pass fragment shader that
+            //   samples this texture in the very next render pass.  Without
+            //   this dependency the blit can start sampling before the
+            //   transition is done, producing garbage rectangles.
+            VkSubpassDependency deps[2]{};
+
+            deps[0].srcSubpass    = VK_SUBPASS_EXTERNAL;
+            deps[0].dstSubpass    = 0;
+            deps[0].srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            deps[0].dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            deps[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            deps[0].dependencyFlags = 0;
+
+            deps[1].srcSubpass    = 0;
+            deps[1].dstSubpass    = VK_SUBPASS_EXTERNAL;
+            deps[1].srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            deps[1].dstStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            deps[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            deps[1].dependencyFlags = 0;
 
             VkRenderPassCreateInfo ci{};
             ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -169,8 +208,8 @@ struct Renderer::Impl {
             ci.pAttachments = &attach;
             ci.subpassCount = 1;
             ci.pSubpasses = &subpass;
-            ci.dependencyCount = 1;
-            ci.pDependencies = &dep;
+            ci.dependencyCount = 2;
+            ci.pDependencies = deps;
 
             if (vkCreateRenderPass(context->device(), &ci, nullptr, &offscreen_render_pass) != VK_SUCCESS) {
                 return std::unexpected(Error{"Failed to create offscreen render pass"});
@@ -223,19 +262,30 @@ struct Renderer::Impl {
         return {};
     }
 
-    std::expected<void, Error> create_offscreen_framebuffer() {
-        VkImageView view = offscreen_texture->image_view();
-        VkFramebufferCreateInfo ci{};
-        ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        ci.renderPass = offscreen_render_pass;
-        ci.attachmentCount = 1;
-        ci.pAttachments = &view;
-        ci.width = config.virtual_width;
-        ci.height = config.virtual_height;
-        ci.layers = 1;
+    std::expected<void, Error> create_offscreen_framebuffers() {
+        offscreen_textures.resize(MAX_FRAMES_IN_FLIGHT);
+        offscreen_framebuffers.resize(MAX_FRAMES_IN_FLIGHT, VK_NULL_HANDLE);
+        offscreen_descriptors.resize(MAX_FRAMES_IN_FLIGHT, VK_NULL_HANDLE);
 
-        if (vkCreateFramebuffer(context->device(), &ci, nullptr, &offscreen_framebuffer) != VK_SUCCESS) {
-            return std::unexpected(Error{"Failed to create offscreen framebuffer"});
+        for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            auto tex = Texture::create_empty(*context, config.virtual_width, config.virtual_height,
+                VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            if (!tex) return std::unexpected(tex.error());
+            offscreen_textures[i].emplace(std::move(*tex));
+
+            VkImageView view = offscreen_textures[i]->image_view();
+            VkFramebufferCreateInfo ci{};
+            ci.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            ci.renderPass = offscreen_render_pass;
+            ci.attachmentCount = 1;
+            ci.pAttachments = &view;
+            ci.width = config.virtual_width;
+            ci.height = config.virtual_height;
+            ci.layers = 1;
+
+            if (vkCreateFramebuffer(context->device(), &ci, nullptr, &offscreen_framebuffers[i]) != VK_SUCCESS) {
+                return std::unexpected(Error{"Failed to create offscreen framebuffer"});
+            }
         }
         return {};
     }
@@ -245,6 +295,7 @@ struct Renderer::Impl {
             vkDestroyFramebuffer(context->device(), fb, nullptr);
 
         swapchain_framebuffers.resize(swapchain->image_count());
+        images_in_flight.assign(swapchain->image_count(), VK_NULL_HANDLE);
         for (uint32_t i = 0; i < swapchain->image_count(); i++) {
             VkImageView view = swapchain->image_views()[i];
             VkFramebufferCreateInfo ci{};
@@ -260,6 +311,41 @@ struct Renderer::Impl {
                 return std::unexpected(Error{"Failed to create swapchain framebuffer"});
             }
         }
+        return {};
+    }
+
+    std::expected<void, Error> recreate_offscreen(uint32_t new_w, uint32_t new_h) {
+        vkDeviceWaitIdle(context->device());
+
+        // Destroy old offscreen resources for all frame slots
+        for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            if (i < offscreen_framebuffers.size() && offscreen_framebuffers[i]) {
+                vkDestroyFramebuffer(context->device(), offscreen_framebuffers[i], nullptr);
+                offscreen_framebuffers[i] = VK_NULL_HANDLE;
+            }
+            if (i < offscreen_textures.size() && offscreen_textures[i]) {
+                auto it = texture_descriptors.find(offscreen_textures[i]->image_view());
+                if (it != texture_descriptors.end())
+                    texture_descriptors.erase(it);
+                offscreen_textures[i].reset();
+            }
+        }
+
+        // Update config
+        config.virtual_width  = new_w;
+        config.virtual_height = new_h;
+
+        // Recreate all per-frame offscreen resources
+        auto result = create_offscreen_framebuffers();
+        if (!result) return result;
+
+        // Create blit descriptors for each frame's offscreen texture
+        for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            offscreen_descriptors[i] = get_or_create_descriptor(*offscreen_textures[i]);
+        }
+
+        log(LogLevel::Info, "Virtual resolution changed to " +
+            std::to_string(new_w) + "x" + std::to_string(new_h));
         return {};
     }
 
@@ -303,18 +389,12 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
     if (!sc) return std::unexpected(sc.error());
     impl.swapchain.emplace(std::move(*sc));
 
-    // Create offscreen texture (render target)
-    auto offscreen = Texture::create_empty(*impl.context, config.virtual_width, config.virtual_height,
-        VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-    if (!offscreen) return std::unexpected(offscreen.error());
-    impl.offscreen_texture.emplace(std::move(*offscreen));
-
     // Create render passes
     auto rp_result = impl.create_render_passes();
     if (!rp_result) return std::unexpected(rp_result.error());
 
-    // Create framebuffers
-    auto ofb_result = impl.create_offscreen_framebuffer();
+    // Create per-frame offscreen textures + framebuffers
+    auto ofb_result = impl.create_offscreen_framebuffers();
     if (!ofb_result) return std::unexpected(ofb_result.error());
     auto sfb_result = impl.create_swapchain_framebuffers();
     if (!sfb_result) return std::unexpected(sfb_result.error());
@@ -330,8 +410,10 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
     if (!pool) return std::unexpected(pool.error());
     impl.descriptor_pool.emplace(std::move(*pool));
 
-    // Create offscreen descriptor for blit
-    impl.offscreen_descriptor = impl.get_or_create_descriptor(*impl.offscreen_texture);
+    // Create per-frame offscreen descriptors for blit
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        impl.offscreen_descriptors[i] = impl.get_or_create_descriptor(*impl.offscreen_textures[i]);
+    }
 
     // Find shader directory: .app bundle > relative to exe > build paths
     auto shader_dir = std::filesystem::path();
@@ -389,7 +471,7 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         auto buf = vk::Buffer::create(
             impl.context->allocator(),
-            sizeof(SpriteInstance) * MAX_INSTANCES_PER_BATCH,
+            sizeof(SpriteInstance) * INITIAL_INSTANCE_CAPACITY,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VMA_MEMORY_USAGE_AUTO,
             VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
@@ -421,6 +503,16 @@ bool Renderer::begin_frame() {
     impl.last_frame_time = now;
     impl.frame_count_++;
 
+    // Apply any pending virtual resolution change before touching the GPU.
+    if (impl.pending_virtual_resolution.has_value()) {
+        auto [new_w, new_h] = *impl.pending_virtual_resolution;
+        impl.pending_virtual_resolution.reset();
+        if (auto r = impl.recreate_offscreen(new_w, new_h); !r) {
+            log(LogLevel::Error, "Failed to resize virtual framebuffer: " + r.error().message);
+            return false;
+        }
+    }
+
     // Wait for previous frame with this index
     vkWaitForFences(impl.context->device(), 1, &impl.in_flight_fences[impl.current_frame],
         VK_TRUE, UINT64_MAX);
@@ -437,9 +529,22 @@ bool Renderer::begin_frame() {
     }
     impl.current_image_index = *image_result;
 
-    vkResetFences(impl.context->device(), 1, &impl.in_flight_fences[impl.current_frame]);
+    // If another frame slot previously submitted work targeting this swapchain
+    // image, wait for that work to complete before we start writing to the
+    // image again.  This prevents two different frame slots from rendering to
+    // the same swapchain image concurrently.
+    if (impl.images_in_flight[impl.current_image_index] != VK_NULL_HANDLE) {
+        vkWaitForFences(impl.context->device(), 1,
+            &impl.images_in_flight[impl.current_image_index], VK_TRUE, UINT64_MAX);
+    }
+    impl.images_in_flight[impl.current_image_index] = impl.in_flight_fences[impl.current_frame];
 
     // Reset and begin command buffer
+    // NOTE: fence is NOT reset here — it is reset just before vkQueueSubmit in
+    // end_frame(), which is the last safe moment.  Resetting it here (before the
+    // buffer upload that happens between begin_frame and end_frame) would allow
+    // a new submission to start before the previous GPU work on this frame slot
+    // has finished, causing the instance buffer write to race with GPU reads.
     auto cmd = impl.command_buffers[impl.current_frame];
     vkResetCommandBuffer(cmd, 0);
 
@@ -451,7 +556,7 @@ bool Renderer::begin_frame() {
     VkRenderPassBeginInfo rpi{};
     rpi.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rpi.renderPass = impl.offscreen_render_pass;
-    rpi.framebuffer = impl.offscreen_framebuffer;
+    rpi.framebuffer = impl.offscreen_framebuffers[impl.current_frame];
     rpi.renderArea = {{0, 0}, {impl.config.virtual_width, impl.config.virtual_height}};
     VkClearValue clear{};
     clear.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -480,8 +585,11 @@ bool Renderer::begin_frame() {
     vkCmdPushConstants(cmd, impl.sprite_pipeline->layout(),
         VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &projection);
 
-    // Clear batches for this frame
+    // Clear batches and staging buffer for this frame
     impl.batches.clear();
+    impl.staging_batches.clear();
+    impl.staging_instances.clear();
+    impl.direct_write_count_ = 0;
 
     return true;
 }
@@ -490,46 +598,137 @@ void Renderer::submit_instances(std::span<const SpriteInstance> instances,
                                  const Texture& texture, float z_order)
 {
     auto& impl = *impl_;
-    DrawBatch batch;
-    batch.texture = &texture;
-    batch.z_order = z_order;
-    batch.instances.assign(instances.begin(), instances.end());
-    impl.batches.push_back(std::move(batch));
+    uint32_t first = static_cast<uint32_t>(impl.staging_instances.size());
+    impl.staging_instances.insert(impl.staging_instances.end(), instances.begin(), instances.end());
+    impl.staging_batches.push_back({&texture, z_order, first,
+                            static_cast<uint32_t>(instances.size())});
+}
+
+SpriteInstance* Renderer::map_instance_buffer(uint32_t count) {
+    auto& impl = *impl_;
+
+    // Grow instance buffers if needed.
+    if (count > impl.instance_capacity) {
+        vkDeviceWaitIdle(impl.context->device());
+
+        uint32_t new_cap = impl.instance_capacity;
+        while (new_cap < count) new_cap *= 2;
+
+        log(LogLevel::Info, "Growing instance buffers (direct): " +
+            std::to_string(impl.instance_capacity) + " -> " + std::to_string(new_cap));
+
+        impl.instance_buffers.clear();
+        for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            auto buf = vk::Buffer::create(
+                impl.context->allocator(),
+                sizeof(SpriteInstance) * new_cap,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VMA_MEMORY_USAGE_AUTO,
+                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+            if (!buf) {
+                log(LogLevel::Error, "Failed to grow instance buffer");
+                return nullptr;
+            }
+            impl.instance_buffers.push_back(std::move(*buf));
+        }
+        impl.instance_capacity = new_cap;
+    }
+
+    return static_cast<SpriteInstance*>(
+        impl.instance_buffers[impl.current_frame].mapped_ptr());
+}
+
+void Renderer::record_batch(const Texture& texture, float z_order,
+                             uint32_t first_instance, uint32_t instance_count) {
+    impl_->batches.push_back({&texture, z_order, first_instance, instance_count});
+}
+
+void Renderer::flush_instance_buffer(uint32_t total_instances) {
+    auto& impl = *impl_;
+    if (total_instances > 0) {
+        VkDeviceSize upload_size = total_instances * sizeof(SpriteInstance);
+        impl.instance_buffers[impl.current_frame].flush(0, upload_size);
+        // Mark staging_instances as effectively populated so end_frame()
+        // sees there are instances to draw but doesn't re-upload.
+        impl.direct_write_count_ = total_instances;
+    }
 }
 
 void Renderer::end_frame() {
     auto& impl = *impl_;
     auto cmd = impl.command_buffers[impl.current_frame];
 
-    // Sort batches by z_order
+    // Merge staging batches into the main batch list.
+    // Direct-write batches (from record_batch) have absolute buffer offsets.
+    // Staging batches (from submit_instances) have offsets relative to
+    // staging_instances[0] — shift them by direct_write_count_ so they
+    // don't overlap with the direct-written region.
+    uint32_t direct_count = impl.direct_write_count_;
+    uint32_t staging_count = static_cast<uint32_t>(impl.staging_instances.size());
+
+    for (auto& sb : impl.staging_batches) {
+        sb.first_instance += direct_count;
+        impl.batches.push_back(sb);
+    }
+
+    // Sort all batch metadata by z_order (tiny array — typically < 10 entries).
     std::sort(impl.batches.begin(), impl.batches.end(),
         [](const DrawBatch& a, const DrawBatch& b) { return a.z_order < b.z_order; });
 
-    // Collect all instances into the frame's instance buffer, issuing draw calls per batch
-    auto& instance_buffer = impl.instance_buffers[impl.current_frame];
-    uint32_t total_offset = 0;
+    if (staging_count > 0) {
+        uint32_t total_needed = direct_count + staging_count;
 
-    // First pass: upload all instance data
-    std::vector<SpriteInstance> all_instances;
-    for (auto& batch : impl.batches) {
-        all_instances.insert(all_instances.end(), batch.instances.begin(), batch.instances.end());
-    }
+        // Grow instance buffers if needed (all frames must be the same size
+        // so we can't just grow one — wait for idle and rebuild all of them).
+        if (total_needed > impl.instance_capacity) {
+            vkDeviceWaitIdle(impl.context->device());
 
-    if (!all_instances.empty()) {
-        VkDeviceSize upload_size = all_instances.size() * sizeof(SpriteInstance);
-        if (upload_size > instance_buffer.size()) {
-            upload_size = instance_buffer.size(); // Clamp
+            uint32_t new_cap = impl.instance_capacity;
+            while (new_cap < total_needed) new_cap *= 2;
+
+            log(LogLevel::Info, "Growing instance buffers: " +
+                std::to_string(impl.instance_capacity) + " -> " + std::to_string(new_cap));
+
+            impl.instance_buffers.clear();
+            for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+                auto buf = vk::Buffer::create(
+                    impl.context->allocator(),
+                    sizeof(SpriteInstance) * new_cap,
+                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                    VMA_MEMORY_USAGE_AUTO,
+                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+                if (!buf) {
+                    log(LogLevel::Error, "Failed to grow instance buffer");
+                    return;
+                }
+                impl.instance_buffers.push_back(std::move(*buf));
+            }
+            impl.instance_capacity = new_cap;
         }
-        instance_buffer.upload(all_instances.data(), upload_size);
+
+        // Upload staging data after the direct-written region.
+        auto* dst = static_cast<SpriteInstance*>(
+            impl.instance_buffers[impl.current_frame].mapped_ptr());
+        std::memcpy(dst + direct_count,
+                    impl.staging_instances.data(),
+                    staging_count * sizeof(SpriteInstance));
+
+        VkDeviceSize flush_offset = direct_count * sizeof(SpriteInstance);
+        VkDeviceSize flush_size = staging_count * sizeof(SpriteInstance);
+        impl.instance_buffers[impl.current_frame].flush(flush_offset, flush_size);
+    } else if (direct_count == 0 && staging_count == 0) {
+        // No instances at all — nothing to draw. Fall through to draw calls
+        // which will all be skipped (empty batches list).
     }
 
-    // Second pass: draw calls
-    VkBuffer vb = instance_buffer.handle();
+    // Draw calls — each batch records its own first_instance offset into the
+    // staging buffer, so draw order (z-sorted) is independent of buffer layout.
+    VkBuffer vb = impl.instance_buffers[impl.current_frame].handle();
     VkDeviceSize zero_offset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &vb, &zero_offset);
 
     for (auto& batch : impl.batches) {
-        if (batch.instances.empty()) continue;
+        if (batch.instance_count == 0) continue;
 
         auto desc = impl.get_or_create_descriptor(*batch.texture);
         if (desc == VK_NULL_HANDLE) continue;
@@ -537,13 +736,43 @@ void Renderer::end_frame() {
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
             impl.sprite_pipeline->layout(), 0, 1, &desc, 0, nullptr);
 
-        uint32_t instance_count = static_cast<uint32_t>(batch.instances.size());
-        vkCmdDraw(cmd, 6, instance_count, 0, total_offset);
-        total_offset += instance_count;
+        vkCmdDraw(cmd, 6, batch.instance_count, 0, batch.first_instance);
     }
 
     // End offscreen render pass
     vkCmdEndRenderPass(cmd);
+
+    // Explicit barrier: ensure the offscreen colour-attachment writes and the
+    // layout transition to SHADER_READ_ONLY_OPTIMAL are fully complete and
+    // visible to the blit pass's fragment shader.  The subpass exit dependency
+    // (dep[1]) should already handle this, but MoltenVK can sometimes elide
+    // subpass dependency barriers when both render passes are in the same
+    // command buffer.  This explicit barrier makes the synchronisation
+    // unambiguous.
+    {
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image         = impl.offscreen_textures[impl.current_frame]->image();
+        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel   = 0;
+        barrier.subresourceRange.levelCount     = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount     = 1;
+
+        vkCmdPipelineBarrier(cmd,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier);
+    }
 
     // --- Blit pass: render offscreen to swapchain ---
     VkRenderPassBeginInfo blit_rpi{};
@@ -597,12 +826,17 @@ void Renderer::end_frame() {
     vkCmdSetScissor(cmd, 0, 1, &blit_scissor);
 
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        impl.blit_pipeline->layout(), 0, 1, &impl.offscreen_descriptor, 0, nullptr);
+        impl.blit_pipeline->layout(), 0, 1, &impl.offscreen_descriptors[impl.current_frame], 0, nullptr);
 
     vkCmdDraw(cmd, 3, 1, 0, 0); // Fullscreen triangle
 
     vkCmdEndRenderPass(cmd);
     vkEndCommandBuffer(cmd);
+
+    // Reset the fence here — the latest safe point before reuse.  Doing it
+    // earlier (e.g. right after vkAcquireNextImageKHR) would race with the
+    // instance buffer upload that happens between begin_frame and end_frame.
+    vkResetFences(impl.context->device(), 1, &impl.in_flight_fences[impl.current_frame]);
 
     // Submit
     VkSubmitInfo si{};
@@ -629,6 +863,16 @@ void Renderer::end_frame() {
     impl.current_frame = (impl.current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void Renderer::set_virtual_resolution(uint32_t width, uint32_t height) {
+    impl_->pending_virtual_resolution = {width, height};
+}
+
+void Renderer::set_display_mode(const DisplayMode& mode) {
+    impl_->window->set_display_mode(mode);
+    // The window resize triggers a swapchain recreation automatically.
+    // No need to touch the virtual resolution here — that is a separate concern.
+}
+
 void Renderer::set_border_color(Color color) { impl_->border_color = color; }
 float Renderer::delta_time() const { return impl_->delta_time_; }
 float Renderer::elapsed_time() const { return impl_->elapsed_time_; }
@@ -636,6 +880,8 @@ uint64_t Renderer::frame_count() const { return impl_->frame_count_; }
 uint32_t Renderer::virtual_width() const { return impl_->config.virtual_width; }
 uint32_t Renderer::virtual_height() const { return impl_->config.virtual_height; }
 vk::Context& Renderer::context() { return *impl_->context; }
+
+uint32_t Renderer::current_frame_index() const { return impl_->current_frame; }
 
 Vec2 Renderer::screen_to_virtual(Vec2 screen_pos) const {
     float cs = impl_->window->content_scale();

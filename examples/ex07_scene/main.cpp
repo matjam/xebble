@@ -41,7 +41,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui = world.resource<xebble::UIContext>();
         ui.panel("title", {.anchor = xebble::Anchor::Center, .size = {400, 160}},
             [](auto& p) {
@@ -50,6 +50,7 @@ public:
                 p.text(u8"[Enter/Space] \u2192 Gameplay",  {.color = {180, 220, 180}});
                 p.text(u8"[Esc] Quit",                {.color = {160, 160, 160}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 
@@ -89,7 +90,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui = world.resource<xebble::UIContext>();
         // Draw the gameplay "dungeon" background panel.
         ui.panel("game_bg", {.anchor = xebble::Anchor::Center, .size = {480, 200}},
@@ -106,6 +107,7 @@ public:
                 p.text(u8"ex07 \u2014 Scene Manager  |  [Esc] Quit from pause",
                        {.color = {200, 200, 200}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 
@@ -127,7 +129,7 @@ public:
         }
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& ui = world.resource<xebble::UIContext>();
         // Semi-transparent overlay panel.
         ui.panel("pause", {.anchor = xebble::Anchor::Center, .size = {300, 130}},
@@ -136,6 +138,7 @@ public:
                 p.text(u8"[Esc/P] Resume",        {.color = {180, 220, 180}});
                 p.text(u8"[Q] Quit to desktop",   {.color = {220, 100, 100}});
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

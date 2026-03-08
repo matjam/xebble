@@ -23,6 +23,7 @@
 #include <xebble/components.hpp>
 #include <xebble/builtin_systems.hpp>
 #include <xebble/ui.hpp>
+#include <xebble/debug.hpp>
 #include <xebble/scene.hpp>
 #include <xebble/fov.hpp>
 #include <xebble/pathfinding.hpp>

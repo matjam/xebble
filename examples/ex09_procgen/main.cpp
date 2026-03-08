@@ -138,7 +138,7 @@ public:
         if (regen) generate(world);
     }
 
-    void draw(xebble::World& world, xebble::Renderer&) override {
+    void draw(xebble::World& world, xebble::Renderer& renderer) override {
         auto& gs = world.resource<GenState>();
         const char* mode_name = [&] {
             switch (gs.mode) {
@@ -166,6 +166,7 @@ public:
                                    ? gs.reachable * 100 / gs.floor_count : 0);
                   p.text(std::u8string(s.begin(), s.end()), {.color = {180, 180, 240}}); }
             });
+        xebble::debug_overlay(world, renderer);
     }
 };
 

@@ -132,7 +132,11 @@ public:
     /// world.add<Position>(e, {0.0f, 0.0f});
     /// world.add<Sprite>(e, {&sheet, TILE_WALL});
     /// @endcode
-    Entity create_entity() { return allocator_.create(); }
+    Entity create_entity() {
+        Entity e = allocator_.create();
+        ensure_mask_slot(ecs_detail::entity_index(e));
+        return e;
+    }
 
     /// @brief Begin building an entity with a fluent component-chaining API.
     ///
@@ -161,6 +165,17 @@ public:
     /// @brief Return true if entity @p e is alive (not yet destroyed).
     bool alive(Entity e) const { return allocator_.alive(e); }
 
+    /// @brief Monotonically increasing counter bumped whenever the set of
+    ///        entities or their components changes (add, remove, destroy, restore).
+    ///        Systems can cache this value and skip work when it hasn't changed.
+    uint64_t generation() const { return generation_; }
+
+    /// @brief Manually bump the generation counter to signal that component
+    ///        data (not structure) has changed — e.g. after modifying Position
+    ///        or Sprite values.  Systems that cache derived data (like
+    ///        `SpriteRenderSystem`) will detect this and rebuild next frame.
+    void mark_changed() { ++generation_; }
+
     // -----------------------------------------------------------------------
     // Components
     // -----------------------------------------------------------------------
@@ -180,6 +195,7 @@ public:
         auto id = ecs_detail::component_id<T>();
         if (id >= pools_.size()) pools_.resize(id + 1);
         pools_[id] = std::make_unique<ComponentPool<T>>();
+        grow_mask_width(id);
     }
 
     /// @brief Register a serializable component type.
@@ -203,6 +219,7 @@ public:
         auto id = ecs_detail::component_id<T>();
         if (id >= pools_.size()) pools_.resize(id + 1);
         pools_[id] = std::make_unique<SerializableComponentPool<T>>();
+        grow_mask_width(id);
     }
 
     /// @brief Add component @p value to entity @p e and return a reference to it.
@@ -218,6 +235,8 @@ public:
     T& add(Entity e, T value) {
         auto& pool = get_pool<T>();
         pool.add(e, std::move(value));
+        set_mask_bit(ecs_detail::entity_index(e), ecs_detail::component_id<T>());
+        ++generation_;
         return pool.get(e);
     }
 
@@ -225,7 +244,11 @@ public:
     ///
     /// No-op if @p e does not have the component.
     template<typename T>
-    void remove(Entity e) { get_pool<T>().remove(e); }
+    void remove(Entity e) {
+        get_pool<T>().remove(e);
+        clear_mask_bit(ecs_detail::entity_index(e), ecs_detail::component_id<T>());
+        ++generation_;
+    }
 
     /// @brief Return a reference to the component of type T on entity @p e.
     ///
@@ -249,10 +272,25 @@ public:
     /// @endcode
     template<typename T>
     bool has(Entity e) const {
-        auto id = ecs_detail::component_id<T>();
-        if (id >= pools_.size() || !pools_[id]) return false;
-        return dynamic_cast<const ComponentPool<T>*>(pools_[id].get())->has(e);
+        return test_mask_bit(ecs_detail::entity_index(e), ecs_detail::component_id<T>());
     }
+
+    /// @brief Return a typed reference to the component pool for T.
+    ///
+    /// Provides direct access to the dense storage for advanced use cases
+    /// such as bulk iteration or direct memory access to contiguous data.
+    /// The component type must have been registered.
+    ///
+    /// @code
+    /// auto& pool = world.pool<Position>();
+    /// for (size_t i = 0; i < pool.size(); ++i)
+    ///     process(pool.dense_entity(i), pool.dense_component(i));
+    /// @endcode
+    template<typename T>
+    ComponentPool<T>& pool() { return get_pool<T>(); }
+
+    template<typename T>
+    const ComponentPool<T>& pool() const { return get_pool<T>(); }
 
     // -----------------------------------------------------------------------
     // Iteration
@@ -295,11 +333,24 @@ public:
     /// @endcode
     template<typename T1, typename T2, typename... Rest, typename Fn>
     void each(Fn&& fn) {
-        auto& pool = get_pool<T1>();
-        for (size_t i = 0; i < pool.size(); i++) {
-            Entity e = pool.dense_entity(i);
-            if (has<T2>(e) && (has<Rest>(e) && ...))
-                fn(e, pool.dense_component(i), get<T2>(e), get<Rest>(e)...);
+        auto& pool1 = get_pool<T1>();
+        // Cache typed pool references for get() calls (one dynamic_cast each,
+        // done once here instead of per-entity).
+        auto& pool2 = get_pool<T2>();
+        [[maybe_unused]] auto typed_rest =
+            std::tuple<ComponentPool<Rest>&...>(get_pool<Rest>()...);
+
+        // Build a required-component bitmask once for all filter types.
+        // The T1 pool is iterated directly so we only need bits for T2..Rest.
+        auto required = make_component_mask(
+            ecs_detail::component_id<T2>(),
+            ecs_detail::component_id<Rest>()...);
+
+        for (size_t i = 0; i < pool1.size(); i++) {
+            Entity e = pool1.dense_entity(i);
+            if (test_mask(ecs_detail::entity_index(e), required))
+                fn(e, pool1.dense_component(i), pool2.get(e),
+                   std::get<ComponentPool<Rest>&>(typed_rest).get(e)...);
         }
     }
 
@@ -480,6 +531,9 @@ private:
     ComponentPool<T>& get_pool() {
         auto id = ecs_detail::component_id<T>();
         assert(id < pools_.size() && pools_[id] && "Component type not registered");
+        // dynamic_cast is required because ComponentPool<T> uses virtual
+        // inheritance from IComponentPool.  This is called once per query
+        // (outside the loop), not per entity, so the cost is negligible.
         return dynamic_cast<ComponentPool<T>&>(*pools_[id]);
     }
 
@@ -490,8 +544,99 @@ private:
         return dynamic_cast<const ComponentPool<T>&>(*pools_[id]);
     }
 
+    /// @brief Fast pool lookup for has() checks — returns the type-erased
+    /// pointer without any cast.  O(1), no RTTI.
+    IComponentPool* get_pool_raw(ecs_detail::ComponentId id) const {
+        if (id >= pools_.size() || !pools_[id]) return nullptr;
+        return pools_[id].get();
+    }
+
+    // -----------------------------------------------------------------------
+    // Component bitmask — flat array of uint64_t words, `mask_words_` words
+    // per entity slot.  Bit `component_id` in entity slot `idx` is at:
+    //   component_masks_[idx * mask_words_ + (component_id / 64)]
+    //       & (1ULL << (component_id % 64))
+    // -----------------------------------------------------------------------
+
+    /// Ensure the mask array has room for entity slot `idx`.
+    void ensure_mask_slot(uint32_t idx) {
+        size_t needed = static_cast<size_t>(idx + 1) * mask_words_;
+        if (needed > component_masks_.size())
+            component_masks_.resize(needed, 0);
+    }
+
+    /// Grow mask width when a new component ID exceeds the current word count.
+    void grow_mask_width(uint32_t component_id) {
+        uint32_t words_needed = component_id / 64 + 1;
+        if (words_needed <= mask_words_) return;
+
+        // Must widen every existing entity's mask.  Re-stride the flat array
+        // from mask_words_ → words_needed.
+        uint32_t old_words = mask_words_;
+        uint32_t new_words = words_needed;
+        uint32_t slot_count = (old_words > 0)
+            ? static_cast<uint32_t>(component_masks_.size() / old_words)
+            : 0;
+
+        std::vector<uint64_t> grown(static_cast<size_t>(slot_count) * new_words, 0);
+        for (uint32_t s = 0; s < slot_count; ++s) {
+            for (uint32_t w = 0; w < old_words; ++w)
+                grown[static_cast<size_t>(s) * new_words + w] =
+                    component_masks_[static_cast<size_t>(s) * old_words + w];
+        }
+        component_masks_ = std::move(grown);
+        mask_words_ = new_words;
+    }
+
+    void set_mask_bit(uint32_t slot, uint32_t component_id) {
+        size_t off = static_cast<size_t>(slot) * mask_words_ + (component_id / 64);
+        component_masks_[off] |= (1ULL << (component_id % 64));
+    }
+
+    void clear_mask_bit(uint32_t slot, uint32_t component_id) {
+        size_t off = static_cast<size_t>(slot) * mask_words_ + (component_id / 64);
+        component_masks_[off] &= ~(1ULL << (component_id % 64));
+    }
+
+    bool test_mask_bit(uint32_t slot, uint32_t component_id) const {
+        size_t off = static_cast<size_t>(slot) * mask_words_ + (component_id / 64);
+        if (off >= component_masks_.size()) return false;
+        return (component_masks_[off] & (1ULL << (component_id % 64))) != 0;
+    }
+
+    /// Clear all mask bits for a given entity slot.
+    void clear_mask(uint32_t slot) {
+        size_t base = static_cast<size_t>(slot) * mask_words_;
+        for (uint32_t w = 0; w < mask_words_; ++w)
+            component_masks_[base + w] = 0;
+    }
+
+    /// A small inline mask used as a query key — same word width as the
+    /// per-entity masks.
+    using MaskVec = std::vector<uint64_t>;
+
+    /// Build a required-component mask from a list of component IDs.
+    template<typename... Ids>
+    MaskVec make_component_mask(Ids... ids) const {
+        MaskVec mask(mask_words_, 0);
+        ((mask[ids / 64] |= (1ULL << (ids % 64))), ...);
+        return mask;
+    }
+
+    /// Test whether entity slot `idx` has ALL bits in `required` set.
+    bool test_mask(uint32_t idx, const MaskVec& required) const {
+        size_t base = static_cast<size_t>(idx) * mask_words_;
+        for (uint32_t w = 0; w < mask_words_; ++w)
+            if ((component_masks_[base + w] & required[w]) != required[w])
+                return false;
+        return true;
+    }
+
     EntityAllocator allocator_;
     std::vector<std::unique_ptr<IComponentPool>> pools_;
+    std::vector<uint64_t> component_masks_;  ///< Flat bitmask array, mask_words_ per entity slot.
+    uint32_t mask_words_ = 1;                ///< Words per entity (grows in 64-bit increments).
+    uint64_t generation_ = 0;                ///< Bumped on structural changes (add/remove/destroy/restore).
     std::unordered_map<ecs_detail::ComponentId, std::any> resources_;
     std::unordered_map<ecs_detail::ComponentId, serial_detail::ResourceSerializer> resource_serializers_;
     std::vector<std::unique_ptr<System>> systems_;
