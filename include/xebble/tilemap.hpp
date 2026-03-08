@@ -54,6 +54,7 @@
 #pragma once
 
 #include <xebble/types.hpp>
+
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -143,8 +144,8 @@ public:
     /// Useful for clearing the effects layer at the start of each turn.
     void clear_layer(uint32_t layer);
 
-    uint32_t width()       const { return width_; }
-    uint32_t height()      const { return height_; }
+    uint32_t width() const { return width_; }
+    uint32_t height() const { return height_; }
     uint32_t layer_count() const { return layer_count_; }
 
 private:
@@ -230,10 +231,10 @@ public:
     /// @endcode
     void set_offset(Vec2 offset);
 
-    Vec2     offset()      const { return offset_; }
+    Vec2 offset() const { return offset_; }
     uint32_t layer_count() const { return data_.layer_count(); }
-    uint32_t width()       const { return data_.width(); }
-    uint32_t height()      const { return data_.height(); }
+    uint32_t width() const { return data_.width(); }
+    uint32_t height() const { return data_.height(); }
 
     /// @brief Access the underlying pure-data layer for game-logic queries.
     const TileMapData& data() const { return data_; }

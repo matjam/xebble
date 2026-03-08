@@ -1,4 +1,5 @@
 #include <xebble/ui.hpp>
+
 #include <gtest/gtest.h>
 
 using namespace xebble;

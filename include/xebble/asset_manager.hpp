@@ -59,6 +59,7 @@
 #pragma once
 
 #include <xebble/types.hpp>
+
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -91,9 +92,9 @@ class Context;
 /// };
 /// @endcode
 struct AssetConfig {
-    std::filesystem::path directory;    ///< Directory to search for loose files.
-    std::filesystem::path archive;      ///< Optional ZIP archive path.
-    std::filesystem::path manifest;     ///< Path to the TOML manifest file.
+    std::filesystem::path directory; ///< Directory to search for loose files.
+    std::filesystem::path archive;   ///< Optional ZIP archive path.
+    std::filesystem::path manifest;  ///< Path to the TOML manifest file.
 };
 
 /// @brief Parsed spritesheet entry from the manifest.
@@ -109,9 +110,9 @@ struct AssetConfig {
 /// tile_height = 16
 /// ```
 struct SpriteSheetEntry {
-    std::string path;           ///< Relative path to the image file.
-    uint32_t tile_width  = 0;  ///< Width of each tile in pixels.
-    uint32_t tile_height = 0;  ///< Height of each tile in pixels.
+    std::string path;         ///< Relative path to the image file.
+    uint32_t tile_width = 0;  ///< Width of each tile in pixels.
+    uint32_t tile_height = 0; ///< Height of each tile in pixels.
 };
 
 /// @brief Parsed bitmap font entry from the manifest.
@@ -128,10 +129,10 @@ struct SpriteSheetEntry {
 /// charset      = " !\"#$%&'()*+,-./0123456789:;<=>?"
 /// ```
 struct BitmapFontEntry {
-    std::string path;            ///< Relative path to the font sheet image.
-    uint32_t glyph_width  = 0;  ///< Width of one glyph cell in pixels.
-    uint32_t glyph_height = 0;  ///< Height of one glyph cell in pixels.
-    std::u8string charset;       ///< Characters encoded in the sheet, in order.
+    std::string path;          ///< Relative path to the font sheet image.
+    uint32_t glyph_width = 0;  ///< Width of one glyph cell in pixels.
+    uint32_t glyph_height = 0; ///< Height of one glyph cell in pixels.
+    std::u8string charset;     ///< Characters encoded in the sheet, in order.
 };
 
 /// @brief Parsed TrueType font entry from the manifest.
@@ -146,8 +147,8 @@ struct BitmapFontEntry {
 /// pixel_size = 18
 /// ```
 struct FontEntry {
-    std::string path;            ///< Relative path to the font file.
-    uint32_t pixel_size = 16;   ///< Render size in pixels (height).
+    std::string path;         ///< Relative path to the font file.
+    uint32_t pixel_size = 16; ///< Render size in pixels (height).
 };
 
 /// @brief Parsed manifest data.
@@ -157,8 +158,8 @@ struct FontEntry {
 /// consumes it internally. It is exposed for testing and tooling.
 struct Manifest {
     std::unordered_map<std::string, SpriteSheetEntry> spritesheets; ///< All declared spritesheets.
-    std::unordered_map<std::string, BitmapFontEntry>  bitmap_fonts; ///< All declared bitmap fonts.
-    std::unordered_map<std::string, FontEntry>         fonts;        ///< All declared TrueType fonts.
+    std::unordered_map<std::string, BitmapFontEntry> bitmap_fonts;  ///< All declared bitmap fonts.
+    std::unordered_map<std::string, FontEntry> fonts; ///< All declared TrueType fonts.
 };
 
 /// @brief Parse a TOML manifest string into a Manifest struct.
@@ -250,8 +251,7 @@ public:
     /// }
     /// AssetManager assets = std::move(*result);
     /// @endcode
-    static std::expected<AssetManager, Error> create(
-        vk::Context& ctx, const AssetConfig& config);
+    static std::expected<AssetManager, Error> create(vk::Context& ctx, const AssetConfig& config);
 
     ~AssetManager();
     AssetManager(AssetManager&&) noexcept;

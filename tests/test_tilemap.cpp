@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <xebble/tilemap.hpp>
+
+#include <gtest/gtest.h>
 
 using namespace xebble;
 

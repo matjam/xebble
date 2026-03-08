@@ -68,8 +68,8 @@ namespace xebble {
 ///     player += d;
 /// @endcode
 struct IVec2 {
-    int32_t x = 0;  ///< Column (increases rightward).
-    int32_t y = 0;  ///< Row    (increases downward).
+    int32_t x = 0; ///< Column (increases rightward).
+    int32_t y = 0; ///< Row    (increases downward).
 
     bool operator==(const IVec2&) const = default;
     bool operator!=(const IVec2&) const = default;
@@ -77,8 +77,16 @@ struct IVec2 {
     IVec2 operator+(IVec2 rhs) const noexcept { return {x + rhs.x, y + rhs.y}; }
     IVec2 operator-(IVec2 rhs) const noexcept { return {x - rhs.x, y - rhs.y}; }
     IVec2 operator*(int32_t s) const noexcept { return {x * s, y * s}; }
-    IVec2& operator+=(IVec2 rhs) noexcept { x += rhs.x; y += rhs.y; return *this; }
-    IVec2& operator-=(IVec2 rhs) noexcept { x -= rhs.x; y -= rhs.y; return *this; }
+    IVec2& operator+=(IVec2 rhs) noexcept {
+        x += rhs.x;
+        y += rhs.y;
+        return *this;
+    }
+    IVec2& operator-=(IVec2 rhs) noexcept {
+        x -= rhs.x;
+        y -= rhs.y;
+        return *this;
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -109,17 +117,17 @@ struct IVec2 {
 /// IRect with_border = room.expand(1);
 /// @endcode
 struct IRect {
-    int32_t x = 0;   ///< Left edge (inclusive column).
-    int32_t y = 0;   ///< Top  edge (inclusive row).
-    int32_t w = 0;   ///< Width  in cells.
-    int32_t h = 0;   ///< Height in cells.
+    int32_t x = 0; ///< Left edge (inclusive column).
+    int32_t y = 0; ///< Top  edge (inclusive row).
+    int32_t w = 0; ///< Width  in cells.
+    int32_t h = 0; ///< Height in cells.
 
     bool operator==(const IRect&) const = default;
 
     /// @brief Exclusive right edge: the first column to the right of this rect.
     ///
     /// Iterating `for (int x = r.x; x < r.right(); ++x)` visits every column.
-    int32_t right()  const noexcept { return x + w; }
+    int32_t right() const noexcept { return x + w; }
 
     /// @brief Exclusive bottom edge: the first row below this rect.
     ///
@@ -161,9 +169,10 @@ struct IRect {
     IRect intersect(IRect other) const noexcept {
         int32_t nx = std::max(x, other.x);
         int32_t ny = std::max(y, other.y);
-        int32_t nr = std::min(right(),  other.right());
+        int32_t nr = std::min(right(), other.right());
         int32_t nb = std::min(bottom(), other.bottom());
-        if (nr <= nx || nb <= ny) return {nx, ny, 0, 0};
+        if (nr <= nx || nb <= ny)
+            return {nx, ny, 0, 0};
         return {nx, ny, nr - nx, nb - ny};
     }
 
@@ -237,8 +246,7 @@ public:
     /// @param width  Number of columns. Must be > 0.
     /// @param height Number of rows.    Must be > 0.
     Grid(int32_t width, int32_t height)
-        : width_(width), height_(height), cells_(static_cast<size_t>(width * height))
-    {
+        : width_(width), height_(height), cells_(static_cast<size_t>(width * height)) {
         assert(width > 0 && height > 0);
     }
 
@@ -256,16 +264,14 @@ public:
     /// Grid<int> heat(80, 50, INT_MAX);
     /// @endcode
     Grid(int32_t width, int32_t height, const T& fill)
-        : width_(width), height_(height),
-          cells_(static_cast<size_t>(width * height), fill)
-    {
+        : width_(width), height_(height), cells_(static_cast<size_t>(width * height), fill) {
         assert(width > 0 && height > 0);
     }
 
-    int32_t width()  const noexcept { return width_; }
+    int32_t width() const noexcept { return width_; }
     int32_t height() const noexcept { return height_; }
     /// @brief Total number of cells (width * height).
-    size_t  size()   const noexcept { return cells_.size(); }
+    size_t size() const noexcept { return cells_.size(); }
 
     /// @brief Return true if @p pos lies within [0, width) × [0, height).
     ///
@@ -322,11 +328,13 @@ public:
     /// }
     /// @endcode
     std::optional<std::reference_wrapper<T>> at(IVec2 pos) noexcept {
-        if (!in_bounds(pos)) return std::nullopt;
+        if (!in_bounds(pos))
+            return std::nullopt;
         return cells_[index_of(pos)];
     }
     std::optional<std::reference_wrapper<const T>> at(IVec2 pos) const noexcept {
-        if (!in_bounds(pos)) return std::nullopt;
+        if (!in_bounds(pos))
+            return std::nullopt;
         return cells_[index_of(pos)];
     }
 
@@ -354,7 +362,7 @@ public:
     /// tilemap.set_layer(0, std::span(indices.data(), indices.size()));
     /// @endcode
     const T* data() const noexcept { return cells_.data(); }
-    T*       data()       noexcept { return cells_.data(); }
+    T* data() noexcept { return cells_.data(); }
 
     /// @brief Iterator range over all cells in row-major order.
     ///
@@ -366,9 +374,9 @@ public:
     /// for (Tile& t : map) { if (t == Tile::Door) t = Tile::Floor; }
     /// @endcode
     auto begin() noexcept { return cells_.begin(); }
-    auto end()   noexcept { return cells_.end(); }
+    auto end() noexcept { return cells_.end(); }
     auto begin() const noexcept { return cells_.begin(); }
-    auto end()   const noexcept { return cells_.end(); }
+    auto end() const noexcept { return cells_.end(); }
 
 private:
     int32_t width_;
@@ -390,18 +398,20 @@ template<>
 class Grid<bool> {
 public:
     Grid(int32_t width, int32_t height)
-        : width_(width), height_(height),
-          cells_(static_cast<size_t>(width * height), 0)
-    { assert(width > 0 && height > 0); }
+        : width_(width), height_(height), cells_(static_cast<size_t>(width * height), 0) {
+        assert(width > 0 && height > 0);
+    }
 
     Grid(int32_t width, int32_t height, bool fill)
-        : width_(width), height_(height),
-          cells_(static_cast<size_t>(width * height), fill ? 1u : 0u)
-    { assert(width > 0 && height > 0); }
+        : width_(width),
+          height_(height),
+          cells_(static_cast<size_t>(width * height), fill ? 1u : 0u) {
+        assert(width > 0 && height > 0);
+    }
 
-    int32_t width()  const noexcept { return width_; }
+    int32_t width() const noexcept { return width_; }
     int32_t height() const noexcept { return height_; }
-    size_t  size()   const noexcept { return cells_.size(); }
+    size_t size() const noexcept { return cells_.size(); }
 
     bool in_bounds(IVec2 pos) const noexcept {
         return pos.x >= 0 && pos.x < width_ && pos.y >= 0 && pos.y < height_;
@@ -415,36 +425,34 @@ public:
     // Since sizeof(uint8_t) == sizeof(bool) on all supported platforms and
     // uint8_t stores 0/1 values here, the reinterpret_cast is well-defined for
     // the operations we perform (assign 0/1, read as bool).
-    bool& operator[](IVec2 pos) noexcept {
-        return reinterpret_cast<bool&>(cells_[index_of(pos)]);
-    }
+    bool& operator[](IVec2 pos) noexcept { return reinterpret_cast<bool&>(cells_[index_of(pos)]); }
     const bool& operator[](IVec2 pos) const noexcept {
         return reinterpret_cast<const bool&>(cells_[index_of(pos)]);
     }
 
     std::optional<std::reference_wrapper<bool>> at(IVec2 pos) noexcept {
-        if (!in_bounds(pos)) return std::nullopt;
+        if (!in_bounds(pos))
+            return std::nullopt;
         return reinterpret_cast<bool&>(cells_[index_of(pos)]);
     }
     std::optional<std::reference_wrapper<const bool>> at(IVec2 pos) const noexcept {
-        if (!in_bounds(pos)) return std::nullopt;
+        if (!in_bounds(pos))
+            return std::nullopt;
         return reinterpret_cast<const bool&>(cells_[index_of(pos)]);
     }
 
-    void fill(bool value) {
-        std::fill(cells_.begin(), cells_.end(), value ? 1u : 0u);
-    }
+    void fill(bool value) { std::fill(cells_.begin(), cells_.end(), value ? 1u : 0u); }
 
     // data() returns uint8_t* rather than bool* to avoid any aliasing issues.
     // Users relying on data() for bool grids should treat each byte as 0 or 1.
     const uint8_t* data() const noexcept { return cells_.data(); }
-    uint8_t*       data()       noexcept { return cells_.data(); }
+    uint8_t* data() noexcept { return cells_.data(); }
 
     // Iterators expose uint8_t references for performance; cast as needed.
-    auto begin() noexcept       { return cells_.begin(); }
-    auto end()   noexcept       { return cells_.end(); }
+    auto begin() noexcept { return cells_.begin(); }
+    auto end() noexcept { return cells_.end(); }
     auto begin() const noexcept { return cells_.begin(); }
-    auto end()   const noexcept { return cells_.end(); }
+    auto end() const noexcept { return cells_.end(); }
 
 private:
     int32_t width_;
@@ -707,14 +715,9 @@ float dist_euclidean(IVec2 a, IVec2 b) noexcept;
 ///     /*eight_way=*/true);
 /// @endcode
 template<typename Passable>
-std::vector<IVec2> flood_fill(
-    IVec2 origin,
-    int32_t grid_w, int32_t grid_h,
-    Passable&& passable,
-    bool eight_way = false)
-{
-    if (origin.x < 0 || origin.x >= grid_w ||
-        origin.y < 0 || origin.y >= grid_h)
+std::vector<IVec2> flood_fill(IVec2 origin, int32_t grid_w, int32_t grid_h, Passable&& passable,
+                              bool eight_way = false) {
+    if (origin.x < 0 || origin.x >= grid_w || origin.y < 0 || origin.y >= grid_h)
         return {};
 
     // Use uint8_t instead of bool to avoid std::vector<bool> proxy issues.
@@ -727,9 +730,9 @@ std::vector<IVec2> flood_fill(
     result.push_back(origin);
 
     while (!queue.empty()) {
-        IVec2 cur = queue.front(); queue.pop();
-        auto nbs = eight_way ? neighbors8(cur, grid_w, grid_h)
-                             : neighbors4(cur, grid_w, grid_h);
+        IVec2 cur = queue.front();
+        queue.pop();
+        auto nbs = eight_way ? neighbors8(cur, grid_w, grid_h) : neighbors4(cur, grid_w, grid_h);
         for (auto nb : nbs) {
             if (!visited[nb] && passable(nb)) {
                 visited[nb] = 1u;
@@ -749,14 +752,10 @@ std::vector<IVec2> flood_fill(
 ///     [&](IVec2 p){ return map[p] == Tile::Floor; });
 /// @endcode
 template<typename T, typename Passable>
-std::vector<IVec2> flood_fill(
-    IVec2 origin,
-    const Grid<T>& grid,
-    Passable&& passable,
-    bool eight_way = false)
-{
-    return flood_fill(origin, grid.width(), grid.height(),
-                      std::forward<Passable>(passable), eight_way);
+std::vector<IVec2> flood_fill(IVec2 origin, const Grid<T>& grid, Passable&& passable,
+                              bool eight_way = false) {
+    return flood_fill(origin, grid.width(), grid.height(), std::forward<Passable>(passable),
+                      eight_way);
 }
 
 // ---------------------------------------------------------------------------

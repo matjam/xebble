@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <xebble/types.hpp>
+
+#include <gtest/gtest.h>
 
 using namespace xebble;
 

@@ -91,7 +91,10 @@ TEST(BSPNode, DifferentSeedsProduceDifferentTrees) {
     bool any_diff = false;
     int prev = count_leaves(0);
     for (uint64_t s = 1; s <= 20; ++s) {
-        if (count_leaves(s) != prev) { any_diff = true; break; }
+        if (count_leaves(s) != prev) {
+            any_diff = true;
+            break;
+        }
     }
     EXPECT_TRUE(any_diff);
 }
@@ -103,12 +106,12 @@ TEST(BSPNode, DifferentSeedsProduceDifferentTrees) {
 TEST(CellularStep, DimensionsPreserved) {
     Grid<bool> g(30, 20, false);
     auto result = cellular_step(g, 4);
-    EXPECT_EQ(result.width(),  30);
+    EXPECT_EQ(result.width(), 30);
     EXPECT_EQ(result.height(), 20);
 }
 
 TEST(CellularStep, BorderAlwaysWall) {
-    Grid<bool> g(20, 15, false);   // all floor
+    Grid<bool> g(20, 15, false); // all floor
     auto result = cellular_step(g, 4);
 
     for (int x = 0; x < 20; ++x) {
@@ -154,12 +157,14 @@ TEST(CellularStep, MultipleSmoothingReducesNoise) {
         int w = 0;
         for (int y = 0; y < gr.height(); ++y)
             for (int x = 0; x < gr.width(); ++x)
-                if (gr[IVec2{x, y}]) ++w;
+                if (gr[IVec2{x, y}])
+                    ++w;
         return w;
     };
 
     int before = count_walls(g);
-    for (int i = 0; i < 5; ++i) g = cellular_step(g, 4);
+    for (int i = 0; i < 5; ++i)
+        g = cellular_step(g, 4);
     int after = count_walls(g);
 
     // After smoothing the checkerboard, the wall count should change.
@@ -195,7 +200,8 @@ TEST(DrunkardWalk, FloorCountIncreasesWithSteps) {
         int c = 0;
         for (int y = 0; y < g.height(); ++y)
             for (int x = 0; x < g.width(); ++x)
-                if (!g[IVec2{x, y}]) ++c;
+                if (!g[IVec2{x, y}])
+                    ++c;
         return c;
     };
 
@@ -227,12 +233,12 @@ TEST(DrunkardWalk, NoBorderCarving) {
 
     for (int x = 0; x < 20; ++x) {
         IVec2 top{x, 0}, bot{x, 14};
-        EXPECT_TRUE(map[top])  << "Top border carved at x=" << x;
+        EXPECT_TRUE(map[top]) << "Top border carved at x=" << x;
         EXPECT_TRUE(map[bot]) << "Bottom border carved at x=" << x;
     }
     for (int y = 0; y < 15; ++y) {
         IVec2 lft{0, y}, rgt{19, y};
-        EXPECT_TRUE(map[lft])  << "Left border carved at y=" << y;
+        EXPECT_TRUE(map[lft]) << "Left border carved at y=" << y;
         EXPECT_TRUE(map[rgt]) << "Right border carved at y=" << y;
     }
 }
@@ -256,7 +262,7 @@ TEST(PlaceRooms, RoomsWithinGridBounds) {
     for (auto& r : rooms) {
         EXPECT_GE(r.x, 1);
         EXPECT_GE(r.y, 1);
-        EXPECT_LE(r.x + r.w, map.width()  - 1);
+        EXPECT_LE(r.x + r.w, map.width() - 1);
         EXPECT_LE(r.y + r.h, map.height() - 1);
     }
 }
@@ -273,8 +279,7 @@ TEST(PlaceRooms, RoomsDoNotOverlap) {
             // Check non-overlapping (with 1-cell gap — use ≥1 gap check).
             bool sep_x = (a.x + a.w + 1 <= b.x) || (b.x + b.w + 1 <= a.x);
             bool sep_y = (a.y + a.h + 1 <= b.y) || (b.y + b.h + 1 <= a.y);
-            EXPECT_TRUE(sep_x || sep_y)
-                << "Rooms " << i << " and " << j << " overlap";
+            EXPECT_TRUE(sep_x || sep_y) << "Rooms " << i << " and " << j << " overlap";
         }
     }
 }
@@ -326,10 +331,7 @@ TEST(ConnectRooms, CorridorCellsAreFloor) {
     Grid<bool> map(40, 25, true);
     Rng rng(8);
     // Two well-separated rooms.
-    std::vector<IRect> rooms = {
-        IRect{2, 2, 6, 5},
-        IRect{28, 15, 6, 5}
-    };
+    std::vector<IRect> rooms = {IRect{2, 2, 6, 5}, IRect{28, 15, 6, 5}};
     connect_rooms(rooms, map, rng);
 
     // Centre of room A.
@@ -357,11 +359,13 @@ TEST(ConnectRooms, ConnectsMultipleRooms) {
     int floor_count = 0;
     for (int y = 0; y < map.height(); ++y)
         for (int x = 0; x < map.width(); ++x)
-            if (!map[IVec2{x, y}]) ++floor_count;
+            if (!map[IVec2{x, y}])
+                ++floor_count;
 
     // At minimum the room areas must all be floor.
     int room_floor = 0;
-    for (auto& r : rooms) room_floor += r.w * r.h;
+    for (auto& r : rooms)
+        room_floor += r.w * r.h;
 
     EXPECT_GE(floor_count, room_floor);
 }

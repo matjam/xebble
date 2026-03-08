@@ -1,0 +1,108 @@
+---
+Language: Cpp
+Standard: c++20
+
+# Base style
+BasedOnStyle: LLVM
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+IndentCaseLabels: false
+IndentPPDirectives: None
+NamespaceIndentation: None
+AccessModifierOffset: -4
+
+# Braces
+BreakBeforeBraces: Attach
+Cpp11BracedListStyle: true
+InsertBraces: false
+
+# Line length
+ColumnLimit: 100
+
+# Alignment
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: true
+
+# Short forms — allow compact single-line bodies
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: false
+
+# Arguments / parameters
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: true
+BinPackParameters: true
+
+# Breaking
+AlwaysBreakTemplateDeclarations: Yes
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+PackConstructorInitializers: NextLine
+
+# Spaces
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Includes — project headers first, then system
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Project headers with quotes
+  - Regex: '^"'
+    Priority: 1
+  # xebble public headers
+  - Regex: '^<xebble/'
+    Priority: 2
+  # Third-party headers (vulkan, glm, glfw, stb, etc.)
+  - Regex: '^<(vulkan|vk_mem|glm|GLFW|stb|freetype|ft2build|toml|mz|gtest)'
+    Priority: 3
+  # System/C++ standard headers
+  - Regex: '^<'
+    Priority: 4
+SortIncludes: CaseInsensitive
+
+# Pointer/reference alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+# Penalties
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 60
+
+# Misc
+CompactNamespaces: false
+FixNamespaceComments: true
+ReflowComments: true
+SortUsingDeclarations: true
+InsertNewlineAtEOF: true
+...

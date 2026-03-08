@@ -35,7 +35,8 @@ using namespace xebble;
 static double sample_rate(int trials, auto fn) {
     int hits = 0;
     for (int i = 0; i < trials; ++i)
-        if (fn()) ++hits;
+        if (fn())
+            ++hits;
     return static_cast<double>(hits) / trials;
 }
 
@@ -53,7 +54,10 @@ TEST(Rng, DifferentSeedsDifferentSequence) {
     Rng a(1), b(2);
     bool any_diff = false;
     for (int i = 0; i < 100; ++i)
-        if (a.next_u32() != b.next_u32()) { any_diff = true; break; }
+        if (a.next_u32() != b.next_u32()) {
+            any_diff = true;
+            break;
+        }
     EXPECT_TRUE(any_diff);
 }
 
@@ -72,12 +76,14 @@ TEST(Rng, SaveRestoreReproducesSequence) {
     RngState snap = rng.save();
 
     std::vector<uint32_t> first;
-    for (int i = 0; i < 50; ++i) first.push_back(rng.next_u32());
+    for (int i = 0; i < 50; ++i)
+        first.push_back(rng.next_u32());
 
     rng.restore(snap);
 
     std::vector<uint32_t> second;
-    for (int i = 0; i < 50; ++i) second.push_back(rng.next_u32());
+    for (int i = 0; i < 50; ++i)
+        second.push_back(rng.next_u32());
 
     EXPECT_EQ(first, second);
 }
@@ -125,7 +131,10 @@ TEST(Rng, NextU64CoversBothHalves) {
     bool high_set = false;
     for (int i = 0; i < 200; ++i) {
         uint64_t v = rng.next_u64();
-        if (v >> 32) { high_set = true; break; }
+        if (v >> 32) {
+            high_set = true;
+            break;
+        }
     }
     EXPECT_TRUE(high_set);
 }
@@ -163,8 +172,10 @@ TEST(Rng, RangeCoversBothEnds) {
     bool saw_min = false, saw_max = false;
     for (int i = 0; i < 10000 && !(saw_min && saw_max); ++i) {
         int v = rng.range(0, 1);
-        if (v == 0) saw_min = true;
-        if (v == 1) saw_max = true;
+        if (v == 0)
+            saw_min = true;
+        if (v == 1)
+            saw_max = true;
     }
     EXPECT_TRUE(saw_min);
     EXPECT_TRUE(saw_max);
@@ -233,8 +244,8 @@ TEST(Rng, RollExprPositiveModifier) {
     Rng rng(42);
     for (int i = 0; i < 500; ++i) {
         int v = rng.roll("2d6+3");
-        EXPECT_GE(v, 5);   // 2*1 + 3
-        EXPECT_LE(v, 15);  // 2*6 + 3
+        EXPECT_GE(v, 5);  // 2*1 + 3
+        EXPECT_LE(v, 15); // 2*6 + 3
     }
 }
 
@@ -242,8 +253,8 @@ TEST(Rng, RollExprNegativeModifier) {
     Rng rng(43);
     for (int i = 0; i < 500; ++i) {
         int v = rng.roll("1d20-2");
-        EXPECT_GE(v, -1);  // 1 - 2
-        EXPECT_LE(v, 18);  // 20 - 2
+        EXPECT_GE(v, -1); // 1 - 2
+        EXPECT_LE(v, 18); // 20 - 2
     }
 }
 
@@ -306,7 +317,8 @@ TEST(Rng, WeightedIndexHighWeightFavoured) {
     int hits1 = 0;
     const int N = 5000;
     for (int i = 0; i < N; ++i)
-        if (rng.weighted_index(w) == 1) ++hits1;
+        if (rng.weighted_index(w) == 1)
+            ++hits1;
     // Expect roughly 90% — allow generous tolerance.
     EXPECT_GT(hits1, N * 70 / 100);
 }
@@ -333,8 +345,8 @@ TEST(Rng, WeightedIndexNegativeWeightThrows) {
 
 TEST(Rng, WeightedChoiceReturnsCorrectValue) {
     Rng rng(80);
-    std::vector<float>       weights = {0.0f, 0.0f, 100.0f};
-    std::vector<std::string> values  = {"a", "b", "c"};
+    std::vector<float> weights = {0.0f, 0.0f, 100.0f};
+    std::vector<std::string> values = {"a", "b", "c"};
     // Only "c" has non-zero weight — always selected.
     for (int i = 0; i < 50; ++i)
         EXPECT_EQ(rng.weighted_choice(weights, values), "c");
@@ -343,7 +355,7 @@ TEST(Rng, WeightedChoiceReturnsCorrectValue) {
 TEST(Rng, WeightedChoiceSizeMismatchThrows) {
     Rng rng(81);
     std::vector<float> w = {1.0f, 2.0f};
-    std::vector<int>   v = {10};
+    std::vector<int> v = {10};
     EXPECT_THROW(rng.weighted_choice(w, v), std::invalid_argument);
 }
 
@@ -372,7 +384,10 @@ TEST(Rng, ShuffleProducesPermutation) {
     for (int t = 0; t < 100; ++t) {
         std::vector<int> v = orig;
         rng.shuffle(v);
-        if (v != orig) { any_diff = true; break; }
+        if (v != orig) {
+            any_diff = true;
+            break;
+        }
     }
     EXPECT_TRUE(any_diff);
 }

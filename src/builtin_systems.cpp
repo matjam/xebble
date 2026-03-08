@@ -2,10 +2,10 @@
 /// @brief Built-in render system implementations.
 #include <xebble/builtin_systems.hpp>
 #include <xebble/components.hpp>
-#include <xebble/world.hpp>
 #include <xebble/renderer.hpp>
 #include <xebble/spritesheet.hpp>
 #include <xebble/tilemap.hpp>
+#include <xebble/world.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -25,7 +25,8 @@ void TileMapRenderSystem::draw(World& world, Renderer& renderer) {
     };
     std::vector<TileMapEntry> entries;
     world.each<TileMapLayer>([&](Entity, TileMapLayer& tl) {
-        if (tl.tilemap) entries.push_back({&tl});
+        if (tl.tilemap)
+            entries.push_back({&tl});
     });
     std::sort(entries.begin(), entries.end(),
               [](const auto& a, const auto& b) { return a.layer->z_order < b.layer->z_order; });
@@ -51,22 +52,30 @@ void TileMapRenderSystem::draw(World& world, Renderer& renderer) {
             std::vector<SpriteInstance> instances;
             for (int ty = start_ty; ty < end_ty; ty++) {
                 for (int tx = start_tx; tx < end_tx; tx++) {
-                    auto tile = tm.tile_at(layer, static_cast<uint32_t>(tx), static_cast<uint32_t>(ty));
-                    if (!tile) continue;
+                    auto tile =
+                        tm.tile_at(layer, static_cast<uint32_t>(tx), static_cast<uint32_t>(ty));
+                    if (!tile)
+                        continue;
                     auto uv = sheet.region(*tile);
                     float screen_x = static_cast<float>(tx) * static_cast<float>(tw) - cam.x;
                     float screen_y = static_cast<float>(ty) * static_cast<float>(th) - cam.y;
                     instances.push_back({
-                        .pos_x  = screen_x,
-                        .pos_y  = screen_y,
-                        .uv_x = uv.x, .uv_y = uv.y, .uv_w = uv.w, .uv_h = uv.h,
+                        .pos_x = screen_x,
+                        .pos_y = screen_y,
+                        .uv_x = uv.x,
+                        .uv_y = uv.y,
+                        .uv_w = uv.w,
+                        .uv_h = uv.h,
                         .quad_w = static_cast<float>(tw),
                         .quad_h = static_cast<float>(th),
-                        .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
-                        .scale    = 1.0f,
+                        .r = 1.0f,
+                        .g = 1.0f,
+                        .b = 1.0f,
+                        .a = 1.0f,
+                        .scale = 1.0f,
                         .rotation = 0.0f,
-                        .pivot_x  = 0.0f,
-                        .pivot_y  = 0.0f,
+                        .pivot_x = 0.0f,
+                        .pivot_y = 0.0f,
                     });
                 }
             }
@@ -98,12 +107,13 @@ void SpriteRenderSystem::draw(World& world, Renderer& renderer) {
         // The other slot got the rebuild data — we need a full write of
         // all instance data into this slot's buffer, then patch positions.
         SpriteInstance* dst = renderer.map_instance_buffer(instance_count_);
-        if (!dst) return;
+        if (!dst)
+            return;
 
         // Copy the full instance data from the other frame's buffer.
         uint32_t other = fi ^ 1;
-        const auto* src = static_cast<const SpriteInstance*>(
-            renderer.map_instance_buffer(instance_count_));
+        const auto* src =
+            static_cast<const SpriteInstance*>(renderer.map_instance_buffer(instance_count_));
         // Can't read from the other buffer easily — it might be in use by GPU.
         // Instead, just do a full rebuild into this buffer too.
         rebuild(world, renderer, cam.x, cam.y, fvw, fvh);
@@ -112,7 +122,8 @@ void SpriteRenderSystem::draw(World& world, Renderer& renderer) {
         // Position-only frame: patch just pos_x/pos_y at stride directly
         // into the mapped GPU buffer.
         SpriteInstance* dst = renderer.map_instance_buffer(instance_count_);
-        if (!dst) return;
+        if (!dst)
+            return;
 
         for (uint32_t i = 0; i < instance_count_; ++i) {
             auto& pos = world.get<Position>(gpu_entities_[i]);
@@ -126,31 +137,32 @@ void SpriteRenderSystem::draw(World& world, Renderer& renderer) {
         renderer.flush_instance_buffer(instance_count_);
     }
 
-    if (instance_count_ == 0) return;
+    if (instance_count_ == 0)
+        return;
 
     // Record batches (rebuild already flushed; position-only path flushed above).
     for (auto& b : batch_runs_)
         renderer.record_batch(*b.texture, b.z_order, b.first, b.count);
 }
 
-void SpriteRenderSystem::rebuild(World& world, Renderer& renderer,
-                                  float cam_x, float cam_y,
-                                  float fvw, float fvh) {
+void SpriteRenderSystem::rebuild(World& world, Renderer& renderer, float cam_x, float cam_y,
+                                 float fvw, float fvh) {
     struct SortKey {
-        float          z_order;
+        float z_order;
         const Texture* texture;
-        uint32_t       index;
+        uint32_t index;
     };
 
     thread_local std::vector<SpriteInstance> instances;
-    thread_local std::vector<SortKey>       keys;
-    thread_local std::vector<Entity>        entities;
+    thread_local std::vector<SortKey> keys;
+    thread_local std::vector<Entity> entities;
     instances.clear();
     keys.clear();
     entities.clear();
 
     world.each<Position, Sprite>([&](Entity e, Position& pos, Sprite& spr) {
-        if (!spr.sheet) return;
+        if (!spr.sheet)
+            return;
         float sx = pos.x - cam_x;
         float sy = pos.y - cam_y;
         float tw = static_cast<float>(spr.sheet->tile_width());
@@ -158,24 +170,28 @@ void SpriteRenderSystem::rebuild(World& world, Renderer& renderer,
         float half_diag = 0.5f * std::sqrt(tw * tw + th * th) * std::abs(spr.scale);
         float cx = sx + tw * 0.5f;
         float cy = sy + th * 0.5f;
-        if (cx + half_diag < 0 || cx - half_diag > fvw ||
-            cy + half_diag < 0 || cy - half_diag > fvh)
+        if (cx + half_diag < 0 || cx - half_diag > fvw || cy + half_diag < 0 ||
+            cy - half_diag > fvh)
             return;
         auto uv = spr.sheet->region(spr.tile_index);
         auto idx = static_cast<uint32_t>(instances.size());
         instances.push_back({
-            .pos_x    = sx + spr.pivot_x * tw * spr.scale,
-            .pos_y    = sy + spr.pivot_y * th * spr.scale,
-            .uv_x = uv.x, .uv_y = uv.y, .uv_w = uv.w, .uv_h = uv.h,
-            .quad_w   = tw, .quad_h = th,
+            .pos_x = sx + spr.pivot_x * tw * spr.scale,
+            .pos_y = sy + spr.pivot_y * th * spr.scale,
+            .uv_x = uv.x,
+            .uv_y = uv.y,
+            .uv_w = uv.w,
+            .uv_h = uv.h,
+            .quad_w = tw,
+            .quad_h = th,
             .r = static_cast<float>(spr.tint.r) / 255.0f,
             .g = static_cast<float>(spr.tint.g) / 255.0f,
             .b = static_cast<float>(spr.tint.b) / 255.0f,
             .a = static_cast<float>(spr.tint.a) / 255.0f,
-            .scale    = spr.scale,
+            .scale = spr.scale,
             .rotation = spr.rotation,
-            .pivot_x  = spr.pivot_x,
-            .pivot_y  = spr.pivot_y,
+            .pivot_x = spr.pivot_x,
+            .pivot_y = spr.pivot_y,
         });
         keys.push_back({spr.z_order, &spr.sheet->texture(), idx});
         entities.push_back(e);
@@ -189,17 +205,18 @@ void SpriteRenderSystem::rebuild(World& world, Renderer& renderer,
     }
 
     // Sort compact keys.
-    std::sort(keys.begin(), keys.end(),
-              [](const SortKey& a, const SortKey& b) {
-                  if (a.z_order != b.z_order) return a.z_order < b.z_order;
-                  return a.texture < b.texture;
-              });
+    std::sort(keys.begin(), keys.end(), [](const SortKey& a, const SortKey& b) {
+        if (a.z_order != b.z_order)
+            return a.z_order < b.z_order;
+        return a.texture < b.texture;
+    });
 
     auto total = static_cast<uint32_t>(keys.size());
 
     // Get mapped GPU buffer.
     SpriteInstance* dst = renderer.map_instance_buffer(total);
-    if (!dst) return;
+    if (!dst)
+        return;
 
     // Build sorted data directly into GPU buffer + gpu_entities_ + batch_runs_.
     gpu_entities_.clear();

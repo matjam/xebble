@@ -70,10 +70,11 @@ struct LogColor {
 
 /// @brief A single log entry.
 struct LogMessage {
-    std::u8string text;     ///< Display text encoded as UTF-8 (includes u8" ×N" suffix if repeated).
-    LogColor      color;    ///< Text color.
-    std::string   category; ///< Optional category tag for filtering (ASCII identifier, not displayed).
-    int           count = 1;///< Raw repeat count (before suffix was appended).
+    std::u8string text; ///< Display text encoded as UTF-8 (includes u8" ×N" suffix if repeated).
+    LogColor color;     ///< Text color.
+    std::string
+        category;  ///< Optional category tag for filtering (ASCII identifier, not displayed).
+    int count = 1; ///< Raw repeat count (before suffix was appended).
 };
 
 // ---------------------------------------------------------------------------
@@ -129,9 +130,7 @@ public:
     /// log.push("You miss.", {180, 180, 180, 255}, "combat");
     /// // → "You miss. ×2"
     /// @endcode
-    void push(std::u8string text,
-              LogColor     color    = {},
-              std::string  category = "") {
+    void push(std::u8string text, LogColor color = {}, std::string category = "") {
         if (!messages_.empty()) {
             auto& last = messages_.back();
             if (last.category == category && last_raw_text_ == text) {
@@ -140,14 +139,16 @@ public:
                 // Digits are ASCII so safe to reinterpret as char8_t.
                 auto count_str = std::to_string(last.count);
                 std::u8string suffix = u8" \u00D7";
-                for (char c : count_str) suffix += static_cast<char8_t>(c);
+                for (char c : count_str)
+                    suffix += static_cast<char8_t>(c);
                 last.text = text + suffix;
                 last.color = color;
                 return;
             }
         }
         last_raw_text_ = text;
-        if (messages_.size() >= capacity_) messages_.pop_front();
+        if (messages_.size() >= capacity_)
+            messages_.pop_front();
         messages_.push_back(LogMessage{std::move(text), color, std::move(category), 1});
     }
 
@@ -165,7 +166,10 @@ public:
     size_t capacity() const { return capacity_; }
 
     /// @brief Clear all messages.
-    void clear() { messages_.clear(); last_raw_text_.clear(); }
+    void clear() {
+        messages_.clear();
+        last_raw_text_.clear();
+    }
 
     /// @brief Return the most recently added message.
     ///
@@ -219,9 +223,9 @@ public:
     const std::deque<LogMessage>& messages() const { return messages_; }
 
 private:
-    size_t              capacity_;
+    size_t capacity_;
     std::deque<LogMessage> messages_;
-    std::u8string       last_raw_text_;
+    std::u8string last_raw_text_;
 };
 
 } // namespace xebble

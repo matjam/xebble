@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tiles.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <random>
@@ -14,10 +15,8 @@ struct Room {
     int center_y() const { return y + h / 2; }
 
     bool intersects(const Room& other, int padding = 1) const {
-        return !(x - padding >= other.x + other.w ||
-                 x + w + padding <= other.x ||
-                 y - padding >= other.y + other.h ||
-                 y + h + padding <= other.y);
+        return !(x - padding >= other.x + other.w || x + w + padding <= other.x ||
+                 y - padding >= other.y + other.h || y + h + padding <= other.y);
     }
 };
 
@@ -40,26 +39,28 @@ struct Dungeon {
     int player_start_y = 0;
 
     uint32_t floor_at(int x, int y) const {
-        if (x < 0 || x >= width || y < 0 || y >= height) return tiles::PERMANENT_WALL;
+        if (x < 0 || x >= width || y < 0 || y >= height)
+            return tiles::PERMANENT_WALL;
         return floor_tiles[y * width + x];
     }
 
     bool is_walkable(int x, int y) const {
         uint32_t t = floor_at(x, y);
-        return t == tiles::FLOOR || t == tiles::OPEN_DOOR ||
-               t == tiles::STAIRS_UP || t == tiles::STAIRS_DOWN ||
-               t == tiles::RUBBLE;
+        return t == tiles::FLOOR || t == tiles::OPEN_DOOR || t == tiles::STAIRS_UP ||
+               t == tiles::STAIRS_DOWN || t == tiles::RUBBLE;
     }
 
     Entity* monster_at(int x, int y) {
         for (auto& e : entities)
-            if (e.alive && e.is_monster && e.x == x && e.y == y) return &e;
+            if (e.alive && e.is_monster && e.x == x && e.y == y)
+                return &e;
         return nullptr;
     }
 
     Entity* item_at(int x, int y) {
         for (auto& e : entities)
-            if (e.alive && !e.is_monster && e.x == x && e.y == y) return &e;
+            if (e.alive && !e.is_monster && e.x == x && e.y == y)
+                return &e;
         return nullptr;
     }
 };
@@ -87,9 +88,13 @@ inline Dungeon generate_dungeon(uint32_t seed = 0) {
         Room room{x, y, w, h};
         bool overlap = false;
         for (auto& existing : dg.rooms) {
-            if (room.intersects(existing, 2)) { overlap = true; break; }
+            if (room.intersects(existing, 2)) {
+                overlap = true;
+                break;
+            }
         }
-        if (overlap) continue;
+        if (overlap)
+            continue;
 
         for (int ry = room.y; ry < room.y + room.h; ry++)
             for (int rx = room.x; rx < room.x + room.w; rx++)
@@ -126,12 +131,13 @@ inline Dungeon generate_dungeon(uint32_t seed = 0) {
     // Place doors at corridor/room junctions
     for (int y = 1; y < dg.height - 1; y++) {
         for (int x = 1; x < dg.width - 1; x++) {
-            if (dg.floor_tiles[y * dg.width + x] != tiles::FLOOR) continue;
+            if (dg.floor_tiles[y * dg.width + x] != tiles::FLOOR)
+                continue;
 
-            uint32_t n = dg.floor_tiles[(y-1) * dg.width + x];
-            uint32_t s = dg.floor_tiles[(y+1) * dg.width + x];
-            uint32_t e = dg.floor_tiles[y * dg.width + (x+1)];
-            uint32_t w = dg.floor_tiles[y * dg.width + (x-1)];
+            uint32_t n = dg.floor_tiles[(y - 1) * dg.width + x];
+            uint32_t s = dg.floor_tiles[(y + 1) * dg.width + x];
+            uint32_t e = dg.floor_tiles[y * dg.width + (x + 1)];
+            uint32_t w = dg.floor_tiles[y * dg.width + (x - 1)];
 
             bool ns_walls = (n == tiles::GRANITE_WALL && s == tiles::GRANITE_WALL);
             bool ew_floors = (e == tiles::FLOOR && w == tiles::FLOOR);
@@ -178,7 +184,8 @@ inline Dungeon generate_dungeon(uint32_t seed = 0) {
         for (int j = 0; j < num; j++) {
             int ex = std::uniform_int_distribution<int>(room.x + 1, room.x + room.w - 2)(rng);
             int ey = std::uniform_int_distribution<int>(room.y + 1, room.y + room.h - 2)(rng);
-            if (ex == dg.player_start_x && ey == dg.player_start_y) continue;
+            if (ex == dg.player_start_x && ey == dg.player_start_y)
+                continue;
             int ii = std::uniform_int_distribution<int>(0, tiles::NUM_ITEMS - 1)(rng);
             dg.entities.push_back({ex, ey, tiles::ITEMS[ii], tiles::ITEM_NAMES[ii], false});
         }
@@ -187,8 +194,10 @@ inline Dungeon generate_dungeon(uint32_t seed = 0) {
     // Scatter rubble
     for (int y = 1; y < dg.height - 1; y++)
         for (int x = 1; x < dg.width - 1; x++) {
-            if (dg.floor_tiles[y * dg.width + x] != tiles::FLOOR) continue;
-            if (dg.feature_tiles[y * dg.width + x] != UINT32_MAX) continue;
+            if (dg.floor_tiles[y * dg.width + x] != tiles::FLOOR)
+                continue;
+            if (dg.feature_tiles[y * dg.width + x] != UINT32_MAX)
+                continue;
             if (std::uniform_int_distribution<int>(0, 99)(rng) < 2)
                 dg.feature_tiles[y * dg.width + x] = tiles::RUBBLE;
         }

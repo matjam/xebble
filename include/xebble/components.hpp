@@ -32,9 +32,9 @@
 /// @endcode
 #pragma once
 
-#include <xebble/types.hpp>
-#include <xebble/tilemap.hpp>
 #include <xebble/serial.hpp>
+#include <xebble/tilemap.hpp>
+#include <xebble/types.hpp>
 
 #include <memory>
 
@@ -68,8 +68,8 @@ class SpriteSheet;
 /// }
 /// @endcode
 struct Position {
-    float x = 0.0f;  ///< Horizontal world position in virtual pixels.
-    float y = 0.0f;  ///< Vertical   world position in virtual pixels.
+    float x = 0.0f; ///< Horizontal world position in virtual pixels.
+    float y = 0.0f; ///< Vertical   world position in virtual pixels.
 };
 
 // ---------------------------------------------------------------------------
@@ -106,14 +106,14 @@ struct Position {
 /// world.get<Sprite>(player).z_order = 10.0f;
 /// @endcode
 struct Sprite {
-    const SpriteSheet* sheet      = nullptr;              ///< Atlas to sample from.
-    uint32_t           tile_index = 0;                    ///< Row-major tile index in the atlas.
-    float              z_order    = 0.0f;                 ///< Draw order (lower = behind).
-    Color              tint       = {255, 255, 255, 255}; ///< Multiplicative colour tint.
-    float              scale      = 1.0f;                 ///< Uniform scale multiplier (1 = native size).
-    float              rotation   = 0.0f;                 ///< Rotation in radians, counter-clockwise.
-    float              pivot_x    = 0.5f;                 ///< Rotation pivot X in 0–1 quad-local space (0=left, 1=right).
-    float              pivot_y    = 0.5f;                 ///< Rotation pivot Y in 0–1 quad-local space (0=top, 1=bottom).
+    const SpriteSheet* sheet = nullptr; ///< Atlas to sample from.
+    uint32_t tile_index = 0;            ///< Row-major tile index in the atlas.
+    float z_order = 0.0f;               ///< Draw order (lower = behind).
+    Color tint = {255, 255, 255, 255};  ///< Multiplicative colour tint.
+    float scale = 1.0f;                 ///< Uniform scale multiplier (1 = native size).
+    float rotation = 0.0f;              ///< Rotation in radians, counter-clockwise.
+    float pivot_x = 0.5f; ///< Rotation pivot X in 0–1 quad-local space (0=left, 1=right).
+    float pivot_y = 0.5f; ///< Rotation pivot Y in 0–1 quad-local space (0=top, 1=bottom).
 };
 
 // ---------------------------------------------------------------------------
@@ -147,8 +147,8 @@ struct Sprite {
 /// game_map->set_tile(1, wall_x, wall_y, TILE_RUBBLE);
 /// @endcode
 struct TileMapLayer {
-    std::shared_ptr<TileMap> tilemap;         ///< The tilemap to render.
-    float                    z_order = 0.0f;  ///< Draw order (lower = behind sprites).
+    std::shared_ptr<TileMap> tilemap; ///< The tilemap to render.
+    float z_order = 0.0f;             ///< Draw order (lower = behind sprites).
 };
 
 // ---------------------------------------------------------------------------
@@ -182,8 +182,8 @@ struct TileMapLayer {
 /// }
 /// @endcode
 struct Camera {
-    float x = 0.0f;  ///< Left edge of the viewport in world pixels.
-    float y = 0.0f;  ///< Top  edge of the viewport in world pixels.
+    float x = 0.0f; ///< Left edge of the viewport in world pixels.
+    float y = 0.0f; ///< Top  edge of the viewport in world pixels.
 };
 
 } // namespace xebble
@@ -193,13 +193,17 @@ struct Camera {
 // ---------------------------------------------------------------------------
 
 /// @brief Opt `Position` into World serialization.
-template<> struct xebble::ComponentName<xebble::Position>
-    { static constexpr std::string_view value = "xebble::Position"; };
+template<>
+struct xebble::ComponentName<xebble::Position> {
+    static constexpr std::string_view value = "xebble::Position";
+};
 
 /// @brief Opt `Camera` into World resource serialization.
 ///
 /// Camera is stored as a resource.  Specializing `ResourceName` here (rather
 /// than `ComponentName`) lets it be saved and restored via
 /// `add_serializable_resource<Camera>()` / `World::snapshot()`.
-template<> struct xebble::ResourceName<xebble::Camera>
-    { static constexpr std::string_view value = "xebble::Camera"; };
+template<>
+struct xebble::ResourceName<xebble::Camera> {
+    static constexpr std::string_view value = "xebble::Camera";
+};

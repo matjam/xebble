@@ -7,15 +7,14 @@ struct DescriptorPool::Impl {
     VkDescriptorPool pool = VK_NULL_HANDLE;
 
     ~Impl() {
-        if (pool) vkDestroyDescriptorPool(device, pool, nullptr);
+        if (pool)
+            vkDestroyDescriptorPool(device, pool, nullptr);
     }
 };
 
-std::expected<DescriptorPool, Error> DescriptorPool::create(
-    VkDevice device,
-    uint32_t max_sets,
-    std::vector<VkDescriptorPoolSize> pool_sizes)
-{
+std::expected<DescriptorPool, Error>
+DescriptorPool::create(VkDevice device, uint32_t max_sets,
+                       std::vector<VkDescriptorPoolSize> pool_sizes) {
     VkDescriptorPoolCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     ci.maxSets = max_sets;
@@ -50,11 +49,12 @@ std::expected<VkDescriptorSet, Error> DescriptorPool::allocate(VkDescriptorSetLa
     return set;
 }
 
-VkDescriptorPool DescriptorPool::handle() const { return impl_->pool; }
+VkDescriptorPool DescriptorPool::handle() const {
+    return impl_->pool;
+}
 
-std::expected<VkDescriptorSetLayout, Error> create_single_texture_layout(
-    VkDevice device, VkShaderStageFlags stage)
-{
+std::expected<VkDescriptorSetLayout, Error> create_single_texture_layout(VkDevice device,
+                                                                         VkShaderStageFlags stage) {
     VkDescriptorSetLayoutBinding binding{};
     binding.binding = 0;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -73,10 +73,8 @@ std::expected<VkDescriptorSetLayout, Error> create_single_texture_layout(
     return layout;
 }
 
-void write_texture_descriptor(
-    VkDevice device, VkDescriptorSet set,
-    VkImageView image_view, VkSampler sampler)
-{
+void write_texture_descriptor(VkDevice device, VkDescriptorSet set, VkImageView image_view,
+                              VkSampler sampler) {
     VkDescriptorImageInfo image_info{};
     image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     image_info.imageView = image_view;

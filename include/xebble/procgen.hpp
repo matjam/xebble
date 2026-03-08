@@ -68,26 +68,25 @@ namespace xebble {
 /// root.each_leaf([&](const BSPNode& n){ leaves.push_back(n.rect); });
 /// @endcode
 struct BSPNode {
-  IRect rect; ///< Rectangle covered by this node.
-  std::unique_ptr<BSPNode> left =
-      nullptr; ///< Left/top child (or null for leaf).
-  std::unique_ptr<BSPNode> right =
-      nullptr; ///< Right/bottom child (or null for leaf).
+    IRect rect;                               ///< Rectangle covered by this node.
+    std::unique_ptr<BSPNode> left = nullptr;  ///< Left/top child (or null for leaf).
+    std::unique_ptr<BSPNode> right = nullptr; ///< Right/bottom child (or null for leaf).
 
-  /// @brief True if this node is a leaf (no further splits).
-  bool is_leaf() const { return !left && !right; }
+    /// @brief True if this node is a leaf (no further splits).
+    bool is_leaf() const { return !left && !right; }
 
-  /// @brief Visit every leaf node depth-first.
-  template <typename Fn> void each_leaf(Fn &&fn) const {
-    if (is_leaf()) {
-      fn(*this);
-      return;
+    /// @brief Visit every leaf node depth-first.
+    template<typename Fn>
+    void each_leaf(Fn&& fn) const {
+        if (is_leaf()) {
+            fn(*this);
+            return;
+        }
+        if (left)
+            left->each_leaf(fn);
+        if (right)
+            right->each_leaf(fn);
     }
-    if (left)
-      left->each_leaf(fn);
-    if (right)
-      right->each_leaf(fn);
-  }
 };
 
 /// @brief Recursively split @p node using Binary Space Partitioning.
@@ -110,31 +109,27 @@ struct BSPNode {
 ///     rect_for_each(room, [&](IVec2 p){ map[p] = Tile::Floor; });
 /// });
 /// @endcode
-inline void bsp_split(BSPNode &node, Rng &rng, int min_size = 6) {
-  const IRect &r = node.rect;
-  bool can_h = r.h >= min_size * 2;
-  bool can_v = r.w >= min_size * 2;
-  if (!can_h && !can_v)
-    return;
+inline void bsp_split(BSPNode& node, Rng& rng, int min_size = 6) {
+    const IRect& r = node.rect;
+    bool can_h = r.h >= min_size * 2;
+    bool can_v = r.w >= min_size * 2;
+    if (!can_h && !can_v)
+        return;
 
-  bool split_h = can_h && (!can_v || rng.coin_flip());
+    bool split_h = can_h && (!can_v || rng.coin_flip());
 
-  if (split_h) {
-    int split = rng.range(r.y + min_size, r.y + r.h - min_size);
-    node.left =
-        std::make_unique<BSPNode>(BSPNode{IRect{r.x, r.y, r.w, split - r.y}});
-    node.right = std::make_unique<BSPNode>(
-        BSPNode{IRect{r.x, split, r.w, r.y + r.h - split}});
-  } else {
-    int split = rng.range(r.x + min_size, r.x + r.w - min_size);
-    node.left =
-        std::make_unique<BSPNode>(BSPNode{IRect{r.x, r.y, split - r.x, r.h}});
-    node.right = std::make_unique<BSPNode>(
-        BSPNode{IRect{split, r.y, r.x + r.w - split, r.h}});
-  }
+    if (split_h) {
+        int split = rng.range(r.y + min_size, r.y + r.h - min_size);
+        node.left = std::make_unique<BSPNode>(BSPNode{IRect{r.x, r.y, r.w, split - r.y}});
+        node.right = std::make_unique<BSPNode>(BSPNode{IRect{r.x, split, r.w, r.y + r.h - split}});
+    } else {
+        int split = rng.range(r.x + min_size, r.x + r.w - min_size);
+        node.left = std::make_unique<BSPNode>(BSPNode{IRect{r.x, r.y, split - r.x, r.h}});
+        node.right = std::make_unique<BSPNode>(BSPNode{IRect{split, r.y, r.x + r.w - split, r.h}});
+    }
 
-  bsp_split(*node.left, rng, min_size);
-  bsp_split(*node.right, rng, min_size);
+    bsp_split(*node.left, rng, min_size);
+    bsp_split(*node.right, rng, min_size);
 }
 
 // ---------------------------------------------------------------------------
@@ -165,30 +160,29 @@ inline void bsp_split(BSPNode &node, Rng &rng, int min_size = 6) {
 /// // Smooth 5× with the classic cave threshold.
 /// for (int i = 0; i < 5; ++i) cave = cellular_step(cave, 4);
 /// @endcode
-inline Grid<bool> cellular_step(const Grid<bool> &grid,
-                                int birth_threshold = 4) {
-  Grid<bool> result(grid.width(), grid.height(), true);
+inline Grid<bool> cellular_step(const Grid<bool>& grid, int birth_threshold = 4) {
+    Grid<bool> result(grid.width(), grid.height(), true);
 
-  for (int y = 0; y < grid.height(); ++y) {
-    for (int x = 0; x < grid.width(); ++x) {
-      IVec2 p{x, y};
-      // Border cells are always walls.
-      if (x == 0 || y == 0 || x == grid.width() - 1 || y == grid.height() - 1) {
-        result[p] = true;
-        continue;
-      }
-      int wall_count = 0;
-      for (IVec2 nb : neighbors8(p, grid))
-        if (grid[nb])
-          ++wall_count;
-      // Out-of-bounds neighbours are treated as walls.
-      // neighbors8 already clips to grid bounds, so count also OOB.
-      int oob = 8 - static_cast<int>(neighbors8(p, grid).size());
-      wall_count += oob;
-      result[p] = (wall_count >= birth_threshold);
+    for (int y = 0; y < grid.height(); ++y) {
+        for (int x = 0; x < grid.width(); ++x) {
+            IVec2 p{x, y};
+            // Border cells are always walls.
+            if (x == 0 || y == 0 || x == grid.width() - 1 || y == grid.height() - 1) {
+                result[p] = true;
+                continue;
+            }
+            int wall_count = 0;
+            for (IVec2 nb : neighbors8(p, grid))
+                if (grid[nb])
+                    ++wall_count;
+            // Out-of-bounds neighbours are treated as walls.
+            // neighbors8 already clips to grid bounds, so count also OOB.
+            int oob = 8 - static_cast<int>(neighbors8(p, grid).size());
+            wall_count += oob;
+            result[p] = (wall_count >= birth_threshold);
+        }
     }
-  }
-  return result;
+    return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -210,17 +204,17 @@ inline Grid<bool> cellular_step(const Grid<bool> &grid,
 /// Grid<bool> map(80, 25, true);
 /// drunkard_walk(map, {40, 12}, 500, rng);
 /// @endcode
-inline void drunkard_walk(Grid<bool> &grid, IVec2 origin, int steps, Rng &rng) {
-  IVec2 pos = origin;
-  static constexpr int dx[4] = {-1, 1, 0, 0};
-  static constexpr int dy[4] = {0, 0, -1, 1};
+inline void drunkard_walk(Grid<bool>& grid, IVec2 origin, int steps, Rng& rng) {
+    IVec2 pos = origin;
+    static constexpr int dx[4] = {-1, 1, 0, 0};
+    static constexpr int dy[4] = {0, 0, -1, 1};
 
-  for (int i = 0; i < steps; ++i) {
-    grid[pos] = false;
-    int d = rng.range(3);
-    pos.x = std::clamp(pos.x + dx[d], 1, grid.width() - 2);
-    pos.y = std::clamp(pos.y + dy[d], 1, grid.height() - 2);
-  }
+    for (int i = 0; i < steps; ++i) {
+        grid[pos] = false;
+        int d = rng.range(3);
+        pos.x = std::clamp(pos.x + dx[d], 1, grid.width() - 2);
+        pos.y = std::clamp(pos.y + dy[d], 1, grid.height() - 2);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -252,34 +246,33 @@ inline void drunkard_walk(Grid<bool> &grid, IVec2 origin, int steps, Rng &rng) {
 ///     rect_for_each(r, [&](IVec2 p){ map[p] = Tile::Floor; });
 /// connect_rooms(rooms, map, rng);
 /// @endcode
-inline std::vector<IRect> place_rooms(const Grid<bool> &grid, int min_w,
-                                      int max_w, int min_h, int max_h, Rng &rng,
-                                      int attempts = 30) {
-  std::vector<IRect> rooms;
+inline std::vector<IRect> place_rooms(const Grid<bool>& grid, int min_w, int max_w, int min_h,
+                                      int max_h, Rng& rng, int attempts = 30) {
+    std::vector<IRect> rooms;
 
-  for (int attempt = 0; attempt < attempts; ++attempt) {
-    int w = rng.range(min_w, max_w);
-    int h = rng.range(min_h, max_h);
-    int x = rng.range(1, grid.width() - w - 1);
-    int y = rng.range(1, grid.height() - h - 1);
-    IRect candidate{x, y, w, h};
+    for (int attempt = 0; attempt < attempts; ++attempt) {
+        int w = rng.range(min_w, max_w);
+        int h = rng.range(min_h, max_h);
+        int x = rng.range(1, grid.width() - w - 1);
+        int y = rng.range(1, grid.height() - h - 1);
+        IRect candidate{x, y, w, h};
 
-    // Expand by 1 for the gap check.
-    IRect padded{x - 1, y - 1, w + 2, h + 2};
+        // Expand by 1 for the gap check.
+        IRect padded{x - 1, y - 1, w + 2, h + 2};
 
-    bool overlaps = false;
-    for (auto &r : rooms) {
-      // Check if padded and existing room intersect.
-      if (padded.x < r.x + r.w && padded.x + padded.w > r.x &&
-          padded.y < r.y + r.h && padded.y + padded.h > r.y) {
-        overlaps = true;
-        break;
-      }
+        bool overlaps = false;
+        for (auto& r : rooms) {
+            // Check if padded and existing room intersect.
+            if (padded.x < r.x + r.w && padded.x + padded.w > r.x && padded.y < r.y + r.h &&
+                padded.y + padded.h > r.y) {
+                overlaps = true;
+                break;
+            }
+        }
+        if (!overlaps)
+            rooms.push_back(candidate);
     }
-    if (!overlaps)
-      rooms.push_back(candidate);
-  }
-  return rooms;
+    return rooms;
 }
 
 // ---------------------------------------------------------------------------
@@ -299,42 +292,41 @@ inline std::vector<IRect> place_rooms(const Grid<bool> &grid, int min_w,
 /// @code
 /// connect_rooms(rooms, map, rng);
 /// @endcode
-inline void connect_rooms(const std::vector<IRect> &rooms, Grid<bool> &grid,
-                          Rng &rng) {
-  auto centre = [](const IRect &r) -> IVec2 {
-    return {r.x + r.w / 2, r.y + r.h / 2};
-  };
-
-  for (size_t i = 1; i < rooms.size(); ++i) {
-    IVec2 a = centre(rooms[i - 1]);
-    IVec2 b = centre(rooms[i]);
-
-    // Clamp corridor to safe bounds.
-    auto carve_h = [&](int y, int x1, int x2) {
-      int lo = std::min(x1, x2), hi = std::max(x1, x2);
-      for (int x = lo; x <= hi; ++x) {
-        IVec2 p{x, y};
-        if (grid.in_bounds(p))
-          grid[p] = false;
-      }
-    };
-    auto carve_v = [&](int x, int y1, int y2) {
-      int lo = std::min(y1, y2), hi = std::max(y1, y2);
-      for (int y = lo; y <= hi; ++y) {
-        IVec2 p{x, y};
-        if (grid.in_bounds(p))
-          grid[p] = false;
-      }
+inline void connect_rooms(const std::vector<IRect>& rooms, Grid<bool>& grid, Rng& rng) {
+    auto centre = [](const IRect& r) -> IVec2 {
+        return {r.x + r.w / 2, r.y + r.h / 2};
     };
 
-    if (rng.coin_flip()) {
-      carve_h(a.y, a.x, b.x);
-      carve_v(b.x, a.y, b.y);
-    } else {
-      carve_v(a.x, a.y, b.y);
-      carve_h(b.y, a.x, b.x);
+    for (size_t i = 1; i < rooms.size(); ++i) {
+        IVec2 a = centre(rooms[i - 1]);
+        IVec2 b = centre(rooms[i]);
+
+        // Clamp corridor to safe bounds.
+        auto carve_h = [&](int y, int x1, int x2) {
+            int lo = std::min(x1, x2), hi = std::max(x1, x2);
+            for (int x = lo; x <= hi; ++x) {
+                IVec2 p{x, y};
+                if (grid.in_bounds(p))
+                    grid[p] = false;
+            }
+        };
+        auto carve_v = [&](int x, int y1, int y2) {
+            int lo = std::min(y1, y2), hi = std::max(y1, y2);
+            for (int y = lo; y <= hi; ++y) {
+                IVec2 p{x, y};
+                if (grid.in_bounds(p))
+                    grid[p] = false;
+            }
+        };
+
+        if (rng.coin_flip()) {
+            carve_h(a.y, a.x, b.x);
+            carve_v(b.x, a.y, b.y);
+        } else {
+            carve_v(a.x, a.y, b.y);
+            carve_h(b.y, a.x, b.x);
+        }
     }
-  }
 }
 
 } // namespace xebble

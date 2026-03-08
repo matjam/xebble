@@ -1,8 +1,9 @@
-#include <xebble/texture.hpp>
-#include <xebble/log.hpp>
-#include "vulkan/context.hpp"
 #include "vulkan/buffer.hpp"
 #include "vulkan/command.hpp"
+#include "vulkan/context.hpp"
+
+#include <xebble/log.hpp>
+#include <xebble/texture.hpp>
 
 #include <stb_image.h>
 
@@ -19,20 +20,24 @@ struct Texture::Impl {
     uint32_t height = 0;
 
     ~Impl() {
-        if (sampler) vkDestroySampler(device, sampler, nullptr);
-        if (view) vkDestroyImageView(device, view, nullptr);
-        if (image && allocator) vmaDestroyImage(allocator, image, allocation);
+        if (sampler)
+            vkDestroySampler(device, sampler, nullptr);
+        if (view)
+            vkDestroyImageView(device, view, nullptr);
+        if (image && allocator)
+            vmaDestroyImage(allocator, image, allocation);
     }
 };
 
 namespace {
 
-std::expected<void, Error> transition_image_layout(
-    VkDevice device, VkCommandPool pool, VkQueue queue,
-    VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
-{
+std::expected<void, Error> transition_image_layout(VkDevice device, VkCommandPool pool,
+                                                   VkQueue queue, VkImage image,
+                                                   VkImageLayout old_layout,
+                                                   VkImageLayout new_layout) {
     auto cmd = vk::begin_one_shot(device, pool);
-    if (!cmd) return std::unexpected(cmd.error());
+    if (!cmd)
+        return std::unexpected(cmd.error());
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -65,27 +70,23 @@ std::expected<void, Error> transition_image_layout(
         return std::unexpected(Error{"Unsupported image layout transition"});
     }
 
-    vkCmdPipelineBarrier(*cmd, src_stage, dst_stage, 0,
-        0, nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(*cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
     return vk::end_one_shot(device, pool, queue, *cmd);
 }
 
 } // anonymous namespace
 
-std::expected<Texture, Error> Texture::create_from_pixels(
-    vk::Context& ctx, const uint8_t* pixels,
-    uint32_t width, uint32_t height)
-{
+std::expected<Texture, Error> Texture::create_from_pixels(vk::Context& ctx, const uint8_t* pixels,
+                                                          uint32_t width, uint32_t height) {
     VkDeviceSize image_size = width * height * 4;
 
     // Create staging buffer
-    auto staging = vk::Buffer::create(
-        ctx.allocator(), image_size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VMA_MEMORY_USAGE_AUTO,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-    if (!staging) return std::unexpected(staging.error());
+    auto staging = vk::Buffer::create(ctx.allocator(), image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                      VMA_MEMORY_USAGE_AUTO,
+                                      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+    if (!staging)
+        return std::unexpected(staging.error());
     staging->upload(pixels, image_size);
 
     // Create image
@@ -112,20 +113,22 @@ std::expected<Texture, Error> Texture::create_from_pixels(
     tex.impl_->width = width;
     tex.impl_->height = height;
 
-    if (vmaCreateImage(ctx.allocator(), &ici, &ai,
-            &tex.impl_->image, &tex.impl_->allocation, nullptr) != VK_SUCCESS) {
+    if (vmaCreateImage(ctx.allocator(), &ici, &ai, &tex.impl_->image, &tex.impl_->allocation,
+                       nullptr) != VK_SUCCESS) {
         return std::unexpected(Error{"Failed to create texture image"});
     }
 
     // Transition to transfer dst
-    auto result = transition_image_layout(
-        ctx.device(), ctx.command_pool(), ctx.graphics_queue(),
-        tex.impl_->image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    if (!result) return std::unexpected(result.error());
+    auto result = transition_image_layout(ctx.device(), ctx.command_pool(), ctx.graphics_queue(),
+                                          tex.impl_->image, VK_IMAGE_LAYOUT_UNDEFINED,
+                                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    if (!result)
+        return std::unexpected(result.error());
 
     // Copy staging buffer to image
     auto cmd = vk::begin_one_shot(ctx.device(), ctx.command_pool());
-    if (!cmd) return std::unexpected(cmd.error());
+    if (!cmd)
+        return std::unexpected(cmd.error());
 
     VkBufferImageCopy region{};
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -133,18 +136,19 @@ std::expected<Texture, Error> Texture::create_from_pixels(
     region.imageExtent = {width, height, 1};
 
     vkCmdCopyBufferToImage(*cmd, staging->handle(), tex.impl_->image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    auto end_result = vk::end_one_shot(ctx.device(), ctx.command_pool(),
-        ctx.graphics_queue(), *cmd);
-    if (!end_result) return std::unexpected(end_result.error());
+    auto end_result =
+        vk::end_one_shot(ctx.device(), ctx.command_pool(), ctx.graphics_queue(), *cmd);
+    if (!end_result)
+        return std::unexpected(end_result.error());
 
     // Transition to shader read
-    result = transition_image_layout(
-        ctx.device(), ctx.command_pool(), ctx.graphics_queue(),
-        tex.impl_->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    if (!result) return std::unexpected(result.error());
+    result = transition_image_layout(ctx.device(), ctx.command_pool(), ctx.graphics_queue(),
+                                     tex.impl_->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    if (!result)
+        return std::unexpected(result.error());
 
     // Create image view
     VkImageViewCreateInfo vi{};
@@ -177,45 +181,41 @@ std::expected<Texture, Error> Texture::create_from_pixels(
     return tex;
 }
 
-std::expected<Texture, Error> Texture::load(
-    vk::Context& ctx, const std::filesystem::path& path)
-{
+std::expected<Texture, Error> Texture::load(vk::Context& ctx, const std::filesystem::path& path) {
     int w, h, channels;
     auto* pixels = stbi_load(path.string().c_str(), &w, &h, &channels, 4);
     if (!pixels) {
         return std::unexpected(Error{"Failed to load image: " + path.string()});
     }
 
-    auto result = create_from_pixels(ctx, pixels,
-        static_cast<uint32_t>(w), static_cast<uint32_t>(h));
+    auto result =
+        create_from_pixels(ctx, pixels, static_cast<uint32_t>(w), static_cast<uint32_t>(h));
     stbi_image_free(pixels);
 
     if (result) {
-        log(LogLevel::Info, "Texture loaded: " + path.string() +
-            " (" + std::to_string(w) + "x" + std::to_string(h) + ")");
+        log(LogLevel::Info, "Texture loaded: " + path.string() + " (" + std::to_string(w) + "x" +
+                                std::to_string(h) + ")");
     }
     return result;
 }
 
-std::expected<Texture, Error> Texture::load_from_memory(
-    vk::Context& ctx, const uint8_t* data, size_t size)
-{
+std::expected<Texture, Error> Texture::load_from_memory(vk::Context& ctx, const uint8_t* data,
+                                                        size_t size) {
     int w, h, channels;
     auto* pixels = stbi_load_from_memory(data, static_cast<int>(size), &w, &h, &channels, 4);
     if (!pixels) {
         return std::unexpected(Error{"Failed to load image from memory"});
     }
 
-    auto result = create_from_pixels(ctx, pixels,
-        static_cast<uint32_t>(w), static_cast<uint32_t>(h));
+    auto result =
+        create_from_pixels(ctx, pixels, static_cast<uint32_t>(w), static_cast<uint32_t>(h));
     stbi_image_free(pixels);
     return result;
 }
 
-std::expected<Texture, Error> Texture::create_empty(
-    vk::Context& ctx, uint32_t width, uint32_t height,
-    VkFormat format, VkImageUsageFlags usage)
-{
+std::expected<Texture, Error> Texture::create_empty(vk::Context& ctx, uint32_t width,
+                                                    uint32_t height, VkFormat format,
+                                                    VkImageUsageFlags usage) {
     VkImageCreateInfo ici{};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ici.imageType = VK_IMAGE_TYPE_2D;
@@ -239,8 +239,8 @@ std::expected<Texture, Error> Texture::create_empty(
     tex.impl_->width = width;
     tex.impl_->height = height;
 
-    if (vmaCreateImage(ctx.allocator(), &ici, &ai,
-            &tex.impl_->image, &tex.impl_->allocation, nullptr) != VK_SUCCESS) {
+    if (vmaCreateImage(ctx.allocator(), &ici, &ai, &tex.impl_->image, &tex.impl_->allocation,
+                       nullptr) != VK_SUCCESS) {
         return std::unexpected(Error{"Failed to create empty texture"});
     }
 
@@ -272,8 +272,8 @@ std::expected<Texture, Error> Texture::create_empty(
         return std::unexpected(Error{"Failed to create empty texture sampler"});
     }
 
-    log(LogLevel::Info, "Empty texture created: " +
-        std::to_string(width) + "x" + std::to_string(height));
+    log(LogLevel::Info,
+        "Empty texture created: " + std::to_string(width) + "x" + std::to_string(height));
     return tex;
 }
 
@@ -281,10 +281,20 @@ Texture::~Texture() = default;
 Texture::Texture(Texture&&) noexcept = default;
 Texture& Texture::operator=(Texture&&) noexcept = default;
 
-uint32_t Texture::width() const { return impl_->width; }
-uint32_t Texture::height() const { return impl_->height; }
-VkImage Texture::image() const { return impl_->image; }
-VkImageView Texture::image_view() const { return impl_->view; }
-VkSampler Texture::sampler() const { return impl_->sampler; }
+uint32_t Texture::width() const {
+    return impl_->width;
+}
+uint32_t Texture::height() const {
+    return impl_->height;
+}
+VkImage Texture::image() const {
+    return impl_->image;
+}
+VkImageView Texture::image_view() const {
+    return impl_->view;
+}
+VkSampler Texture::sampler() const {
+    return impl_->sampler;
+}
 
 } // namespace xebble

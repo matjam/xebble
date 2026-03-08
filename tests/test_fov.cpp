@@ -15,12 +15,10 @@ using namespace xebble;
 // ---------------------------------------------------------------------------
 
 /// Collect all visible cells from compute_fov into a set.
-static std::set<std::pair<int,int>> visible_set(
-        IVec2 origin, int radius,
-        const std::function<bool(IVec2)>& blocks,
-        int grid_w = 40, int grid_h = 25)
-{
-    std::set<std::pair<int,int>> out;
+static std::set<std::pair<int, int>> visible_set(IVec2 origin, int radius,
+                                                 const std::function<bool(IVec2)>& blocks,
+                                                 int grid_w = 40, int grid_h = 25) {
+    std::set<std::pair<int, int>> out;
     compute_fov(origin, radius, blocks, [&](IVec2 p) {
         if (p.x >= 0 && p.x < grid_w && p.y >= 0 && p.y < grid_h)
             out.insert({p.x, p.y});
@@ -30,7 +28,9 @@ static std::set<std::pair<int,int>> visible_set(
 
 /// All-open map (no walls).
 static auto no_walls() {
-    return [](IVec2) { return false; };
+    return [](IVec2) {
+        return false;
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -38,9 +38,9 @@ static auto no_walls() {
 // ---------------------------------------------------------------------------
 
 TEST(VisState, DefaultValues) {
-    EXPECT_EQ(static_cast<int>(VisState::Unseen),   0);
-    EXPECT_EQ(static_cast<int>(VisState::Revealed),  1);
-    EXPECT_EQ(static_cast<int>(VisState::Visible),   2);
+    EXPECT_EQ(static_cast<int>(VisState::Unseen), 0);
+    EXPECT_EQ(static_cast<int>(VisState::Revealed), 1);
+    EXPECT_EQ(static_cast<int>(VisState::Visible), 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -55,10 +55,8 @@ TEST(ComputeFov, OriginAlwaysVisible) {
 
 TEST(ComputeFov, OriginVisibleEvenRadiusZero) {
     IVec2 origin{3, 3};
-    std::set<std::pair<int,int>> out;
-    compute_fov(origin, 0, no_walls(), [&](IVec2 p) {
-        out.insert({p.x, p.y});
-    });
+    std::set<std::pair<int, int>> out;
+    compute_fov(origin, 0, no_walls(), [&](IVec2 p) { out.insert({p.x, p.y}); });
     EXPECT_EQ(out.size(), 1u);
     EXPECT_TRUE(out.count({3, 3}));
 }
@@ -112,7 +110,9 @@ TEST(ComputeFov, OpenFieldSymmetric) {
 TEST(ComputeFov, WallBlocksCell) {
     // Wall at (6,5) — the cell directly to the right of origin.
     IVec2 origin{5, 5};
-    auto blocks = [](IVec2 p) { return p.x == 6 && p.y == 5; };
+    auto blocks = [](IVec2 p) {
+        return p.x == 6 && p.y == 5;
+    };
 
     auto vis = visible_set(origin, 4, blocks);
     // The wall cell itself is visible (you can see it, just not through it).
@@ -125,7 +125,9 @@ TEST(ComputeFov, WallBlocksCell) {
 TEST(ComputeFov, WallDoesNotBlockPerpendicularDirection) {
     // Wall at (6,5) should not block cells above/below origin.
     IVec2 origin{5, 5};
-    auto blocks = [](IVec2 p) { return p.x == 6 && p.y == 5; };
+    auto blocks = [](IVec2 p) {
+        return p.x == 6 && p.y == 5;
+    };
 
     auto vis = visible_set(origin, 4, blocks);
     EXPECT_TRUE(vis.count({5, 4}));
@@ -203,7 +205,7 @@ TEST(ComputeFov, GridOverloadIgnoresOutOfBounds) {
     IVec2 origin{1, 1};
     // Should not throw or crash even though the algorithm generates
     // cells with negative coordinates.
-    EXPECT_NO_THROW(compute_fov(origin, 5, [](IVec2){ return false; }, vis));
+    EXPECT_NO_THROW(compute_fov(origin, 5, [](IVec2) { return false; }, vis));
 }
 
 TEST(ComputeFov, GridOverloadDoesNotClearExistingRevealed) {

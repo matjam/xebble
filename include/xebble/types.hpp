@@ -42,8 +42,8 @@ namespace xebble {
 /// Vec2 virtual_pos = renderer.screen_to_virtual(event.mouse_move().position);
 /// @endcode
 struct Vec2 {
-    float x = 0.0f;  ///< Horizontal component.
-    float y = 0.0f;  ///< Vertical component.
+    float x = 0.0f; ///< Horizontal component.
+    float y = 0.0f; ///< Vertical component.
 };
 
 // ---------------------------------------------------------------------------
@@ -66,10 +66,10 @@ struct Vec2 {
 ///         && cursor.y >= panel.y && cursor.y < panel.y + panel.h;
 /// @endcode
 struct Rect {
-    float x = 0.0f;  ///< Left edge in virtual pixels.
-    float y = 0.0f;  ///< Top  edge in virtual pixels.
-    float w = 0.0f;  ///< Width  in virtual pixels.
-    float h = 0.0f;  ///< Height in virtual pixels.
+    float x = 0.0f; ///< Left edge in virtual pixels.
+    float y = 0.0f; ///< Top  edge in virtual pixels.
+    float w = 0.0f; ///< Width  in virtual pixels.
+    float h = 0.0f; ///< Height in virtual pixels.
 };
 
 // ---------------------------------------------------------------------------
@@ -101,10 +101,10 @@ struct Rect {
 /// renderer.set_border_color({10, 10, 40, 255});
 /// @endcode
 struct Color {
-    uint8_t r = 255;  ///< Red channel   (0–255).
-    uint8_t g = 255;  ///< Green channel (0–255).
-    uint8_t b = 255;  ///< Blue channel  (0–255).
-    uint8_t a = 255;  ///< Alpha channel (0 = transparent, 255 = opaque).
+    uint8_t r = 255; ///< Red channel   (0–255).
+    uint8_t g = 255; ///< Green channel (0–255).
+    uint8_t b = 255; ///< Blue channel  (0–255).
+    uint8_t a = 255; ///< Alpha channel (0 = transparent, 255 = opaque).
 };
 
 // ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ struct Color {
 ///     });
 /// @endcode
 struct Error {
-    std::string message;  ///< Human-readable description of what went wrong.
+    std::string message; ///< Human-readable description of what went wrong.
 };
 
 // ---------------------------------------------------------------------------
@@ -163,16 +163,49 @@ enum class Key {
 
     // Printable keys
     Space = 32,
-    Apostrophe = 39,   ///< `'`
-    Comma = 44,        ///< `,`
-    Minus = 45,        ///< `-`
-    Period = 46,       ///< `.`
-    Slash = 47,        ///< `/`
-    Num0 = 48, Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
-    Semicolon = 59,    ///< `;`
-    Equal = 61,        ///< `=`
-    A = 65, B, C, D, E, F, G, H, I, J, K, L, M,
-    N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
+    Apostrophe = 39, ///< `'`
+    Comma = 44,      ///< `,`
+    Minus = 45,      ///< `-`
+    Period = 46,     ///< `.`
+    Slash = 47,      ///< `/`
+    Num0 = 48,
+    Num1,
+    Num2,
+    Num3,
+    Num4,
+    Num5,
+    Num6,
+    Num7,
+    Num8,
+    Num9,
+    Semicolon = 59, ///< `;`
+    Equal = 61,     ///< `=`
+    A = 65,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
     LeftBracket = 91,  ///< `[`
     Backslash = 92,    ///< `\`
     RightBracket = 93, ///< `]`
@@ -200,17 +233,28 @@ enum class Key {
     Pause = 284,
 
     // Function keys
-    F1 = 290, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+    F1 = 290,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
 
     // Modifier keys
     LeftShift = 340,
     LeftControl = 341,
     LeftAlt = 342,
-    LeftSuper = 343,   ///< Left Windows / Command key.
+    LeftSuper = 343, ///< Left Windows / Command key.
     RightShift = 344,
     RightControl = 345,
     RightAlt = 346,
-    RightSuper = 347,  ///< Right Windows / Command key.
+    RightSuper = 347, ///< Right Windows / Command key.
     Menu = 348,
 };
 
@@ -235,9 +279,9 @@ enum class Key {
 /// }
 /// @endcode
 enum class MouseButton {
-    Left   = 0,  ///< Primary (left) mouse button.
-    Right  = 1,  ///< Secondary (right) mouse button.
-    Middle = 2,  ///< Middle mouse button / scroll wheel click.
+    Left = 0,   ///< Primary (left) mouse button.
+    Right = 1,  ///< Secondary (right) mouse button.
+    Middle = 2, ///< Middle mouse button / scroll wheel click.
 };
 
 // ---------------------------------------------------------------------------
@@ -259,10 +303,10 @@ enum class MouseButton {
 /// }
 /// @endcode
 struct Modifiers {
-    bool shift = false;  ///< Left or right Shift is held.
-    bool ctrl  = false;  ///< Left or right Control is held.
-    bool alt   = false;  ///< Left or right Alt is held.
-    bool super = false;  ///< Left or right Super (Windows/Command) is held.
+    bool shift = false; ///< Left or right Shift is held.
+    bool ctrl = false;  ///< Left or right Control is held.
+    bool alt = false;   ///< Left or right Alt is held.
+    bool super = false; ///< Left or right Super (Windows/Command) is held.
 };
 
 // ---------------------------------------------------------------------------
@@ -287,10 +331,10 @@ struct Modifiers {
 /// });
 /// @endcode
 enum class LogLevel {
-    Debug,  ///< Verbose diagnostic information, usually disabled in release builds.
-    Info,   ///< General operational messages (asset loads, state transitions, etc.).
-    Warn,   ///< Unexpected but recoverable situations.
-    Error,  ///< Failures that prevent correct operation.
+    Debug, ///< Verbose diagnostic information, usually disabled in release builds.
+    Info,  ///< General operational messages (asset loads, state transitions, etc.).
+    Warn,  ///< Unexpected but recoverable situations.
+    Error, ///< Failures that prevent correct operation.
 };
 
 } // namespace xebble

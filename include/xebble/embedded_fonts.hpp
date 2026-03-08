@@ -40,16 +40,18 @@
 /// @endcode
 #pragma once
 
-#include <xebble/types.hpp>
 #include <xebble/font.hpp>
+#include <xebble/types.hpp>
 
 #include <cstdint>
 #include <expected>
 
 namespace xebble {
-namespace vk { class Context; }
-class World;
+namespace vk {
+class Context;
 }
+class World;
+} // namespace xebble
 
 namespace xebble::embedded_fonts {
 
@@ -57,32 +59,32 @@ namespace xebble::embedded_fonts {
 // petme64  —  BitmapFont, 8×8 fixed cell
 // ---------------------------------------------------------------------------
 namespace petme64 {
-    /// @brief Create the PetMe64 embedded bitmap font (8×8 cells).
-    ///
-    /// Covers 3800+ codepoints including full Latin, box-drawing (U+2500),
-    /// block elements, C64 Private Use Area graphics, and legacy symbols.
-    std::expected<BitmapFont, Error> create(vk::Context& ctx);
+/// @brief Create the PetMe64 embedded bitmap font (8×8 cells).
+///
+/// Covers 3800+ codepoints including full Latin, box-drawing (U+2500),
+/// block elements, C64 Private Use Area graphics, and legacy symbols.
+std::expected<BitmapFont, Error> create(vk::Context& ctx);
 } // namespace petme64
 
 // ---------------------------------------------------------------------------
 // petme642y  —  BitmapFont, 8×16 fixed cell
 // ---------------------------------------------------------------------------
 namespace petme642y {
-    /// @brief Create the PetMe642Y embedded bitmap font (8×16 cells).
-    ///
-    /// Double-height version of PetMe64. Same codepoint coverage, taller glyphs.
-    std::expected<BitmapFont, Error> create(vk::Context& ctx);
+/// @brief Create the PetMe642Y embedded bitmap font (8×16 cells).
+///
+/// Double-height version of PetMe64. Same codepoint coverage, taller glyphs.
+std::expected<BitmapFont, Error> create(vk::Context& ctx);
 } // namespace petme642y
 
 // ---------------------------------------------------------------------------
 // berkelium64  —  Font (proportional), ~8px high
 // ---------------------------------------------------------------------------
 namespace berkelium64 {
-    /// @brief Create the Berkelium64 embedded proportional font (~8px high).
-    ///
-    /// Variable-width pixel font with 288 codepoints covering Latin and
-    /// common symbols. Use as a `Font` with per-glyph advance/bearing metrics.
-    std::expected<Font, Error> create(vk::Context& ctx);
+/// @brief Create the Berkelium64 embedded proportional font (~8px high).
+///
+/// Variable-width pixel font with 288 codepoints covering Latin and
+/// common symbols. Use as a `Font` with per-glyph advance/bearing metrics.
+std::expected<Font, Error> create(vk::Context& ctx);
 } // namespace berkelium64
 
 // ---------------------------------------------------------------------------

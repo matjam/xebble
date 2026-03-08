@@ -1,5 +1,7 @@
 #include "swapchain.hpp"
+
 #include "context.hpp"
+
 #include <xebble/log.hpp>
 
 #define GLFW_INCLUDE_VULKAN
@@ -26,7 +28,8 @@ struct Swapchain::Impl {
 
     ~Impl() {
         destroy_views();
-        if (swapchain) vkDestroySwapchainKHR(device, swapchain, nullptr);
+        if (swapchain)
+            vkDestroySwapchainKHR(device, swapchain, nullptr);
     }
 
     void destroy_views() {
@@ -46,7 +49,8 @@ struct Swapchain::Impl {
         uint32_t format_count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> formats(format_count);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count,
+                                             formats.data());
 
         VkSurfaceFormatKHR chosen_format = formats[0];
         for (auto& f : formats) {
@@ -62,7 +66,8 @@ struct Swapchain::Impl {
         uint32_t mode_count;
         vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &mode_count, nullptr);
         std::vector<VkPresentModeKHR> modes(mode_count);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &mode_count, modes.data());
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &mode_count,
+                                                  modes.data());
 
         VkPresentModeKHR chosen_mode = VK_PRESENT_MODE_FIFO_KHR;
         if (!vsync) {
@@ -80,10 +85,10 @@ struct Swapchain::Impl {
         } else {
             int w, h;
             glfwGetFramebufferSize(window, &w, &h);
-            extent.width = std::clamp(static_cast<uint32_t>(w),
-                caps.minImageExtent.width, caps.maxImageExtent.width);
-            extent.height = std::clamp(static_cast<uint32_t>(h),
-                caps.minImageExtent.height, caps.maxImageExtent.height);
+            extent.width = std::clamp(static_cast<uint32_t>(w), caps.minImageExtent.width,
+                                      caps.maxImageExtent.width);
+            extent.height = std::clamp(static_cast<uint32_t>(h), caps.minImageExtent.height,
+                                       caps.maxImageExtent.height);
         }
 
         uint32_t image_count = caps.minImageCount + 1;
@@ -155,16 +160,16 @@ struct Swapchain::Impl {
             }
         }
 
-        log(LogLevel::Info, "Swapchain created: " + std::to_string(extent.width) +
-            "x" + std::to_string(extent.height) + ", " + std::to_string(count) + " images");
+        log(LogLevel::Info, "Swapchain created: " + std::to_string(extent.width) + "x" +
+                                std::to_string(extent.height) + ", " + std::to_string(count) +
+                                " images");
 
         return {};
     }
 };
 
-std::expected<Swapchain, Error> Swapchain::create(
-    const Context& ctx, GLFWwindow* window, bool vsync)
-{
+std::expected<Swapchain, Error> Swapchain::create(const Context& ctx, GLFWwindow* window,
+                                                  bool vsync) {
     Swapchain sc;
     sc.impl_ = std::make_unique<Impl>();
     sc.impl_->device = ctx.device();
@@ -175,7 +180,8 @@ std::expected<Swapchain, Error> Swapchain::create(
     sc.impl_->present_family = ctx.present_queue_family();
 
     auto result = sc.impl_->create_swapchain(window, vsync);
-    if (!result) return std::unexpected(result.error());
+    if (!result)
+        return std::unexpected(result.error());
 
     return sc;
 }
@@ -186,8 +192,8 @@ Swapchain& Swapchain::operator=(Swapchain&&) noexcept = default;
 
 std::expected<uint32_t, Error> Swapchain::acquire_next_image(VkSemaphore signal_semaphore) {
     uint32_t index;
-    VkResult result = vkAcquireNextImageKHR(
-        impl_->device, impl_->swapchain, UINT64_MAX, signal_semaphore, VK_NULL_HANDLE, &index);
+    VkResult result = vkAcquireNextImageKHR(impl_->device, impl_->swapchain, UINT64_MAX,
+                                            signal_semaphore, VK_NULL_HANDLE, &index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         return std::unexpected(Error{"Swapchain out of date"});
@@ -221,10 +227,20 @@ std::expected<void, Error> Swapchain::recreate(GLFWwindow* window, bool vsync) {
     return impl_->create_swapchain(window, vsync);
 }
 
-VkSwapchainKHR Swapchain::handle() const { return impl_->swapchain; }
-VkFormat Swapchain::image_format() const { return impl_->format; }
-VkExtent2D Swapchain::extent() const { return impl_->extent; }
-const std::vector<VkImageView>& Swapchain::image_views() const { return impl_->views; }
-uint32_t Swapchain::image_count() const { return static_cast<uint32_t>(impl_->images.size()); }
+VkSwapchainKHR Swapchain::handle() const {
+    return impl_->swapchain;
+}
+VkFormat Swapchain::image_format() const {
+    return impl_->format;
+}
+VkExtent2D Swapchain::extent() const {
+    return impl_->extent;
+}
+const std::vector<VkImageView>& Swapchain::image_views() const {
+    return impl_->views;
+}
+uint32_t Swapchain::image_count() const {
+    return static_cast<uint32_t>(impl_->images.size());
+}
 
 } // namespace xebble::vk

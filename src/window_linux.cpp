@@ -16,8 +16,8 @@
 #error "window_linux.cpp must only be compiled on Linux"
 #endif
 
-#include <xebble/window.hpp>
 #include <xebble/log.hpp>
+#include <xebble/window.hpp>
 
 struct GLFWwindow;
 

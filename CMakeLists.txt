@@ -5,6 +5,15 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Suppress "ignoring duplicate libraries" warning on macOS.
+# vcpkg's freetype port lists zlib twice in its link interface: once as
+# the ZLIB::ZLIB imported target and again as a hard-coded libz.a path
+# (a transitive dependency from libpng). Both resolve to the same archive,
+# so the duplicate is harmless.
+if(APPLE)
+    add_link_options("LINKER:-no_warn_duplicate_libraries")
+endif()
+
 option(XEBBLE_PROFILE "Enable gperftools CPU profiling in ex06_ecs" OFF)
 
 find_package(Vulkan REQUIRED)

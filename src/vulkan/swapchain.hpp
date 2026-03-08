@@ -7,7 +7,9 @@
 #pragma once
 
 #include <xebble/types.hpp>
+
 #include <vulkan/vulkan.h>
+
 #include <expected>
 #include <memory>
 #include <vector>
@@ -28,8 +30,8 @@ public:
     /// @param ctx The Vulkan context (provides device, surface, queues).
     /// @param window The GLFW window (provides framebuffer extent).
     /// @param vsync Whether to use vsync (FIFO) or prefer mailbox.
-    static std::expected<Swapchain, Error> create(
-        const Context& ctx, GLFWwindow* window, bool vsync);
+    static std::expected<Swapchain, Error> create(const Context& ctx, GLFWwindow* window,
+                                                  bool vsync);
 
     ~Swapchain();
     Swapchain(Swapchain&&) noexcept;

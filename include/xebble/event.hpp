@@ -50,6 +50,7 @@
 #pragma once
 
 #include <xebble/types.hpp>
+
 #include <variant>
 
 namespace xebble {
@@ -104,8 +105,8 @@ enum class EventType {
 /// }
 /// @endcode
 struct KeyData {
-    Key       key;   ///< Which key was involved.
-    Modifiers mods;  ///< Modifier keys held at the time of the event.
+    Key key;        ///< Which key was involved.
+    Modifiers mods; ///< Modifier keys held at the time of the event.
 };
 
 /// @brief Payload for `MousePress` and `MouseRelease` events.
@@ -125,9 +126,9 @@ struct KeyData {
 /// }
 /// @endcode
 struct MouseButtonData {
-    MouseButton button;    ///< Which button was pressed or released.
-    Modifiers   mods;      ///< Modifier keys held at the time of the event.
-    Vec2        position;  ///< Cursor position in screen (physical) pixels.
+    MouseButton button; ///< Which button was pressed or released.
+    Modifiers mods;     ///< Modifier keys held at the time of the event.
+    Vec2 position;      ///< Cursor position in screen (physical) pixels.
 };
 
 /// @brief Payload for `MouseMove` events.
@@ -143,7 +144,7 @@ struct MouseButtonData {
 /// }
 /// @endcode
 struct MouseMoveData {
-    Vec2 position;  ///< Cursor position in screen (physical) pixels.
+    Vec2 position; ///< Cursor position in screen (physical) pixels.
 };
 
 /// @brief Payload for `MouseScroll` events.
@@ -158,8 +159,8 @@ struct MouseMoveData {
 /// }
 /// @endcode
 struct MouseScrollData {
-    float dx = 0.0f;  ///< Horizontal scroll delta (positive = right).
-    float dy = 0.0f;  ///< Vertical scroll delta   (positive = up on most platforms).
+    float dx = 0.0f; ///< Horizontal scroll delta (positive = right).
+    float dy = 0.0f; ///< Vertical scroll delta   (positive = up on most platforms).
 };
 
 /// @brief Payload for `WindowResize` events.
@@ -176,8 +177,8 @@ struct MouseScrollData {
 /// }
 /// @endcode
 struct ResizeData {
-    uint32_t width  = 0;  ///< New framebuffer width in pixels.
-    uint32_t height = 0;  ///< New framebuffer height in pixels.
+    uint32_t width = 0;  ///< New framebuffer width in pixels.
+    uint32_t height = 0; ///< New framebuffer height in pixels.
 };
 
 // ---------------------------------------------------------------------------
@@ -214,43 +215,73 @@ struct ResizeData {
 /// @endcode
 class Event {
 public:
-    EventType type;          ///< Discriminator — always valid.
-    bool consumed = false;   ///< Set by a handler to prevent downstream processing.
+    EventType type;        ///< Discriminator — always valid.
+    bool consumed = false; ///< Set by a handler to prevent downstream processing.
 
     /// @name Factory methods (used internally by Window)
     /// @{
     static Event key_press(Key key, Modifiers mods) {
-        Event e; e.type = EventType::KeyPress; e.data_ = KeyData{key, mods}; return e;
+        Event e;
+        e.type = EventType::KeyPress;
+        e.data_ = KeyData{key, mods};
+        return e;
     }
     static Event key_release(Key key, Modifiers mods) {
-        Event e; e.type = EventType::KeyRelease; e.data_ = KeyData{key, mods}; return e;
+        Event e;
+        e.type = EventType::KeyRelease;
+        e.data_ = KeyData{key, mods};
+        return e;
     }
     static Event key_repeat(Key key, Modifiers mods) {
-        Event e; e.type = EventType::KeyRepeat; e.data_ = KeyData{key, mods}; return e;
+        Event e;
+        e.type = EventType::KeyRepeat;
+        e.data_ = KeyData{key, mods};
+        return e;
     }
     static Event mouse_press(MouseButton button, Modifiers mods, Vec2 pos) {
-        Event e; e.type = EventType::MousePress; e.data_ = MouseButtonData{button, mods, pos}; return e;
+        Event e;
+        e.type = EventType::MousePress;
+        e.data_ = MouseButtonData{button, mods, pos};
+        return e;
     }
     static Event mouse_release(MouseButton button, Modifiers mods, Vec2 pos) {
-        Event e; e.type = EventType::MouseRelease; e.data_ = MouseButtonData{button, mods, pos}; return e;
+        Event e;
+        e.type = EventType::MouseRelease;
+        e.data_ = MouseButtonData{button, mods, pos};
+        return e;
     }
     static Event mouse_move(Vec2 pos) {
-        Event e; e.type = EventType::MouseMove; e.data_ = MouseMoveData{pos}; return e;
+        Event e;
+        e.type = EventType::MouseMove;
+        e.data_ = MouseMoveData{pos};
+        return e;
     }
     static Event mouse_scroll(float dx, float dy) {
-        Event e; e.type = EventType::MouseScroll; e.data_ = MouseScrollData{dx, dy}; return e;
+        Event e;
+        e.type = EventType::MouseScroll;
+        e.data_ = MouseScrollData{dx, dy};
+        return e;
     }
     static Event window_resize(uint32_t w, uint32_t h) {
-        Event e; e.type = EventType::WindowResize; e.data_ = ResizeData{w, h}; return e;
+        Event e;
+        e.type = EventType::WindowResize;
+        e.data_ = ResizeData{w, h};
+        return e;
     }
     static Event window_focus_gained() {
-        Event e; e.type = EventType::WindowFocusGained; return e;
+        Event e;
+        e.type = EventType::WindowFocusGained;
+        return e;
     }
     static Event window_focus_lost() {
-        Event e; e.type = EventType::WindowFocusLost; return e;
+        Event e;
+        e.type = EventType::WindowFocusLost;
+        return e;
     }
     static Event window_close() {
-        Event e; e.type = EventType::WindowClose; return e;
+        Event e;
+        e.type = EventType::WindowClose;
+        return e;
     }
     /// @}
 
@@ -278,8 +309,9 @@ public:
 
 private:
     Event() = default;
-    std::variant<std::monostate, KeyData, MouseButtonData,
-                 MouseMoveData, MouseScrollData, ResizeData> data_;
+    std::variant<std::monostate, KeyData, MouseButtonData, MouseMoveData, MouseScrollData,
+                 ResizeData>
+        data_;
 };
 
 } // namespace xebble

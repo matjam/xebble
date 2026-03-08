@@ -2,9 +2,7 @@
 
 namespace xebble::vk {
 
-std::expected<VkCommandBuffer, Error> begin_one_shot(
-    VkDevice device, VkCommandPool command_pool)
-{
+std::expected<VkCommandBuffer, Error> begin_one_shot(VkDevice device, VkCommandPool command_pool) {
     VkCommandBufferAllocateInfo ai{};
     ai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     ai.commandPool = command_pool;
@@ -28,10 +26,8 @@ std::expected<VkCommandBuffer, Error> begin_one_shot(
     return cmd;
 }
 
-std::expected<void, Error> end_one_shot(
-    VkDevice device, VkCommandPool command_pool,
-    VkQueue queue, VkCommandBuffer cmd)
-{
+std::expected<void, Error> end_one_shot(VkDevice device, VkCommandPool command_pool, VkQueue queue,
+                                        VkCommandBuffer cmd) {
     if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
         vkFreeCommandBuffers(device, command_pool, 1, &cmd);
         return std::unexpected(Error{"Failed to end one-shot command buffer"});
@@ -49,9 +45,8 @@ std::expected<void, Error> end_one_shot(
     return {};
 }
 
-std::expected<std::vector<VkCommandBuffer>, Error> allocate_command_buffers(
-    VkDevice device, VkCommandPool command_pool, uint32_t count)
-{
+std::expected<std::vector<VkCommandBuffer>, Error>
+allocate_command_buffers(VkDevice device, VkCommandPool command_pool, uint32_t count) {
     VkCommandBufferAllocateInfo ai{};
     ai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     ai.commandPool = command_pool;

@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <xebble/asset_manager.hpp>
+
+#include <gtest/gtest.h>
 
 #include <string_view>
 

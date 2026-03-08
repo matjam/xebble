@@ -141,7 +141,7 @@ TEST(MessageLog, DedupResetsOnDifferentText) {
     MessageLog log(10);
     log.push(u8"You miss.");
     log.push(u8"You miss.");
-    log.push(u8"You hit!");    // different text → new entry
+    log.push(u8"You hit!"); // different text → new entry
     EXPECT_EQ(log.size(), 2u);
     EXPECT_EQ(log.newest().count, 1);
     EXPECT_EQ(sv(log.newest().text), "You hit!");
@@ -296,9 +296,9 @@ TEST(MessageLog, VisiblePointersValid) {
 TEST(MessageLog, FilteredReturnsOnlyMatchingCategory) {
     MessageLog log(20);
     log.push(u8"combat A", {}, "combat");
-    log.push(u8"story 1",  {}, "story");
+    log.push(u8"story 1", {}, "story");
     log.push(u8"combat B", {}, "combat");
-    log.push(u8"story 2",  {}, "story");
+    log.push(u8"story 2", {}, "story");
 
     auto combat = log.filtered("combat");
     EXPECT_EQ(combat.size(), 2u);
@@ -308,8 +308,8 @@ TEST(MessageLog, FilteredReturnsOnlyMatchingCategory) {
 
 TEST(MessageLog, FilteredOrderOldestFirst) {
     MessageLog log(20);
-    log.push(u8"first",  {}, "combat");
-    log.push(u8"other",  {}, "story");
+    log.push(u8"first", {}, "combat");
+    log.push(u8"other", {}, "story");
     log.push(u8"second", {}, "combat");
 
     auto v = log.filtered("combat");

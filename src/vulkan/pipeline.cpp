@@ -1,7 +1,10 @@
 #include "pipeline.hpp"
+
 #include <xebble/log.hpp>
-#include <fstream>
+
 #include <glm/glm.hpp>
+
+#include <fstream>
 #include <vector>
 
 namespace xebble::vk {
@@ -12,16 +15,22 @@ struct Pipeline::Impl {
     VkPipelineLayout layout = VK_NULL_HANDLE;
 
     ~Impl() {
-        if (pipeline) vkDestroyPipeline(device, pipeline, nullptr);
-        if (layout) vkDestroyPipelineLayout(device, layout, nullptr);
+        if (pipeline)
+            vkDestroyPipeline(device, pipeline, nullptr);
+        if (layout)
+            vkDestroyPipelineLayout(device, layout, nullptr);
     }
 };
 
 Pipeline::~Pipeline() = default;
 Pipeline::Pipeline(Pipeline&&) noexcept = default;
 Pipeline& Pipeline::operator=(Pipeline&&) noexcept = default;
-VkPipeline Pipeline::handle() const { return impl_->pipeline; }
-VkPipelineLayout Pipeline::layout() const { return impl_->layout; }
+VkPipeline Pipeline::handle() const {
+    return impl_->pipeline;
+}
+VkPipelineLayout Pipeline::layout() const {
+    return impl_->layout;
+}
 
 namespace {
 
@@ -37,9 +46,8 @@ std::expected<std::vector<char>, Error> read_spirv(const std::filesystem::path& 
     return buffer;
 }
 
-std::expected<VkShaderModule, Error> create_shader_module(
-    VkDevice device, const std::vector<char>& code)
-{
+std::expected<VkShaderModule, Error> create_shader_module(VkDevice device,
+                                                          const std::vector<char>& code) {
     VkShaderModuleCreateInfo ci{};
     ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     ci.codeSize = code.size();
@@ -57,31 +65,30 @@ std::expected<VkShaderModule, Error> create_shader_module(
 /// Per-instance vertex data for the sprite pipeline.
 /// Must match the layout in sprite.vert exactly (field order, types, padding).
 struct SpriteInstanceData {
-    glm::vec2 position;   // location 0
-    glm::vec2 uv_offset;  // location 1
-    glm::vec2 uv_size;    // location 2
-    glm::vec2 quad_size;  // location 3
-    glm::vec4 color;      // location 4
-    float     scale;      // location 5
-    float     rotation;   // location 6
-    glm::vec2 pivot;      // location 7
+    glm::vec2 position;  // location 0
+    glm::vec2 uv_offset; // location 1
+    glm::vec2 uv_size;   // location 2
+    glm::vec2 quad_size; // location 3
+    glm::vec4 color;     // location 4
+    float scale;         // location 5
+    float rotation;      // location 6
+    glm::vec2 pivot;     // location 7
 };
 
 std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
-    VkDevice device,
-    VkRenderPass render_pass,
-    VkDescriptorSetLayout descriptor_set_layout,
-    const std::filesystem::path& vert_path,
-    const std::filesystem::path& frag_path)
-{
+    VkDevice device, VkRenderPass render_pass, VkDescriptorSetLayout descriptor_set_layout,
+    const std::filesystem::path& vert_path, const std::filesystem::path& frag_path) {
     // Load shaders
     auto vert_code = read_spirv(vert_path);
-    if (!vert_code) return std::unexpected(vert_code.error());
+    if (!vert_code)
+        return std::unexpected(vert_code.error());
     auto frag_code = read_spirv(frag_path);
-    if (!frag_code) return std::unexpected(frag_code.error());
+    if (!frag_code)
+        return std::unexpected(frag_code.error());
 
     auto vert_module = create_shader_module(device, *vert_code);
-    if (!vert_module) return std::unexpected(vert_module.error());
+    if (!vert_module)
+        return std::unexpected(vert_module.error());
     auto frag_module = create_shader_module(device, *frag_code);
     if (!frag_module) {
         vkDestroyShaderModule(device, *vert_module, nullptr);
@@ -106,35 +113,43 @@ std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
 
     VkVertexInputAttributeDescription attrs[8]{};
     // position
-    attrs[0].binding = 0; attrs[0].location = 0;
+    attrs[0].binding = 0;
+    attrs[0].location = 0;
     attrs[0].format = VK_FORMAT_R32G32_SFLOAT;
     attrs[0].offset = offsetof(SpriteInstanceData, position);
     // uv_offset
-    attrs[1].binding = 0; attrs[1].location = 1;
+    attrs[1].binding = 0;
+    attrs[1].location = 1;
     attrs[1].format = VK_FORMAT_R32G32_SFLOAT;
     attrs[1].offset = offsetof(SpriteInstanceData, uv_offset);
     // uv_size
-    attrs[2].binding = 0; attrs[2].location = 2;
+    attrs[2].binding = 0;
+    attrs[2].location = 2;
     attrs[2].format = VK_FORMAT_R32G32_SFLOAT;
     attrs[2].offset = offsetof(SpriteInstanceData, uv_size);
     // quad_size
-    attrs[3].binding = 0; attrs[3].location = 3;
+    attrs[3].binding = 0;
+    attrs[3].location = 3;
     attrs[3].format = VK_FORMAT_R32G32_SFLOAT;
     attrs[3].offset = offsetof(SpriteInstanceData, quad_size);
     // color
-    attrs[4].binding = 0; attrs[4].location = 4;
+    attrs[4].binding = 0;
+    attrs[4].location = 4;
     attrs[4].format = VK_FORMAT_R32G32B32A32_SFLOAT;
     attrs[4].offset = offsetof(SpriteInstanceData, color);
     // scale
-    attrs[5].binding = 0; attrs[5].location = 5;
+    attrs[5].binding = 0;
+    attrs[5].location = 5;
     attrs[5].format = VK_FORMAT_R32_SFLOAT;
     attrs[5].offset = offsetof(SpriteInstanceData, scale);
     // rotation
-    attrs[6].binding = 0; attrs[6].location = 6;
+    attrs[6].binding = 0;
+    attrs[6].location = 6;
     attrs[6].format = VK_FORMAT_R32_SFLOAT;
     attrs[6].offset = offsetof(SpriteInstanceData, rotation);
     // pivot
-    attrs[7].binding = 0; attrs[7].location = 7;
+    attrs[7].binding = 0;
+    attrs[7].location = 7;
     attrs[7].format = VK_FORMAT_R32G32_SFLOAT;
     attrs[7].offset = offsetof(SpriteInstanceData, pivot);
 
@@ -169,7 +184,7 @@ std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
     // Alpha blending
     VkPipelineColorBlendAttachmentState blend_attach{};
     blend_attach.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                   VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+                                  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     blend_attach.blendEnable = VK_TRUE;
     blend_attach.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     blend_attach.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -227,8 +242,8 @@ std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
     pipeline_ci.renderPass = render_pass;
     pipeline_ci.subpass = 0;
 
-    VkResult result = vkCreateGraphicsPipelines(
-        device, VK_NULL_HANDLE, 1, &pipeline_ci, nullptr, &pip.impl_->pipeline);
+    VkResult result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_ci, nullptr,
+                                                &pip.impl_->pipeline);
 
     vkDestroyShaderModule(device, *vert_module, nullptr);
     vkDestroyShaderModule(device, *frag_module, nullptr);
@@ -242,19 +257,18 @@ std::expected<Pipeline, Error> Pipeline::create_sprite_pipeline(
 }
 
 std::expected<Pipeline, Error> Pipeline::create_blit_pipeline(
-    VkDevice device,
-    VkRenderPass render_pass,
-    VkDescriptorSetLayout descriptor_set_layout,
-    const std::filesystem::path& vert_path,
-    const std::filesystem::path& frag_path)
-{
+    VkDevice device, VkRenderPass render_pass, VkDescriptorSetLayout descriptor_set_layout,
+    const std::filesystem::path& vert_path, const std::filesystem::path& frag_path) {
     auto vert_code = read_spirv(vert_path);
-    if (!vert_code) return std::unexpected(vert_code.error());
+    if (!vert_code)
+        return std::unexpected(vert_code.error());
     auto frag_code = read_spirv(frag_path);
-    if (!frag_code) return std::unexpected(frag_code.error());
+    if (!frag_code)
+        return std::unexpected(frag_code.error());
 
     auto vert_module = create_shader_module(device, *vert_code);
-    if (!vert_module) return std::unexpected(vert_module.error());
+    if (!vert_module)
+        return std::unexpected(vert_module.error());
     auto frag_module = create_shader_module(device, *frag_code);
     if (!frag_module) {
         vkDestroyShaderModule(device, *vert_module, nullptr);
@@ -297,7 +311,7 @@ std::expected<Pipeline, Error> Pipeline::create_blit_pipeline(
     // No blending for blit
     VkPipelineColorBlendAttachmentState blend_attach{};
     blend_attach.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                   VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+                                  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
     VkPipelineColorBlendStateCreateInfo color_blending{};
     color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -341,8 +355,8 @@ std::expected<Pipeline, Error> Pipeline::create_blit_pipeline(
     pipeline_ci.renderPass = render_pass;
     pipeline_ci.subpass = 0;
 
-    VkResult result = vkCreateGraphicsPipelines(
-        device, VK_NULL_HANDLE, 1, &pipeline_ci, nullptr, &pip.impl_->pipeline);
+    VkResult result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_ci, nullptr,
+                                                &pip.impl_->pipeline);
 
     vkDestroyShaderModule(device, *vert_module, nullptr);
     vkDestroyShaderModule(device, *frag_module, nullptr);

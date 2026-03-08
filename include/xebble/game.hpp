@@ -75,12 +75,12 @@
 /// @endcode
 #pragma once
 
+#include <xebble/asset_manager.hpp>
+#include <xebble/renderer.hpp>
+#include <xebble/scene.hpp>
 #include <xebble/types.hpp>
 #include <xebble/window.hpp>
-#include <xebble/renderer.hpp>
-#include <xebble/asset_manager.hpp>
 #include <xebble/world.hpp>
-#include <xebble/scene.hpp>
 
 namespace xebble {
 
@@ -108,9 +108,9 @@ namespace xebble {
 /// };
 /// @endcode
 struct GameConfig {
-    WindowConfig   window;                   ///< Window title, size, and display options.
-    RendererConfig renderer;                 ///< Renderer capacity and pipeline settings.
-    AssetConfig    assets;                   ///< Manifest, directory, and optional archive paths.
+    WindowConfig window;     ///< Window title, size, and display options.
+    RendererConfig renderer; ///< Renderer capacity and pipeline settings.
+    AssetConfig assets;      ///< Manifest, directory, and optional archive paths.
 };
 
 /// @brief Create built-in systems and run the main game loop.

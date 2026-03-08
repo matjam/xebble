@@ -43,8 +43,9 @@
 /// @endcode
 #pragma once
 
-#include <xebble/types.hpp>
 #include <xebble/event.hpp>
+#include <xebble/types.hpp>
+
 #include <expected>
 #include <functional>
 #include <memory>
@@ -75,9 +76,9 @@ namespace xebble {
 /// On macOS pixel dimensions are obtained from `CGDisplayModeGetPixelWidth/Height()`
 /// so they always reflect the true hardware pixel count with no HiDPI scaling.
 struct DisplayMode {
-    uint32_t    pixel_width;   ///< Native pixel width.
-    uint32_t    pixel_height;  ///< Native pixel height.
-    std::string label;         ///< Human-readable, e.g. "1920x1080".
+    uint32_t pixel_width;  ///< Native pixel width.
+    uint32_t pixel_height; ///< Native pixel height.
+    std::string label;     ///< Human-readable, e.g. "1920x1080".
 };
 
 // ---------------------------------------------------------------------------
@@ -104,11 +105,13 @@ struct DisplayMode {
 /// cfg.display_mode = modes[0];
 /// @endcode
 struct WindowConfig {
-    std::string title      = "Xebble";  ///< Title bar text.
-    uint32_t    width      = 1280;      ///< Initial width in screen coordinates (ignored when display_mode is set).
-    uint32_t    height     = 720;       ///< Initial height in screen coordinates (ignored when display_mode is set).
-    bool        resizable  = true;      ///< Whether the user can resize the window.
-    bool        fullscreen = false;     ///< Start in fullscreen mode.
+    std::string title = "Xebble"; ///< Title bar text.
+    uint32_t width =
+        1280; ///< Initial width in screen coordinates (ignored when display_mode is set).
+    uint32_t height =
+        720; ///< Initial height in screen coordinates (ignored when display_mode is set).
+    bool resizable = true;   ///< Whether the user can resize the window.
+    bool fullscreen = false; ///< Start in fullscreen mode.
 
     /// @brief Optional native-pixel display mode.
     ///

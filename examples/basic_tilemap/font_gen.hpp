@@ -8,8 +8,8 @@
 
 // stb_image_write.h must be included (with STB_IMAGE_WRITE_IMPLEMENTATION)
 // in exactly one .cpp file before including this header.
-extern "C" int stbi_write_png(char const *filename, int w, int h, int comp,
-                               const void *data, int stride_in_bytes);
+extern "C" int stbi_write_png(char const* filename, int w, int h, int comp, const void* data,
+                              int stride_in_bytes);
 
 namespace font_gen {
 
@@ -127,7 +127,8 @@ constexpr uint8_t FONT_DATA[] = {
 // clang-format on
 
 inline bool generate_font(const std::filesystem::path& path) {
-    if (std::filesystem::exists(path)) return true;
+    if (std::filesystem::exists(path))
+        return true;
 
     std::vector<uint8_t> pixels(ATLAS_W * ATLAS_H * 4, 0);
 
@@ -152,7 +153,8 @@ inline bool generate_font(const std::filesystem::path& path) {
         }
     }
 
-    return stbi_write_png(path.string().c_str(), ATLAS_W, ATLAS_H, 4, pixels.data(), ATLAS_W * 4) != 0;
+    return stbi_write_png(path.string().c_str(), ATLAS_W, ATLAS_H, 4, pixels.data(), ATLAS_W * 4) !=
+           0;
 }
 
 inline std::string font_charset() {

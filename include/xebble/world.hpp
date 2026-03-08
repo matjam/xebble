@@ -59,18 +59,18 @@ namespace xebble {
 class Renderer;
 
 namespace ecs_detail {
-    inline uint32_t next_component_id() {
-        static uint32_t counter = 0;
-        return counter++;
-    }
+inline uint32_t next_component_id() {
+    static uint32_t counter = 0;
+    return counter++;
+}
 
-    template<typename T>
-    uint32_t component_id() {
-        static uint32_t id = next_component_id();
-        return id;
-    }
+template<typename T>
+uint32_t component_id() {
+    static uint32_t id = next_component_id();
+    return id;
+}
 
-    using ComponentId = uint32_t;
+using ComponentId = uint32_t;
 } // namespace ecs_detail
 
 class World;
@@ -98,8 +98,7 @@ class World;
 /// @endcode
 class EntityBuilder {
 public:
-    explicit EntityBuilder(World& world, Entity entity)
-        : world_(world), entity_(entity) {}
+    explicit EntityBuilder(World& world, Entity entity) : world_(world), entity_(entity) {}
 
     /// @brief Add a component to the entity being built.
     template<typename T>
@@ -120,7 +119,6 @@ private:
 /// @brief Central ECS coordinator — owns entities, components, systems, and resources.
 class World {
 public:
-
     // -----------------------------------------------------------------------
     // Entities
     // -----------------------------------------------------------------------
@@ -193,7 +191,8 @@ public:
     template<typename T>
     void register_component() {
         auto id = ecs_detail::component_id<T>();
-        if (id >= pools_.size()) pools_.resize(id + 1);
+        if (id >= pools_.size())
+            pools_.resize(id + 1);
         pools_[id] = std::make_unique<ComponentPool<T>>();
         grow_mask_width(id);
     }
@@ -217,7 +216,8 @@ public:
         requires serial_detail::HasComponentName<T> && std::is_trivially_copyable_v<T>
     void register_serializable_component() {
         auto id = ecs_detail::component_id<T>();
-        if (id >= pools_.size()) pools_.resize(id + 1);
+        if (id >= pools_.size())
+            pools_.resize(id + 1);
         pools_[id] = std::make_unique<SerializableComponentPool<T>>();
         grow_mask_width(id);
     }
@@ -260,10 +260,14 @@ public:
     /// world.get<Health>(target).hp -= damage;
     /// @endcode
     template<typename T>
-    T& get(Entity e) { return get_pool<T>().get(e); }
+    T& get(Entity e) {
+        return get_pool<T>().get(e);
+    }
 
     template<typename T>
-    const T& get(Entity e) const { return get_pool<T>().get(e); }
+    const T& get(Entity e) const {
+        return get_pool<T>().get(e);
+    }
 
     /// @brief Return true if entity @p e currently has a component of type T.
     ///
@@ -287,10 +291,14 @@ public:
     ///     process(pool.dense_entity(i), pool.dense_component(i));
     /// @endcode
     template<typename T>
-    ComponentPool<T>& pool() { return get_pool<T>(); }
+    ComponentPool<T>& pool() {
+        return get_pool<T>();
+    }
 
     template<typename T>
-    const ComponentPool<T>& pool() const { return get_pool<T>(); }
+    const ComponentPool<T>& pool() const {
+        return get_pool<T>();
+    }
 
     // -----------------------------------------------------------------------
     // Iteration
@@ -337,14 +345,12 @@ public:
         // Cache typed pool references for get() calls (one dynamic_cast each,
         // done once here instead of per-entity).
         auto& pool2 = get_pool<T2>();
-        [[maybe_unused]] auto typed_rest =
-            std::tuple<ComponentPool<Rest>&...>(get_pool<Rest>()...);
+        [[maybe_unused]] auto typed_rest = std::tuple<ComponentPool<Rest>&...>(get_pool<Rest>()...);
 
         // Build a required-component bitmask once for all filter types.
         // The T1 pool is iterated directly so we only need bits for T2..Rest.
-        auto required = make_component_mask(
-            ecs_detail::component_id<T2>(),
-            ecs_detail::component_id<Rest>()...);
+        auto required = make_component_mask(ecs_detail::component_id<T2>(),
+                                            ecs_detail::component_id<Rest>()...);
 
         for (size_t i = 0; i < pool1.size(); i++) {
             Entity e = pool1.dense_entity(i);
@@ -402,7 +408,8 @@ public:
             serial_detail::append(out, v);
         };
         ser.read = [](std::any& a, const uint8_t* data, size_t size) {
-            if (size < sizeof(T)) return;
+            if (size < sizeof(T))
+                return;
             T v{};
             std::memcpy(&v, data, sizeof(T));
             a = v;
@@ -412,7 +419,9 @@ public:
 
     /// @brief Remove a resource by type. No-op if absent.
     template<typename T>
-    void remove_resource() { resources_.erase(ecs_detail::component_id<T>()); }
+    void remove_resource() {
+        resources_.erase(ecs_detail::component_id<T>());
+    }
 
     /// @brief Return a reference to the resource of type T.
     ///
@@ -547,7 +556,8 @@ private:
     /// @brief Fast pool lookup for has() checks — returns the type-erased
     /// pointer without any cast.  O(1), no RTTI.
     IComponentPool* get_pool_raw(ecs_detail::ComponentId id) const {
-        if (id >= pools_.size() || !pools_[id]) return nullptr;
+        if (id >= pools_.size() || !pools_[id])
+            return nullptr;
         return pools_[id].get();
     }
 
@@ -568,15 +578,15 @@ private:
     /// Grow mask width when a new component ID exceeds the current word count.
     void grow_mask_width(uint32_t component_id) {
         uint32_t words_needed = component_id / 64 + 1;
-        if (words_needed <= mask_words_) return;
+        if (words_needed <= mask_words_)
+            return;
 
         // Must widen every existing entity's mask.  Re-stride the flat array
         // from mask_words_ → words_needed.
         uint32_t old_words = mask_words_;
         uint32_t new_words = words_needed;
-        uint32_t slot_count = (old_words > 0)
-            ? static_cast<uint32_t>(component_masks_.size() / old_words)
-            : 0;
+        uint32_t slot_count =
+            (old_words > 0) ? static_cast<uint32_t>(component_masks_.size() / old_words) : 0;
 
         std::vector<uint64_t> grown(static_cast<size_t>(slot_count) * new_words, 0);
         for (uint32_t s = 0; s < slot_count; ++s) {
@@ -600,7 +610,8 @@ private:
 
     bool test_mask_bit(uint32_t slot, uint32_t component_id) const {
         size_t off = static_cast<size_t>(slot) * mask_words_ + (component_id / 64);
-        if (off >= component_masks_.size()) return false;
+        if (off >= component_masks_.size())
+            return false;
         return (component_masks_[off] & (1ULL << (component_id % 64))) != 0;
     }
 
@@ -634,11 +645,12 @@ private:
 
     EntityAllocator allocator_;
     std::vector<std::unique_ptr<IComponentPool>> pools_;
-    std::vector<uint64_t> component_masks_;  ///< Flat bitmask array, mask_words_ per entity slot.
-    uint32_t mask_words_ = 1;                ///< Words per entity (grows in 64-bit increments).
-    uint64_t generation_ = 0;                ///< Bumped on structural changes (add/remove/destroy/restore).
+    std::vector<uint64_t> component_masks_; ///< Flat bitmask array, mask_words_ per entity slot.
+    uint32_t mask_words_ = 1;               ///< Words per entity (grows in 64-bit increments).
+    uint64_t generation_ = 0; ///< Bumped on structural changes (add/remove/destroy/restore).
     std::unordered_map<ecs_detail::ComponentId, std::any> resources_;
-    std::unordered_map<ecs_detail::ComponentId, serial_detail::ResourceSerializer> resource_serializers_;
+    std::unordered_map<ecs_detail::ComponentId, serial_detail::ResourceSerializer>
+        resource_serializers_;
     std::vector<std::unique_ptr<System>> systems_;
     std::vector<Entity> pending_destroy_;
 };

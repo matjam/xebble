@@ -148,10 +148,7 @@ using CostFn = std::function<float(IVec2 from, IVec2 to)>;
 /// if (path.empty()) { log("No path found!"); }
 /// else { entity_follow_path(monster, path); }
 /// @endcode
-std::vector<IVec2> find_path(
-        IVec2 start, IVec2 goal,
-        int width, int height,
-        const CostFn& cost_fn);
+std::vector<IVec2> find_path(IVec2 start, IVec2 goal, int width, int height, const CostFn& cost_fn);
 
 // ---------------------------------------------------------------------------
 // dijkstra_map — multi-source Dijkstra distance grid
@@ -182,10 +179,8 @@ std::vector<IVec2> find_path(
 /// // Use the map: monster steps toward player.
 /// // Iterate 8 neighbours, pick lowest-cost walkable one.
 /// @endcode
-Grid<float> dijkstra_map(
-        int width, int height,
-        const std::vector<IVec2>& goals,
-        const CostFn& cost_fn);
+Grid<float> dijkstra_map(int width, int height, const std::vector<IVec2>& goals,
+                         const CostFn& cost_fn);
 
 // ---------------------------------------------------------------------------
 // dijkstra_step — single greedy step on a Dijkstra map
@@ -214,10 +209,7 @@ Grid<float> dijkstra_map(
 ///     if (v < PathCostInfinity) v = -v;
 /// monster_pos = dijkstra_step(monster_pos, flee, w, h, cost);
 /// @endcode
-IVec2 dijkstra_step(
-        IVec2 pos,
-        const Grid<float>& dmap,
-        int width, int height,
-        const CostFn& cost_fn);
+IVec2 dijkstra_step(IVec2 pos, const Grid<float>& dmap, int width, int height,
+                    const CostFn& cost_fn);
 
 } // namespace xebble

@@ -6,7 +6,9 @@
 #pragma once
 
 #include <xebble/types.hpp>
+
 #include <vulkan/vulkan.h>
+
 #include <expected>
 #include <memory>
 #include <vector>
@@ -20,10 +22,8 @@ public:
     /// @param device Vulkan logical device.
     /// @param max_sets Maximum number of descriptor sets that can be allocated.
     /// @param pool_sizes Array of pool size entries describing the pool capacity.
-    static std::expected<DescriptorPool, Error> create(
-        VkDevice device,
-        uint32_t max_sets,
-        std::vector<VkDescriptorPoolSize> pool_sizes);
+    static std::expected<DescriptorPool, Error>
+    create(VkDevice device, uint32_t max_sets, std::vector<VkDescriptorPoolSize> pool_sizes);
 
     ~DescriptorPool();
     DescriptorPool(DescriptorPool&&) noexcept;
@@ -46,16 +46,16 @@ private:
 /// @brief Create a descriptor set layout with a single combined image sampler at binding 0.
 /// @param device Vulkan logical device.
 /// @param stage Shader stage flags for the binding.
-std::expected<VkDescriptorSetLayout, Error> create_single_texture_layout(
-    VkDevice device, VkShaderStageFlags stage = VK_SHADER_STAGE_FRAGMENT_BIT);
+std::expected<VkDescriptorSetLayout, Error>
+create_single_texture_layout(VkDevice device,
+                             VkShaderStageFlags stage = VK_SHADER_STAGE_FRAGMENT_BIT);
 
 /// @brief Write a combined image sampler descriptor to a set at binding 0.
 /// @param device Vulkan logical device.
 /// @param set The descriptor set to write to.
 /// @param image_view The image view to bind.
 /// @param sampler The sampler to bind.
-void write_texture_descriptor(
-    VkDevice device, VkDescriptorSet set,
-    VkImageView image_view, VkSampler sampler);
+void write_texture_descriptor(VkDevice device, VkDescriptorSet set, VkImageView image_view,
+                              VkSampler sampler);
 
 } // namespace xebble::vk

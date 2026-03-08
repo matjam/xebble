@@ -50,9 +50,10 @@
 /// @endcode
 #pragma once
 
-#include <xebble/types.hpp>
 #include <xebble/texture.hpp>
+#include <xebble/types.hpp>
 #include <xebble/window.hpp>
+
 #include <expected>
 #include <memory>
 #include <span>
@@ -74,17 +75,17 @@ class Context;
 
 /// @brief Configuration for `Renderer::create()`.
 struct RendererConfig {
-    uint32_t virtual_width  = 640;   ///< Virtual framebuffer width  in pixels.
-    uint32_t virtual_height = 360;   ///< Virtual framebuffer height in pixels.
-    bool     vsync          = true;  ///< Enable vertical sync (prevents tearing).
-    bool     nearest_filter = true;  ///< Nearest-neighbor blit — keeps pixels sharp.
+    uint32_t virtual_width = 640;  ///< Virtual framebuffer width  in pixels.
+    uint32_t virtual_height = 360; ///< Virtual framebuffer height in pixels.
+    bool vsync = true;             ///< Enable vertical sync (prevents tearing).
+    bool nearest_filter = true;    ///< Nearest-neighbor blit — keeps pixels sharp.
 };
 
 /// @brief A named resolution option (for a settings menu, for example).
 struct Resolution {
-    uint32_t    width;
-    uint32_t    height;
-    std::string label;  ///< Human-readable name, e.g. "1920×1080".
+    uint32_t width;
+    uint32_t height;
+    std::string label; ///< Human-readable name, e.g. "1920×1080".
 };
 
 // ---------------------------------------------------------------------------
@@ -112,15 +113,15 @@ struct Resolution {
 /// renderer.submit_instances({&inst, 1}, sheet.texture(), z_order);
 /// @endcode
 struct SpriteInstance {
-    float pos_x, pos_y;    ///< Top-left position in virtual pixels (before pivot/rotation).
+    float pos_x, pos_y;   ///< Top-left position in virtual pixels (before pivot/rotation).
     float uv_x, uv_y;     ///< Top-left UV coordinate (normalised 0–1).
     float uv_w, uv_h;     ///< UV extent (normalised 0–1).
     float quad_w, quad_h; ///< Unscaled quad size in virtual pixels (shader applies scale).
     float r, g, b, a;     ///< Multiplicative colour tint (1,1,1,1 = no tint).
-    float scale;           ///< Uniform scale multiplier (1 = native size).
-    float rotation;        ///< Rotation in radians, counter-clockwise.
-    float pivot_x;         ///< Pivot X in 0–1 quad-local space (0=left, 1=right).
-    float pivot_y;         ///< Pivot Y in 0–1 quad-local space (0=top,  1=bottom).
+    float scale;          ///< Uniform scale multiplier (1 = native size).
+    float rotation;       ///< Rotation in radians, counter-clockwise.
+    float pivot_x;        ///< Pivot X in 0–1 quad-local space (0=left, 1=right).
+    float pivot_y;        ///< Pivot Y in 0–1 quad-local space (0=top,  1=bottom).
 };
 
 // ---------------------------------------------------------------------------
@@ -190,8 +191,8 @@ public:
     /// SpriteInstance inst{x, y, uv.x, uv.y, uv.w, uv.h, 16, 16, 1, 1, 1, 1};
     /// renderer.submit_instances({&inst, 1}, sheet.texture(), 2.0f);
     /// @endcode
-    void submit_instances(std::span<const SpriteInstance> instances,
-                          const Texture& texture, float z_order = 0.0f);
+    void submit_instances(std::span<const SpriteInstance> instances, const Texture& texture,
+                          float z_order = 0.0f);
 
     /// @brief Ensure the instance buffer can hold at least @p count instances
     ///        and return a pointer to the mapped memory for direct writes.
@@ -215,8 +216,8 @@ public:
     /// @param z_order        Draw order — lower values are drawn first.
     /// @param first_instance Offset (in instances, not bytes) into the buffer.
     /// @param instance_count Number of instances in this batch.
-    void record_batch(const Texture& texture, float z_order,
-                      uint32_t first_instance, uint32_t instance_count);
+    void record_batch(const Texture& texture, float z_order, uint32_t first_instance,
+                      uint32_t instance_count);
 
     /// @brief Flush the instance buffer after direct writes and mark the
     ///        total number of instances written.
@@ -234,8 +235,6 @@ public:
 
     /// @brief Number of frame-in-flight slots (currently 2).
     static constexpr uint32_t frames_in_flight() { return 2; }
-
-
 
     /// @brief Set the letterbox/pillarbox border colour (default black).
     ///
@@ -257,8 +256,8 @@ public:
     /// @brief Total number of frames rendered since creation.
     uint64_t frame_count() const;
 
-    uint32_t virtual_width()  const;  ///< Virtual framebuffer width in pixels.
-    uint32_t virtual_height() const;  ///< Virtual framebuffer height in pixels.
+    uint32_t virtual_width() const;  ///< Virtual framebuffer width in pixels.
+    uint32_t virtual_height() const; ///< Virtual framebuffer height in pixels.
 
     /// @brief Change the virtual resolution at runtime.
     ///

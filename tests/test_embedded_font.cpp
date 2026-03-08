@@ -1,4 +1,5 @@
 #include <xebble/embedded_font.hpp>
+
 #include <gtest/gtest.h>
 
 using namespace xebble::embedded_font;
@@ -17,7 +18,10 @@ TEST(EmbeddedFont, PixelDataNotEmpty) {
     auto pixels = generate_pixels();
     bool has_content = false;
     for (size_t i = 3; i < pixels.size(); i += 4) {
-        if (pixels[i] != 0) { has_content = true; break; }
+        if (pixels[i] != 0) {
+            has_content = true;
+            break;
+        }
     }
     EXPECT_TRUE(has_content);
 }

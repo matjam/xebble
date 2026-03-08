@@ -54,8 +54,9 @@
 /// @endcode
 #pragma once
 
-#include <xebble/types.hpp>
 #include <xebble/texture.hpp>
+#include <xebble/types.hpp>
+
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -98,10 +99,9 @@ public:
     ///     return 1;
     /// }
     /// @endcode
-    static std::expected<SpriteSheet, Error> load(
-        vk::Context& ctx,
-        const std::filesystem::path& image_path,
-        uint32_t tile_width, uint32_t tile_height);
+    static std::expected<SpriteSheet, Error> load(vk::Context& ctx,
+                                                  const std::filesystem::path& image_path,
+                                                  uint32_t tile_width, uint32_t tile_height);
 
     /// @brief Create a spritesheet from an already-loaded `Texture`.
     ///
@@ -111,9 +111,8 @@ public:
     /// @param texture      The atlas texture (taken by move).
     /// @param tile_width   Width of each tile in pixels.
     /// @param tile_height  Height of each tile in pixels.
-    static std::expected<SpriteSheet, Error> from_texture(
-        Texture texture,
-        uint32_t tile_width, uint32_t tile_height);
+    static std::expected<SpriteSheet, Error> from_texture(Texture texture, uint32_t tile_width,
+                                                          uint32_t tile_height);
 
     ~SpriteSheet();
     SpriteSheet(SpriteSheet&&) noexcept;
@@ -160,19 +159,17 @@ public:
     /// @param tile_width    Tile width in pixels.
     /// @param tile_height   Tile height in pixels.
     /// @param index         Linear tile index.
-    static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height,
-                                  uint32_t tile_width, uint32_t tile_height,
-                                  uint32_t index);
+    static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height, uint32_t tile_width,
+                                 uint32_t tile_height, uint32_t index);
 
     /// @brief Calculate a UV region by (col, row) without a SpriteSheet instance.
-    static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height,
-                                  uint32_t tile_width, uint32_t tile_height,
-                                  uint32_t col, uint32_t row);
+    static Rect calculate_region(uint32_t sheet_width, uint32_t sheet_height, uint32_t tile_width,
+                                 uint32_t tile_height, uint32_t col, uint32_t row);
 
-    uint32_t columns()     const;  ///< Number of tile columns (sheet_width / tile_width).
-    uint32_t rows()        const;  ///< Number of tile rows    (sheet_height / tile_height).
-    uint32_t tile_width()  const;  ///< Width of each tile in pixels.
-    uint32_t tile_height() const;  ///< Height of each tile in pixels.
+    uint32_t columns() const;     ///< Number of tile columns (sheet_width / tile_width).
+    uint32_t rows() const;        ///< Number of tile rows    (sheet_height / tile_height).
+    uint32_t tile_width() const;  ///< Width of each tile in pixels.
+    uint32_t tile_height() const; ///< Height of each tile in pixels.
 
     /// @brief Access the underlying GPU texture.
     ///

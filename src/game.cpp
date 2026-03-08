@@ -1,13 +1,13 @@
 /// @file game.cpp
 /// @brief Game loop implementation — single-world and scene-stack variants.
-#include <xebble/game.hpp>
-#include <xebble/scene.hpp>
-#include <xebble/event.hpp>
-#include <xebble/log.hpp>
-#include <xebble/components.hpp>
 #include <xebble/builtin_systems.hpp>
-#include <xebble/ui.hpp>
+#include <xebble/components.hpp>
 #include <xebble/embedded_font.hpp>
+#include <xebble/event.hpp>
+#include <xebble/game.hpp>
+#include <xebble/log.hpp>
+#include <xebble/scene.hpp>
+#include <xebble/ui.hpp>
 
 #include <optional>
 
@@ -15,15 +15,17 @@ namespace xebble {
 
 // Keeps the embedded BitmapFont alive for the lifetime of the World that owns it.
 // shared_ptr so the struct is copy-constructible (required by std::any).
-struct EmbeddedFontStorage { std::shared_ptr<BitmapFont> font; };
+struct EmbeddedFontStorage {
+    std::shared_ptr<BitmapFont> font;
+};
 
 // ---------------------------------------------------------------------------
 // Internal helper: bootstrap a Window + Renderer + AssetManager.
 // ---------------------------------------------------------------------------
 
 struct EngineHandle {
-    std::optional<Window>       window;
-    std::optional<Renderer>     renderer;
+    std::optional<Window> window;
+    std::optional<Renderer> renderer;
     std::optional<AssetManager> assets;
     bool ok = false;
 };
@@ -65,10 +67,8 @@ static EngineHandle make_engine(const GameConfig& config) {
 //       refcount > 0) so world.resource<EmbeddedFontStorage>() is always valid.
 // ---------------------------------------------------------------------------
 
-static bool inject_and_init(World& world,
-                             Renderer&                    renderer,
-                             AssetManager&                assets,
-                             std::shared_ptr<BitmapFont>& shared_font) {
+static bool inject_and_init(World& world, Renderer& renderer, AssetManager& assets,
+                            std::shared_ptr<BitmapFont>& shared_font) {
     // Engine resources
     world.add_resource<Renderer*>(&renderer);
     world.add_resource<AssetManager*>(&assets);
@@ -131,7 +131,8 @@ static bool inject_and_init(World& world,
 
 int run(World world, const GameConfig& config) {
     auto h = make_engine(config);
-    if (!h.ok) return 1;
+    if (!h.ok)
+        return 1;
 
     std::shared_ptr<BitmapFont> shared_font;
     if (!inject_and_init(world, *h.renderer, *h.assets, shared_font))
@@ -167,7 +168,8 @@ int run(World world, const GameConfig& config) {
 
 int run(SceneRouter router, const GameConfig& config) {
     auto h = make_engine(config);
-    if (!h.ok) return 1;
+    if (!h.ok)
+        return 1;
 
     std::shared_ptr<BitmapFont> shared_font;
 
@@ -182,9 +184,11 @@ int run(SceneRouter router, const GameConfig& config) {
     // Bootstrap the initial scene.
     bool init_ok = true;
     stack.push_initial([&](World& w) {
-        if (!injector(w)) init_ok = false;
+        if (!injector(w))
+            init_ok = false;
     });
-    if (!init_ok) return 1;
+    if (!init_ok)
+        return 1;
 
     while (!h.window->should_close() && !stack.empty()) {
         h.window->poll_events();
@@ -196,9 +200,11 @@ int run(SceneRouter router, const GameConfig& config) {
             stack.tick_update(dt);
             // Apply any pending transition after the tick.
             stack.apply_transition([&](World& w) {
-                if (!injector(w)) init_ok = false;
+                if (!injector(w))
+                    init_ok = false;
             });
-            if (!init_ok) return 1;
+            if (!init_ok)
+                return 1;
             if (!stack.empty()) {
                 stack.tick_draw(*h.renderer);
             }

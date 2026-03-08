@@ -101,9 +101,9 @@ namespace xebble {
 /// });
 /// @endcode
 enum class VisState : uint8_t {
-    Unseen   = 0, ///< Never seen by the observer.
+    Unseen = 0,   ///< Never seen by the observer.
     Revealed = 1, ///< Seen in a previous turn (remembered but not currently lit).
-    Visible  = 2, ///< Currently in line-of-sight.
+    Visible = 2,  ///< Currently in line-of-sight.
 };
 
 // ---------------------------------------------------------------------------
@@ -120,11 +120,8 @@ enum class VisState : uint8_t {
 /// @param radius   Maximum sight distance in cells (Euclidean).
 /// @param blocks   `bool(IVec2)` — return `true` if the cell is opaque.
 /// @param mark     `void(IVec2)` — called for each visible cell.
-void compute_fov(
-        IVec2 origin,
-        int   radius,
-        const std::function<bool(IVec2)>& blocks,
-        const std::function<void(IVec2)>& mark);
+void compute_fov(IVec2 origin, int radius, const std::function<bool(IVec2)>& blocks,
+                 const std::function<void(IVec2)>& mark);
 
 /// @brief Convenience overload: writes results directly into a `Grid<VisState>`.
 ///
@@ -143,10 +140,7 @@ void compute_fov(
 ///     vis);
 /// @endcode
 /// @brief Convenience overload: writes results directly into a `Grid<VisState>`.
-void compute_fov(
-        IVec2 origin,
-        int   radius,
-        const std::function<bool(IVec2)>& blocks,
-        Grid<VisState>& vis);
+void compute_fov(IVec2 origin, int radius, const std::function<bool(IVec2)>& blocks,
+                 Grid<VisState>& vis);
 
 } // namespace xebble

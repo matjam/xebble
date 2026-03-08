@@ -56,14 +56,14 @@
 /// @endcode
 #pragma once
 
+#include <xebble/serial.hpp>
+
 #include <cstdint>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <span>
-
-#include <xebble/serial.hpp>
 
 namespace xebble {
 
@@ -89,8 +89,8 @@ namespace xebble {
 /// rng.restore(state);
 /// @endcode
 struct RngState {
-    uint64_t state = 0;  ///< PCG32 internal state word.
-    uint64_t inc   = 0;  ///< PCG32 stream selector (always odd internally).
+    uint64_t state = 0; ///< PCG32 internal state word.
+    uint64_t inc = 0;   ///< PCG32 stream selector (always odd internally).
 
     bool operator==(const RngState&) const = default;
 };
@@ -150,7 +150,7 @@ public:
     /// @endcode
     explicit Rng(uint64_t seed = 0) noexcept {
         state_ = 0u;
-        inc_   = (seed << 1u) | 1u; // inc must be odd
+        inc_ = (seed << 1u) | 1u; // inc must be odd
         next_raw();
         state_ += seed;
         next_raw();
@@ -192,7 +192,10 @@ public:
     /// All subsequent calls will produce the same values as they did after the
     /// original save() call. Useful for deterministic replays, procedural
     /// regeneration, and debugging.
-    void restore(RngState s) noexcept { state_ = s.state; inc_ = s.inc; }
+    void restore(RngState s) noexcept {
+        state_ = s.state;
+        inc_ = s.inc;
+    }
 
     // -----------------------------------------------------------------------
     // Core primitives
@@ -256,11 +259,14 @@ public:
     /// int temperature = rng.range(-20, 40);
     /// @endcode
     int32_t range(int32_t min, int32_t max) noexcept {
-        if (min == max) return min;
+        if (min == max)
+            return min;
         uint32_t span = static_cast<uint32_t>(max - min) + 1u;
         uint32_t threshold = (~span + 1u) % span; // = 2^32 mod span
         uint32_t r;
-        do { r = next_raw(); } while (r < threshold);
+        do {
+            r = next_raw();
+        } while (r < threshold);
         return min + static_cast<int32_t>(r % span);
     }
 
@@ -291,7 +297,8 @@ public:
     /// int d100  = rng.roll_die(100); // 1..100  (percentile roll)
     /// @endcode
     int32_t roll_die(int32_t faces) noexcept {
-        if (faces <= 1) return 1;
+        if (faces <= 1)
+            return 1;
         return range(1, faces);
     }
 
@@ -307,7 +314,8 @@ public:
     /// @endcode
     int32_t roll_dice(int32_t count, int32_t faces) noexcept {
         int32_t total = 0;
-        for (int32_t i = 0; i < count; ++i) total += roll_die(faces);
+        for (int32_t i = 0; i < count; ++i)
+            total += roll_die(faces);
         return total;
     }
 
@@ -415,8 +423,7 @@ public:
     /// @brief Vector overload for weighted_choice.
     template<typename T>
     T weighted_choice(const std::vector<float>& weights, const std::vector<T>& values) {
-        return weighted_choice(std::span<const float>(weights),
-                               std::span<const T>(values));
+        return weighted_choice(std::span<const float>(weights), std::span<const T>(values));
     }
 
     // -----------------------------------------------------------------------
@@ -509,7 +516,7 @@ public:
 
 private:
     uint64_t state_ = 0;
-    uint64_t inc_   = 1;
+    uint64_t inc_ = 1;
 
     // PCG32 output function: one LCG step + permuted output.
     uint32_t next_raw() noexcept {
@@ -531,5 +538,7 @@ private:
 ///
 /// Specializing `ResourceName` here lets the RNG state be saved and restored
 /// via `add_serializable_resource<RngState>()` / `World::snapshot()`.
-template<> struct xebble::ResourceName<xebble::RngState>
-    { static constexpr std::string_view value = "xebble::RngState"; };
+template<>
+struct xebble::ResourceName<xebble::RngState> {
+    static constexpr std::string_view value = "xebble::RngState";
+};

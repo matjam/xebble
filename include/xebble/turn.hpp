@@ -112,7 +112,7 @@ public:
     Phase phase() const { return phase_; }
 
     /// @brief True during the player's action window.
-    bool is_player_turn()  const { return phase_ == Phase::Player; }
+    bool is_player_turn() const { return phase_ == Phase::Player; }
 
     /// @brief True during the monsters' action window.
     bool is_monster_turn() const { return phase_ == Phase::Monsters; }
@@ -150,8 +150,8 @@ public:
     uint64_t turn() const { return turn_; }
 
 private:
-    Phase    phase_ = Phase::Player;
-    uint64_t turn_  = 0;
+    Phase phase_ = Phase::Player;
+    uint64_t turn_ = 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -189,9 +189,9 @@ private:
 class EnergyScheduler {
 public:
     struct Actor {
-        uint64_t id;      ///< Arbitrary actor identifier.
-        int      speed;   ///< Energy gained per tick.
-        int      energy;  ///< Current energy.
+        uint64_t id; ///< Arbitrary actor identifier.
+        int speed;   ///< Energy gained per tick.
+        int energy;  ///< Current energy.
     };
 
     explicit EnergyScheduler(int threshold = 100) : threshold_(threshold) {}
@@ -211,9 +211,7 @@ public:
     /// sched.add_actor(player_id, 10);
     /// sched.add_actor(goblin_id,  7);
     /// @endcode
-    void add_actor(uint64_t id, int speed) {
-        actors_.push_back(Actor{id, speed, 0});
-    }
+    void add_actor(uint64_t id, int speed) { actors_.push_back(Actor{id, speed, 0}); }
 
     /// @brief Remove an actor by ID. No-op if not found.
     ///
@@ -222,19 +220,23 @@ public:
     /// @endcode
     void remove_actor(uint64_t id) {
         actors_.erase(std::remove_if(actors_.begin(), actors_.end(),
-            [id](const Actor& a){ return a.id == id; }), actors_.end());
+                                     [id](const Actor& a) { return a.id == id; }),
+                      actors_.end());
     }
 
     /// @brief Award energy to all actors proportional to their speed.
     ///
     /// Call once per game tick (or fixed-step frame).
     void tick() {
-        for (auto& a : actors_) a.energy += a.speed;
+        for (auto& a : actors_)
+            a.energy += a.speed;
     }
 
     /// @brief True if at least one actor has reached the action threshold.
     bool has_ready() const {
-        for (auto& a : actors_) if (a.energy >= threshold_) return true;
+        for (auto& a : actors_)
+            if (a.energy >= threshold_)
+                return true;
         return false;
     }
 
@@ -261,9 +263,13 @@ public:
     /// sched.end_turn(actor_id, threshold/2);  // half-cost quick action
     /// @endcode
     void end_turn(uint64_t id, int cost = -1) {
-        if (cost < 0) cost = threshold_;
+        if (cost < 0)
+            cost = threshold_;
         for (auto& a : actors_)
-            if (a.id == id) { a.energy -= cost; return; }
+            if (a.id == id) {
+                a.energy -= cost;
+                return;
+            }
     }
 
     /// @brief Return all actors (read-only).
@@ -307,8 +313,8 @@ private:
 class InitiativeScheduler {
 public:
     struct Entry {
-        uint64_t id;          ///< Actor identifier.
-        int      initiative;  ///< Sort key — higher acts first.
+        uint64_t id;    ///< Actor identifier.
+        int initiative; ///< Sort key — higher acts first.
     };
 
     /// @brief Add an actor with their initiative score.
@@ -321,8 +327,9 @@ public:
     /// @endcode
     void push(uint64_t id, int initiative) {
         queue_.push_back({id, initiative});
-        std::stable_sort(queue_.begin(), queue_.end(),
-            [](const Entry& a, const Entry& b){ return a.initiative > b.initiative; });
+        std::stable_sort(queue_.begin(), queue_.end(), [](const Entry& a, const Entry& b) {
+            return a.initiative > b.initiative;
+        });
         current_ = 0;
     }
 
@@ -336,15 +343,21 @@ public:
         size_t before = queue_.size();
         size_t removed_before_current = 0;
         for (size_t i = 0; i < queue_.size() && i < current_; ++i)
-            if (queue_[i].id == id) ++removed_before_current;
+            if (queue_[i].id == id)
+                ++removed_before_current;
 
         queue_.erase(std::remove_if(queue_.begin(), queue_.end(),
-            [id](const Entry& e){ return e.id == id; }), queue_.end());
+                                    [id](const Entry& e) { return e.id == id; }),
+                     queue_.end());
 
-        if (queue_.empty()) { current_ = 0; return; }
+        if (queue_.empty()) {
+            current_ = 0;
+            return;
+        }
         if (removed_before_current > 0 && current_ > 0)
             current_ -= removed_before_current;
-        if (current_ >= queue_.size()) current_ = 0;
+        if (current_ >= queue_.size())
+            current_ = 0;
     }
 
     /// @brief True if no actors are registered.
@@ -373,7 +386,8 @@ public:
     /// sched.advance();  // next combatant's turn
     /// @endcode
     void advance() {
-        if (queue_.empty()) return;
+        if (queue_.empty())
+            return;
         current_ = (current_ + 1) % queue_.size();
     }
 

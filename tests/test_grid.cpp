@@ -1,5 +1,7 @@
-#include <gtest/gtest.h>
 #include <xebble/grid.hpp>
+
+#include <gtest/gtest.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -17,7 +19,7 @@ TEST(IVec2, DefaultConstruction) {
 
 TEST(IVec2, AggregateInit) {
     IVec2 v{3, -5};
-    EXPECT_EQ(v.x,  3);
+    EXPECT_EQ(v.x, 3);
     EXPECT_EQ(v.y, -5);
 }
 
@@ -56,7 +58,7 @@ TEST(IRect, DefaultConstruction) {
 
 TEST(IRect, EdgeAccessors) {
     IRect r{2, 3, 4, 5};
-    EXPECT_EQ(r.right(),  6);
+    EXPECT_EQ(r.right(), 6);
     EXPECT_EQ(r.bottom(), 8);
 }
 
@@ -100,8 +102,8 @@ TEST(IRect, Expand) {
 }
 
 TEST(IRect, Equality) {
-    EXPECT_EQ((IRect{1,2,3,4}), (IRect{1,2,3,4}));
-    EXPECT_NE((IRect{1,2,3,4}), (IRect{1,2,3,5}));
+    EXPECT_EQ((IRect{1, 2, 3, 4}), (IRect{1, 2, 3, 4}));
+    EXPECT_NE((IRect{1, 2, 3, 4}), (IRect{1, 2, 3, 5}));
 }
 
 // ---------------------------------------------------------------------------
@@ -110,9 +112,9 @@ TEST(IRect, Equality) {
 
 TEST(Grid, Construction) {
     Grid<int> g(5, 3);
-    EXPECT_EQ(g.width(),  5);
+    EXPECT_EQ(g.width(), 5);
     EXPECT_EQ(g.height(), 3);
-    EXPECT_EQ(g.size(),  15u);
+    EXPECT_EQ(g.size(), 15u);
 }
 
 TEST(Grid, FillConstruction) {
@@ -157,7 +159,8 @@ TEST(Grid, AtBoundsChecked) {
 TEST(Grid, Fill) {
     Grid<int> g(3, 3, 0);
     g.fill(5);
-    for (auto v : g) EXPECT_EQ(v, 5);
+    for (auto v : g)
+        EXPECT_EQ(v, 5);
 }
 
 TEST(Grid, ConstAccess) {
@@ -176,10 +179,10 @@ TEST(Grid, ConstAccess) {
 TEST(Neighbors4, Centre) {
     auto nbs = neighbors4({2, 2}, 5, 5);
     EXPECT_EQ(nbs.size(), 4u);
-    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{2,1}) != nbs.end());
-    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{3,2}) != nbs.end());
-    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{2,3}) != nbs.end());
-    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{1,2}) != nbs.end());
+    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{2, 1}) != nbs.end());
+    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{3, 2}) != nbs.end());
+    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{2, 3}) != nbs.end());
+    EXPECT_TRUE(std::find(nbs.begin(), nbs.end(), IVec2{1, 2}) != nbs.end());
 }
 
 TEST(Neighbors4, Corner) {
@@ -194,7 +197,7 @@ TEST(Neighbors4, Edge) {
 
 TEST(Neighbors4, GridOverload) {
     Grid<int> g(5, 5);
-    EXPECT_EQ(neighbors4({2,2}, g).size(), 4u);
+    EXPECT_EQ(neighbors4({2, 2}, g).size(), 4u);
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +221,7 @@ TEST(Neighbors8, Edge) {
 
 TEST(Neighbors8, GridOverload) {
     Grid<int> g(5, 5);
-    EXPECT_EQ(neighbors8({0,0}, g).size(), 3u);
+    EXPECT_EQ(neighbors8({0, 0}, g).size(), 3u);
 }
 
 // ---------------------------------------------------------------------------
@@ -255,7 +258,7 @@ TEST(Line, Diagonal45) {
 TEST(Line, StartsAtA) {
     auto pts = line({1, 2}, {5, 8});
     EXPECT_EQ(pts.front(), (IVec2{1, 2}));
-    EXPECT_EQ(pts.back(),  (IVec2{5, 8}));
+    EXPECT_EQ(pts.back(), (IVec2{5, 8}));
 }
 
 TEST(Line, ReverseDirection) {
@@ -272,23 +275,23 @@ TEST(Line, ReverseDirection) {
 // ---------------------------------------------------------------------------
 
 TEST(Distance, Chebyshev) {
-    EXPECT_EQ(dist_chebyshev({0,0}, {3,1}), 3);
-    EXPECT_EQ(dist_chebyshev({0,0}, {2,2}), 2);
-    EXPECT_EQ(dist_chebyshev({0,0}, {0,0}), 0);
-    EXPECT_EQ(dist_chebyshev({1,2}, {4,3}), 3);
+    EXPECT_EQ(dist_chebyshev({0, 0}, {3, 1}), 3);
+    EXPECT_EQ(dist_chebyshev({0, 0}, {2, 2}), 2);
+    EXPECT_EQ(dist_chebyshev({0, 0}, {0, 0}), 0);
+    EXPECT_EQ(dist_chebyshev({1, 2}, {4, 3}), 3);
 }
 
 TEST(Distance, Manhattan) {
-    EXPECT_EQ(dist_manhattan({0,0}, {3,1}), 4);
-    EXPECT_EQ(dist_manhattan({0,0}, {2,2}), 4);
-    EXPECT_EQ(dist_manhattan({0,0}, {0,0}), 0);
-    EXPECT_EQ(dist_manhattan({1,2}, {4,3}), 4);
+    EXPECT_EQ(dist_manhattan({0, 0}, {3, 1}), 4);
+    EXPECT_EQ(dist_manhattan({0, 0}, {2, 2}), 4);
+    EXPECT_EQ(dist_manhattan({0, 0}, {0, 0}), 0);
+    EXPECT_EQ(dist_manhattan({1, 2}, {4, 3}), 4);
 }
 
 TEST(Distance, Euclidean) {
-    EXPECT_FLOAT_EQ(dist_euclidean({0,0}, {0,0}), 0.0f);
-    EXPECT_FLOAT_EQ(dist_euclidean({0,0}, {3,4}), 5.0f);
-    EXPECT_NEAR(dist_euclidean({0,0}, {1,1}), std::sqrt(2.0f), 1e-5f);
+    EXPECT_FLOAT_EQ(dist_euclidean({0, 0}, {0, 0}), 0.0f);
+    EXPECT_FLOAT_EQ(dist_euclidean({0, 0}, {3, 4}), 5.0f);
+    EXPECT_NEAR(dist_euclidean({0, 0}, {1, 1}), std::sqrt(2.0f), 1e-5f);
 }
 
 // ---------------------------------------------------------------------------
@@ -298,22 +301,23 @@ TEST(Distance, Euclidean) {
 // Open 5x5 grid — all cells reachable from centre.
 TEST(FloodFill, OpenGrid4) {
     // Everything passable
-    auto result = flood_fill({2,2}, 5, 5, [](IVec2){ return true; });
+    auto result = flood_fill({2, 2}, 5, 5, [](IVec2) { return true; });
     EXPECT_EQ(result.size(), 25u);
 }
 
 TEST(FloodFill, OpenGrid8) {
-    auto result = flood_fill({2,2}, 5, 5, [](IVec2){ return true; }, true);
+    auto result = flood_fill({2, 2}, 5, 5, [](IVec2) { return true; }, true);
     EXPECT_EQ(result.size(), 25u);
 }
 
 // Wall splits the grid in half vertically: column x=2 is blocked.
 TEST(FloodFill, WallBlocks4) {
     // 5x5, column 2 is a wall. Start on left side (x=0).
-    auto result = flood_fill({0,0}, 5, 5, [](IVec2 p){ return p.x != 2; });
+    auto result = flood_fill({0, 0}, 5, 5, [](IVec2 p) { return p.x != 2; });
     // Only the left two columns (x=0,1) should be reachable
     EXPECT_EQ(result.size(), 10u);
-    for (auto p : result) EXPECT_LT(p.x, 2);
+    for (auto p : result)
+        EXPECT_LT(p.x, 2);
 }
 
 // 8-way fill can go around a diagonal gap that 4-way can't.
@@ -324,8 +328,8 @@ TEST(FloodFill, DiagonalGap) {
     auto pass = [](IVec2 p) {
         return !(p.x == 1 && p.y == 0) && !(p.x == 0 && p.y == 1);
     };
-    auto r4 = flood_fill({0,0}, 5, 5, pass, false);
-    auto r8 = flood_fill({0,0}, 5, 5, pass, true);
+    auto r4 = flood_fill({0, 0}, 5, 5, pass, false);
+    auto r8 = flood_fill({0, 0}, 5, 5, pass, true);
     // 4-way: only origin (passable check not applied to origin itself)
     EXPECT_EQ(r4.size(), 1u);
     // 8-way: can reach more cells via (1,1)
@@ -333,13 +337,13 @@ TEST(FloodFill, DiagonalGap) {
 }
 
 TEST(FloodFill, OutOfBoundsOrigin) {
-    auto result = flood_fill({10,10}, 5, 5, [](IVec2){ return true; });
+    auto result = flood_fill({10, 10}, 5, 5, [](IVec2) { return true; });
     EXPECT_TRUE(result.empty());
 }
 
 TEST(FloodFill, GridOverload) {
     Grid<bool> g(5, 5, true);
-    auto result = flood_fill({0,0}, g, [](IVec2){ return true; });
+    auto result = flood_fill({0, 0}, g, [](IVec2) { return true; });
     EXPECT_EQ(result.size(), 25u);
 }
 
@@ -348,24 +352,24 @@ TEST(FloodFill, GridOverload) {
 // ---------------------------------------------------------------------------
 
 TEST(RectClamp, InsideBounds) {
-    IRect r = rect_clamp({1,1,3,3}, 10, 10);
-    EXPECT_EQ(r, (IRect{1,1,3,3}));
+    IRect r = rect_clamp({1, 1, 3, 3}, 10, 10);
+    EXPECT_EQ(r, (IRect{1, 1, 3, 3}));
 }
 
 TEST(RectClamp, ClipsRight) {
-    IRect r = rect_clamp({8,0,5,3}, 10, 10);
+    IRect r = rect_clamp({8, 0, 5, 3}, 10, 10);
     EXPECT_EQ(r.x, 8);
     EXPECT_EQ(r.w, 2); // clipped to grid width
 }
 
 TEST(RectClamp, ClipsBottom) {
-    IRect r = rect_clamp({0,8,3,5}, 10, 10);
+    IRect r = rect_clamp({0, 8, 3, 5}, 10, 10);
     EXPECT_EQ(r.y, 8);
     EXPECT_EQ(r.h, 2);
 }
 
 TEST(RectClamp, NegativeOrigin) {
-    IRect r = rect_clamp({-2,-2,6,6}, 10, 10);
+    IRect r = rect_clamp({-2, -2, 6, 6}, 10, 10);
     EXPECT_EQ(r.x, 0);
     EXPECT_EQ(r.y, 0);
     EXPECT_EQ(r.w, 4);
@@ -373,14 +377,14 @@ TEST(RectClamp, NegativeOrigin) {
 }
 
 TEST(RectClamp, EntirelyOutside) {
-    IRect r = rect_clamp({20,20,5,5}, 10, 10);
+    IRect r = rect_clamp({20, 20, 5, 5}, 10, 10);
     EXPECT_FALSE(r.valid());
 }
 
 TEST(RectClamp, GridOverload) {
     Grid<int> g(10, 10);
-    IRect r = rect_clamp({0,0,5,5}, g);
-    EXPECT_EQ(r, (IRect{0,0,5,5}));
+    IRect r = rect_clamp({0, 0, 5, 5}, g);
+    EXPECT_EQ(r, (IRect{0, 0, 5, 5}));
 }
 
 // ---------------------------------------------------------------------------
@@ -389,13 +393,13 @@ TEST(RectClamp, GridOverload) {
 
 TEST(RectForEach, CountCells) {
     int count = 0;
-    rect_for_each({1,1,3,2}, [&](IVec2){ ++count; });
+    rect_for_each({1, 1, 3, 2}, [&](IVec2) { ++count; });
     EXPECT_EQ(count, 6); // 3 wide * 2 tall
 }
 
 TEST(RectForEach, AllCellsVisited) {
     Grid<int> g(5, 5, 0);
-    rect_for_each({1,1,3,3}, [&](IVec2 p){ g[p] = 1; });
+    rect_for_each({1, 1, 3, 3}, [&](IVec2 p) { g[p] = 1; });
     // Cells inside rect should be 1
     for (int y = 1; y < 4; ++y)
         for (int x = 1; x < 4; ++x) {
@@ -403,7 +407,7 @@ TEST(RectForEach, AllCellsVisited) {
             EXPECT_EQ(g[p], 1);
         }
     // Cells outside should remain 0
-    IVec2 corner00{0,0}, corner44{4,4};
+    IVec2 corner00{0, 0}, corner44{4, 4};
     EXPECT_EQ(g[corner00], 0);
     EXPECT_EQ(g[corner44], 0);
 }

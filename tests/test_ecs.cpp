@@ -1,7 +1,8 @@
-#include <gtest/gtest.h>
 #include <xebble/ecs.hpp>
-#include <xebble/world.hpp>
 #include <xebble/system.hpp>
+#include <xebble/world.hpp>
+
+#include <gtest/gtest.h>
 
 using namespace xebble;
 
@@ -48,7 +49,9 @@ TEST(EntityAllocator, StaleHandleNotAlive) {
 }
 
 TEST(ComponentPool, AddAndGet) {
-    struct Pos { int x, y; };
+    struct Pos {
+        int x, y;
+    };
     ComponentPool<Pos> pool;
     Entity e{1};
     pool.add(e, Pos{10, 20});
@@ -58,7 +61,9 @@ TEST(ComponentPool, AddAndGet) {
 }
 
 TEST(ComponentPool, Remove) {
-    struct Pos { int x, y; };
+    struct Pos {
+        int x, y;
+    };
     ComponentPool<Pos> pool;
     Entity e{1};
     pool.add(e, Pos{10, 20});
@@ -67,7 +72,9 @@ TEST(ComponentPool, Remove) {
 }
 
 TEST(ComponentPool, IterateDenseArray) {
-    struct Pos { int x, y; };
+    struct Pos {
+        int x, y;
+    };
     ComponentPool<Pos> pool;
     Entity e0{0}, e1{1}, e2{2};
     pool.add(e0, Pos{1, 1});
@@ -82,7 +89,9 @@ TEST(ComponentPool, IterateDenseArray) {
 }
 
 TEST(ComponentPool, RemoveSwapsLast) {
-    struct Val { int v; };
+    struct Val {
+        int v;
+    };
     ComponentPool<Val> pool;
     Entity e0{0}, e1{1}, e2{2};
     pool.add(e0, Val{10});
@@ -97,7 +106,9 @@ TEST(ComponentPool, RemoveSwapsLast) {
 }
 
 TEST(ComponentPool, ManyEntities) {
-    struct Id { uint32_t v; };
+    struct Id {
+        uint32_t v;
+    };
     ComponentPool<Id> pool;
     for (uint32_t i = 0; i < 1000; i++) {
         pool.add(Entity{i}, Id{i * 2});
@@ -110,10 +121,16 @@ TEST(ComponentPool, ManyEntities) {
 
 // --- Test components (in anonymous namespace) ---
 namespace {
-    struct Position { int x, y; };
-    struct Velocity { int dx, dy; };
-    struct Health { int hp; };
-}
+struct Position {
+    int x, y;
+};
+struct Velocity {
+    int dx, dy;
+};
+struct Health {
+    int hp;
+};
+} // namespace
 
 TEST(World, CreateAndDestroyEntity) {
     World world;
@@ -135,10 +152,7 @@ TEST(World, EntityBuilder) {
     world.register_component<Position>();
     world.register_component<Velocity>();
 
-    auto e = world.build_entity()
-        .with<Position>({5, 10})
-        .with<Velocity>({1, -1})
-        .build();
+    auto e = world.build_entity().with<Position>({5, 10}).with<Velocity>({1, -1}).build();
 
     EXPECT_TRUE(world.alive(e));
     EXPECT_EQ(world.get<Position>(e).x, 5);
@@ -181,7 +195,9 @@ TEST(World, EachMultipleComponents) {
 }
 
 TEST(World, Resources) {
-    struct GameState { int score; };
+    struct GameState {
+        int score;
+    };
 
     World world;
     world.add_resource<GameState>(GameState{42});
@@ -196,15 +212,13 @@ TEST(World, Resources) {
 }
 
 TEST(World, SystemInitAndUpdate) {
-    struct Counter { int value = 0; };
+    struct Counter {
+        int value = 0;
+    };
 
     struct CountSystem : System {
-        void init(World& w) override {
-            w.resource<Counter>().value = 10;
-        }
-        void update(World& w, float) override {
-            w.resource<Counter>().value++;
-        }
+        void init(World& w) override { w.resource<Counter>().value = 10; }
+        void update(World& w, float) override { w.resource<Counter>().value++; }
     };
 
     World world;

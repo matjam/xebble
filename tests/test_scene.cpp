@@ -20,13 +20,19 @@ using namespace xebble;
 // ---------------------------------------------------------------------------
 
 /// Counter resource placed on a world so we can verify which world is active.
-struct SceneId { std::string name; };
+struct SceneId {
+    std::string name;
+};
 
 /// Tick counter resource — incremented by a simple update system.
-struct TickCount { int value = 0; };
+struct TickCount {
+    int value = 0;
+};
 
 /// Draw counter resource — incremented by a simple draw system.
-struct DrawCount { int value = 0; };
+struct DrawCount {
+    int value = 0;
+};
 
 /// No-op injector: does not inject GPU resources (not available in tests).
 static void noop_injector(World& /*w*/) {}
@@ -144,7 +150,8 @@ TEST(SceneRouter, BuildForwardsPayload) {
     SceneRouter r;
     int received = 0;
     r.add_scene("scene", [&](std::any p) {
-        if (p.has_value()) received = std::any_cast<int>(p);
+        if (p.has_value())
+            received = std::any_cast<int>(p);
         return World{};
     });
     r.set_initial("scene", 7);
@@ -187,8 +194,7 @@ TEST(SceneStack, PushTransitionAddsScene) {
     SceneStack stack(router);
     stack.push_initial(noop_injector);
 
-    stack.top_world().resource<SceneTransition>() =
-        SceneTransition::push("b");
+    stack.top_world().resource<SceneTransition>() = SceneTransition::push("b");
     stack.apply_transition(noop_injector);
 
     EXPECT_EQ(stack.top_world().resource<SceneId>().name, "b");
@@ -223,10 +229,9 @@ TEST(SceneStack, PopEmptiesStackWhenOnlyOneScene) {
 TEST(SceneStack, ReplaceSwapsScene) {
     auto router = make_abc_router();
     SceneStack stack(router);
-    stack.push_initial(noop_injector);  // "a"
+    stack.push_initial(noop_injector); // "a"
 
-    stack.top_world().resource<SceneTransition>() =
-        SceneTransition::replace("c");
+    stack.top_world().resource<SceneTransition>() = SceneTransition::replace("c");
     stack.apply_transition(noop_injector);
 
     // Stack depth stays 1, top is "c".
@@ -241,18 +246,17 @@ TEST(SceneStack, ReplaceSwapsScene) {
 TEST(SceneStack, PopToRemovesIntermediateScenes) {
     auto router = make_abc_router();
     SceneStack stack(router);
-    stack.push_initial(noop_injector);  // "a"
+    stack.push_initial(noop_injector); // "a"
 
     stack.top_world().resource<SceneTransition>() = SceneTransition::push("b");
-    stack.apply_transition(noop_injector);  // stack: a, b
+    stack.apply_transition(noop_injector); // stack: a, b
 
     stack.top_world().resource<SceneTransition>() = SceneTransition::push("c");
-    stack.apply_transition(noop_injector);  // stack: a, b, c
+    stack.apply_transition(noop_injector); // stack: a, b, c
 
     // Pop all the way back to "a".
-    stack.top_world().resource<SceneTransition>() =
-        SceneTransition::pop_to("a");
-    stack.apply_transition(noop_injector);  // stack: a
+    stack.top_world().resource<SceneTransition>() = SceneTransition::pop_to("a");
+    stack.apply_transition(noop_injector); // stack: a
 
     EXPECT_EQ(stack.top_world().resource<SceneId>().name, "a");
 
@@ -265,16 +269,15 @@ TEST(SceneStack, PopToRemovesIntermediateScenes) {
 TEST(SceneStack, PopAllAndPushClearsAndPushes) {
     auto router = make_abc_router();
     SceneStack stack(router);
-    stack.push_initial(noop_injector);  // "a"
+    stack.push_initial(noop_injector); // "a"
 
     stack.top_world().resource<SceneTransition>() = SceneTransition::push("b");
-    stack.apply_transition(noop_injector);  // a, b
+    stack.apply_transition(noop_injector); // a, b
     stack.top_world().resource<SceneTransition>() = SceneTransition::push("c");
-    stack.apply_transition(noop_injector);  // a, b, c
+    stack.apply_transition(noop_injector); // a, b, c
 
-    stack.top_world().resource<SceneTransition>() =
-        SceneTransition::pop_all_and_push("a");
-    stack.apply_transition(noop_injector);  // only "a"
+    stack.top_world().resource<SceneTransition>() = SceneTransition::pop_all_and_push("a");
+    stack.apply_transition(noop_injector); // only "a"
 
     EXPECT_EQ(stack.top_world().resource<SceneId>().name, "a");
 
@@ -308,8 +311,7 @@ TEST(SceneStack, PayloadForwardedToNewScene) {
     SceneStack stack(router);
     stack.push_initial(noop_injector);
 
-    stack.top_world().resource<SceneTransition>() =
-        SceneTransition::push("b", 42);
+    stack.top_world().resource<SceneTransition>() = SceneTransition::push("b", 42);
     stack.apply_transition(noop_injector);
 
     EXPECT_EQ(std::any_cast<int>(stack.top_world().resource<int>()), 42);

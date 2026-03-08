@@ -71,7 +71,7 @@ namespace xebble {
 /// }
 /// @endcode
 struct Entity {
-    uint32_t id = 0;  ///< Packed index + generation. Treat as opaque.
+    uint32_t id = 0; ///< Packed index + generation. Treat as opaque.
     bool operator==(Entity other) const { return id == other.id; }
     bool operator!=(Entity other) const { return id != other.id; }
 };
@@ -92,7 +92,7 @@ class Event;
 /// }
 /// @endcode
 struct EventQueue {
-    std::vector<Event> events;  ///< Events collected during the current frame's poll.
+    std::vector<Event> events; ///< Events collected during the current frame's poll.
 };
 
 // ---------------------------------------------------------------------------
@@ -102,15 +102,19 @@ struct EventQueue {
 // because templates require it, but game code should not use them directly.
 
 namespace ecs_detail {
-    constexpr uint32_t INDEX_BITS = 20;
-    constexpr uint32_t INDEX_MASK = (1u << INDEX_BITS) - 1;
-    constexpr uint32_t GEN_SHIFT  = INDEX_BITS;
+constexpr uint32_t INDEX_BITS = 20;
+constexpr uint32_t INDEX_MASK = (1u << INDEX_BITS) - 1;
+constexpr uint32_t GEN_SHIFT = INDEX_BITS;
 
-    inline uint32_t entity_index(Entity e) { return e.id & INDEX_MASK; }
-    inline uint32_t entity_gen(Entity e)   { return e.id >> GEN_SHIFT; }
-    inline Entity make_entity(uint32_t index, uint32_t gen) {
-        return Entity{(gen << GEN_SHIFT) | (index & INDEX_MASK)};
-    }
+inline uint32_t entity_index(Entity e) {
+    return e.id & INDEX_MASK;
+}
+inline uint32_t entity_gen(Entity e) {
+    return e.id >> GEN_SHIFT;
+}
+inline Entity make_entity(uint32_t index, uint32_t gen) {
+    return Entity{(gen << GEN_SHIFT) | (index & INDEX_MASK)};
+}
 } // namespace ecs_detail
 
 // ---------------------------------------------------------------------------
@@ -167,8 +171,8 @@ public:
     }
 
 private:
-    std::vector<uint32_t> generation_;  // One entry per slot.
-    std::vector<uint32_t> free_list_;   // Indices of destroyed slots.
+    std::vector<uint32_t> generation_; // One entry per slot.
+    std::vector<uint32_t> free_list_;  // Indices of destroyed slots.
 };
 
 // ---------------------------------------------------------------------------
@@ -204,7 +208,8 @@ public:
     /// Undefined behaviour if @p e already has this component.
     void add(Entity e, T value) {
         uint32_t idx = ecs_detail::entity_index(e);
-        if (idx >= sparse_.size()) sparse_.resize(idx + 1, EMPTY);
+        if (idx >= sparse_.size())
+            sparse_.resize(idx + 1, EMPTY);
         sparse_[idx] = static_cast<uint32_t>(dense_entities_.size());
         dense_entities_.push_back(e);
         dense_components_.push_back(std::move(value));
@@ -213,11 +218,12 @@ public:
     /// @brief Remove the component from @p e. No-op if @p e has none.
     void remove(Entity e) override {
         uint32_t idx = ecs_detail::entity_index(e);
-        if (idx >= sparse_.size() || sparse_[idx] == EMPTY) return;
+        if (idx >= sparse_.size() || sparse_[idx] == EMPTY)
+            return;
         uint32_t dense_idx = sparse_[idx];
         uint32_t last = static_cast<uint32_t>(dense_entities_.size()) - 1;
         if (dense_idx != last) {
-            dense_entities_[dense_idx]   = dense_entities_[last];
+            dense_entities_[dense_idx] = dense_entities_[last];
             dense_components_[dense_idx] = std::move(dense_components_[last]);
             sparse_[ecs_detail::entity_index(dense_entities_[dense_idx])] = dense_idx;
         }
@@ -232,12 +238,12 @@ public:
         return idx < sparse_.size() && sparse_[idx] != EMPTY;
     }
 
-    T&       get(Entity e)       { return dense_components_[sparse_[ecs_detail::entity_index(e)]]; }
+    T& get(Entity e) { return dense_components_[sparse_[ecs_detail::entity_index(e)]]; }
     const T& get(Entity e) const { return dense_components_[sparse_[ecs_detail::entity_index(e)]]; }
 
     size_t size() const { return dense_entities_.size(); }
-    Entity dense_entity(size_t i) const    { return dense_entities_[i]; }
-    T&     dense_component(size_t i)       { return dense_components_[i]; }
+    Entity dense_entity(size_t i) const { return dense_entities_[i]; }
+    T& dense_component(size_t i) { return dense_components_[i]; }
     const T& dense_component(size_t i) const { return dense_components_[i]; }
 
     /// @brief Remove all entries from this pool.
@@ -255,8 +261,8 @@ public:
 private:
     static constexpr uint32_t EMPTY = UINT32_MAX;
     std::vector<uint32_t> sparse_;
-    std::vector<Entity>   dense_entities_;
-    std::vector<T>        dense_components_;
+    std::vector<Entity> dense_entities_;
+    std::vector<T> dense_components_;
 };
 
 } // namespace xebble

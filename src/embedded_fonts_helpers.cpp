@@ -13,9 +13,15 @@ namespace {
 
 // Tag types used as World resource keys.
 // std::any requires copy-constructibility, so we wrap in shared_ptr.
-struct Berkelium64Resource { std::shared_ptr<Font>       font; };
-struct PetMe64Resource     { std::shared_ptr<BitmapFont> font; };
-struct PetMe642YResource   { std::shared_ptr<BitmapFont> font; };
+struct Berkelium64Resource {
+    std::shared_ptr<Font> font;
+};
+struct PetMe64Resource {
+    std::shared_ptr<BitmapFont> font;
+};
+struct PetMe642YResource {
+    std::shared_ptr<BitmapFont> font;
+};
 
 vk::Context& ctx_from_world(World& world) {
     return world.resource<Renderer*>()->context();
@@ -31,22 +37,25 @@ UITheme& get_or_add_theme(World& world) {
 
 void use_berkelium64(World& world) {
     auto f = berkelium64::create(ctx_from_world(world));
-    if (!f) return;
-    world.add_resource(Berkelium64Resource{ std::make_shared<Font>(std::move(*f)) });
+    if (!f)
+        return;
+    world.add_resource(Berkelium64Resource{std::make_shared<Font>(std::move(*f))});
     get_or_add_theme(world).font = world.resource<Berkelium64Resource>().font.get();
 }
 
 void use_petme64(World& world) {
     auto f = petme64::create(ctx_from_world(world));
-    if (!f) return;
-    world.add_resource(PetMe64Resource{ std::make_shared<BitmapFont>(std::move(*f)) });
+    if (!f)
+        return;
+    world.add_resource(PetMe64Resource{std::make_shared<BitmapFont>(std::move(*f))});
     get_or_add_theme(world).font = world.resource<PetMe64Resource>().font.get();
 }
 
 void use_petme642y(World& world) {
     auto f = petme642y::create(ctx_from_world(world));
-    if (!f) return;
-    world.add_resource(PetMe642YResource{ std::make_shared<BitmapFont>(std::move(*f)) });
+    if (!f)
+        return;
+    world.add_resource(PetMe642YResource{std::make_shared<BitmapFont>(std::move(*f))});
     get_or_add_theme(world).font = world.resource<PetMe642YResource>().font.get();
 }
 

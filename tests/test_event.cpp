@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <xebble/event.hpp>
+
+#include <gtest/gtest.h>
 
 using namespace xebble;
 
@@ -48,8 +49,11 @@ TEST(EventQueue, PushAndIterate) {
     int key_count = 0;
     for (auto& e : queue) {
         switch (e.type) {
-            case EventType::KeyPress: key_count++; break;
-            default: break;
+        case EventType::KeyPress:
+            key_count++;
+            break;
+        default:
+            break;
         }
     }
     EXPECT_EQ(key_count, 2);

@@ -70,11 +70,11 @@ TEST(EnergyScheduler, NoActorsNoneReady) {
 
 TEST(EnergyScheduler, ActorReadyAfterEnoughTicks) {
     EnergyScheduler s(10);
-    s.add_actor(1, 5);  // gains 5 per tick, needs 10
+    s.add_actor(1, 5); // gains 5 per tick, needs 10
     EXPECT_FALSE(s.has_ready());
     s.tick();
     EXPECT_FALSE(s.has_ready());
-    s.tick();           // 10 energy total
+    s.tick(); // 10 energy total
     EXPECT_TRUE(s.has_ready());
     EXPECT_EQ(s.next_actor(), 1u);
 }
@@ -82,9 +82,9 @@ TEST(EnergyScheduler, ActorReadyAfterEnoughTicks) {
 TEST(EnergyScheduler, EndTurnDeductsEnergy) {
     EnergyScheduler s(10);
     s.add_actor(1, 10);
-    s.tick();  // 10 energy
+    s.tick(); // 10 energy
     EXPECT_TRUE(s.has_ready());
-    s.end_turn(1);      // deduct 10
+    s.end_turn(1); // deduct 10
     EXPECT_FALSE(s.has_ready());
 }
 
@@ -94,7 +94,7 @@ TEST(EnergyScheduler, FasterActorGoesFirst) {
     s.add_actor(2, 10);
     s.tick();
     EXPECT_TRUE(s.has_ready());
-    EXPECT_EQ(s.next_actor(), 2u);  // actor 2 has 10 energy; actor 1 has only 5
+    EXPECT_EQ(s.next_actor(), 2u); // actor 2 has 10 energy; actor 1 has only 5
 }
 
 TEST(EnergyScheduler, RemoveActor) {
@@ -118,10 +118,10 @@ TEST(EnergyScheduler, RemoveNonExistentActorNoOp) {
 TEST(EnergyScheduler, CustomActionCost) {
     EnergyScheduler s(10);
     s.add_actor(1, 10);
-    s.tick();       // actor gains 10 energy → ready (10 >= threshold 10)
+    s.tick(); // actor gains 10 energy → ready (10 >= threshold 10)
     EXPECT_TRUE(s.has_ready());
-    s.end_turn(1, 5);   // cheap action costs 5; remaining energy = 10 - 5 = 5 < 10
-    EXPECT_FALSE(s.has_ready());  // not enough energy for another action
+    s.end_turn(1, 5);            // cheap action costs 5; remaining energy = 10 - 5 = 5 < 10
+    EXPECT_FALSE(s.has_ready()); // not enough energy for another action
 }
 
 TEST(EnergyScheduler, SetThreshold) {
@@ -129,9 +129,9 @@ TEST(EnergyScheduler, SetThreshold) {
     s.set_threshold(20);
     EXPECT_EQ(s.threshold(), 20);
     s.add_actor(1, 10);
-    s.tick();  // 10 — not enough for 20
+    s.tick(); // 10 — not enough for 20
     EXPECT_FALSE(s.has_ready());
-    s.tick();  // 20 — ready
+    s.tick(); // 20 — ready
     EXPECT_TRUE(s.has_ready());
 }
 
@@ -157,7 +157,7 @@ TEST(InitiativeScheduler, HigherInitiativeGoesFirst) {
     s.push(1, 5);
     s.push(2, 18);
     s.push(3, 12);
-    EXPECT_EQ(s.current(), 2u);  // highest initiative
+    EXPECT_EQ(s.current(), 2u); // highest initiative
 }
 
 TEST(InitiativeScheduler, AdvanceWraps) {
@@ -169,7 +169,7 @@ TEST(InitiativeScheduler, AdvanceWraps) {
     s.advance();
     EXPECT_EQ(s.current(), 1u);
     s.advance();
-    EXPECT_EQ(s.current(), 2u);  // wrapped back
+    EXPECT_EQ(s.current(), 2u); // wrapped back
 }
 
 TEST(InitiativeScheduler, RemoveCurrent) {

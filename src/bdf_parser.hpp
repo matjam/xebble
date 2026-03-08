@@ -26,13 +26,13 @@ namespace xebble::bdf {
 // ---------------------------------------------------------------------------
 
 struct Glyph {
-    uint32_t              codepoint  = 0;
-    int32_t               advance    = 0;   ///< DWIDTH x value (pixel advance).
-    int32_t               bbx_w      = 0;   ///< BBX width  (ink bounding box).
-    int32_t               bbx_h      = 0;   ///< BBX height.
-    int32_t               bbx_x      = 0;   ///< BBX x offset from origin.
-    int32_t               bbx_y      = 0;   ///< BBX y offset from baseline (positive = above).
-    std::vector<uint8_t>  bitmap;           ///< Row-major, MSBit first, one byte per 8px column.
+    uint32_t codepoint = 0;
+    int32_t advance = 0;         ///< DWIDTH x value (pixel advance).
+    int32_t bbx_w = 0;           ///< BBX width  (ink bounding box).
+    int32_t bbx_h = 0;           ///< BBX height.
+    int32_t bbx_x = 0;           ///< BBX x offset from origin.
+    int32_t bbx_y = 0;           ///< BBX y offset from baseline (positive = above).
+    std::vector<uint8_t> bitmap; ///< Row-major, MSBit first, one byte per 8px column.
 };
 
 // ---------------------------------------------------------------------------
@@ -40,10 +40,10 @@ struct Glyph {
 // ---------------------------------------------------------------------------
 
 struct Font {
-    int32_t font_ascent  = 0;  ///< Global FONT_ASCENT.
-    int32_t font_descent = 0;  ///< Global FONT_DESCENT.
-    int32_t bbox_w       = 0;  ///< Global FONTBOUNDINGBOX width.
-    int32_t bbox_h       = 0;  ///< Global FONTBOUNDINGBOX height.
+    int32_t font_ascent = 0;  ///< Global FONT_ASCENT.
+    int32_t font_descent = 0; ///< Global FONT_DESCENT.
+    int32_t bbox_w = 0;       ///< Global FONTBOUNDINGBOX width.
+    int32_t bbox_h = 0;       ///< Global FONTBOUNDINGBOX height.
     std::vector<Glyph> glyphs;
 };
 
@@ -51,9 +51,7 @@ struct Font {
 // Tiny line-oriented parser
 // ---------------------------------------------------------------------------
 
-inline std::expected<Font, xebble::Error>
-parse(const std::filesystem::path& path)
-{
+inline std::expected<Font, xebble::Error> parse(const std::filesystem::path& path) {
     std::ifstream f(path);
     if (!f)
         return std::unexpected(xebble::Error{"BDF: cannot open " + path.string()});
@@ -68,20 +66,23 @@ parse(const std::filesystem::path& path)
     bool in_char = false;
     bool in_bitmap = false;
     Glyph cur;
-    int   bitmap_rows_expected = 0;
+    int bitmap_rows_expected = 0;
 
     auto next_int = [](std::istringstream& ss) -> int32_t {
-        int32_t v = 0; ss >> v; return v;
+        int32_t v = 0;
+        ss >> v;
+        return v;
     };
 
     while (std::getline(f, line)) {
         // Strip trailing CR (Windows line endings).
-        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (!line.empty() && line.back() == '\r')
+            line.pop_back();
 
         if (in_bitmap) {
             if (line.rfind("ENDCHAR", 0) == 0) {
                 in_bitmap = false;
-                in_char   = false;
+                in_char = false;
                 font.glyphs.push_back(std::move(cur));
                 cur = {};
                 bitmap_rows_expected = 0;
@@ -92,21 +93,28 @@ parse(const std::filesystem::path& path)
                 // Parse pairs of hex chars.
                 size_t i = 0;
                 while (i + 1 < line.size()) {
-                    auto hi_c = line[i], lo_c = line[i+1];
+                    auto hi_c = line[i], lo_c = line[i + 1];
                     // Skip non-hex chars (e.g. spaces).
                     auto is_hex = [](char c) {
-                        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+                        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') ||
+                               (c >= 'A' && c <= 'F');
                     };
-                    if (!is_hex(hi_c) || !is_hex(lo_c)) { ++i; continue; }
+                    if (!is_hex(hi_c) || !is_hex(lo_c)) {
+                        ++i;
+                        continue;
+                    }
                     auto hex = [](char c) -> uint8_t {
-                        if (c >= '0' && c <= '9') return static_cast<uint8_t>(c - '0');
-                        if (c >= 'a' && c <= 'f') return static_cast<uint8_t>(c - 'a' + 10);
+                        if (c >= '0' && c <= '9')
+                            return static_cast<uint8_t>(c - '0');
+                        if (c >= 'a' && c <= 'f')
+                            return static_cast<uint8_t>(c - 'a' + 10);
                         return static_cast<uint8_t>(c - 'A' + 10);
                     };
                     row_bytes.push_back(static_cast<uint8_t>((hex(hi_c) << 4) | hex(lo_c)));
                     i += 2;
                 }
-                for (auto b : row_bytes) cur.bitmap.push_back(b);
+                for (auto b : row_bytes)
+                    cur.bitmap.push_back(b);
             }
             continue;
         }
@@ -151,8 +159,8 @@ parse(const std::filesystem::path& path)
             bitmap_rows_expected = cur.bbx_h;
         } else if (line.rfind("BITMAP", 0) == 0) {
             in_bitmap = true;
-            cur.bitmap.reserve(static_cast<size_t>(bitmap_rows_expected)
-                               * static_cast<size_t>((cur.bbx_w + 7) / 8));
+            cur.bitmap.reserve(static_cast<size_t>(bitmap_rows_expected) *
+                               static_cast<size_t>((cur.bbx_w + 7) / 8));
         } else if (line.rfind("ENDCHAR", 0) == 0) {
             // Reached without BITMAP (e.g. empty glyph).
             in_char = false;
@@ -175,7 +183,7 @@ parse(const std::filesystem::path& path)
     if (font.font_ascent == 0 && font.font_descent == 0) {
         // Fallback: derive from max ascent/descent across glyphs.
         for (const auto& g : font.glyphs) {
-            font.font_ascent  = std::max(font.font_ascent,  g.bbx_y + g.bbx_h);
+            font.font_ascent = std::max(font.font_ascent, g.bbx_y + g.bbx_h);
             font.font_descent = std::max(font.font_descent, -g.bbx_y);
         }
     }
@@ -192,10 +200,12 @@ parse(const std::filesystem::path& path)
 /// @param row     0-based pixel row within the glyph's BBX (top=0).
 /// @returns true if the pixel is set.
 inline bool sample(const Glyph& glyph, int32_t col, int32_t row) noexcept {
-    if (col < 0 || row < 0 || col >= glyph.bbx_w || row >= glyph.bbx_h) return false;
-    int32_t stride    = (glyph.bbx_w + 7) / 8;
-    size_t  byte_idx  = static_cast<size_t>(row * stride + col / 8);
-    if (byte_idx >= glyph.bitmap.size()) return false;
+    if (col < 0 || row < 0 || col >= glyph.bbx_w || row >= glyph.bbx_h)
+        return false;
+    int32_t stride = (glyph.bbx_w + 7) / 8;
+    size_t byte_idx = static_cast<size_t>(row * stride + col / 8);
+    if (byte_idx >= glyph.bitmap.size())
+        return false;
     uint8_t byte = glyph.bitmap[byte_idx];
     return (byte >> (7 - (col % 8))) & 1u;
 }

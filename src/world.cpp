@@ -1,7 +1,7 @@
 /// @file world.cpp
 /// @brief World non-template method implementations.
-#include <xebble/world.hpp>
 #include <xebble/renderer.hpp>
+#include <xebble/world.hpp>
 
 #include <algorithm>
 #include <cstring>
@@ -30,7 +30,8 @@ void World::tick_draw(Renderer& renderer) {
 void World::flush_destroyed() {
     bool any_destroyed = false;
     for (Entity e : pending_destroy_) {
-        if (!allocator_.alive(e)) continue;
+        if (!allocator_.alive(e))
+            continue;
         for (auto& pool : pools_) {
             if (pool && pool->has(e)) {
                 pool->remove(e);
@@ -41,7 +42,8 @@ void World::flush_destroyed() {
         any_destroyed = true;
     }
     pending_destroy_.clear();
-    if (any_destroyed) ++generation_;
+    if (any_destroyed)
+        ++generation_;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,10 +58,10 @@ std::vector<uint8_t> World::snapshot() const {
 
     // ---- Header (placeholder — patched below) ----
     const size_t header_offset = 0;
-    uint32_t magic          = MAGIC;
-    uint32_t version        = VERSION;
-    uint32_t entity_count   = 0;
-    uint32_t pool_count     = 0;
+    uint32_t magic = MAGIC;
+    uint32_t version = VERSION;
+    uint32_t entity_count = 0;
+    uint32_t pool_count = 0;
     uint32_t resource_count = 0;
     append(out, magic);
     append(out, version);
@@ -71,9 +73,11 @@ std::vector<uint8_t> World::snapshot() const {
     // We build a sorted-unique list of (slot) across all serializable pools.
     std::vector<uint32_t> slots;
     for (const auto& pool_ptr : pools_) {
-        if (!pool_ptr) continue;
+        if (!pool_ptr)
+            continue;
         auto* sp = dynamic_cast<const ISerializablePool*>(pool_ptr.get());
-        if (!sp) continue;
+        if (!sp)
+            continue;
         std::vector<Entity> ents;
         sp->enumerate_entities(ents);
         for (Entity e : ents)
@@ -98,14 +102,17 @@ std::vector<uint8_t> World::snapshot() const {
     //   data        : uint8_t[data_len]
 
     for (const auto& pool_ptr : pools_) {
-        if (!pool_ptr) continue;
+        if (!pool_ptr)
+            continue;
         auto* sp = dynamic_cast<const ISerializablePool*>(pool_ptr.get());
-        if (!sp) continue;
+        if (!sp)
+            continue;
 
         std::vector<uint8_t> section_data;
         uint32_t rc = 0;
         sp->serialize_all(section_data, rc);
-        if (rc == 0) continue; // skip empty pools
+        if (rc == 0)
+            continue; // skip empty pools
 
         append_string(out, sp->component_name());
         append(out, rc);
@@ -124,7 +131,8 @@ std::vector<uint8_t> World::snapshot() const {
 
     for (const auto& [id, ser] : resource_serializers_) {
         auto it = resources_.find(id);
-        if (it == resources_.end()) continue;
+        if (it == resources_.end())
+            continue;
 
         std::vector<uint8_t> res_bytes;
         ser.write(it->second, res_bytes);
@@ -137,12 +145,10 @@ std::vector<uint8_t> World::snapshot() const {
     }
 
     // ---- Patch header ----
-    std::memcpy(out.data() + header_offset + sizeof(uint32_t) * 2,
-                &entity_count,   sizeof(uint32_t));
-    std::memcpy(out.data() + header_offset + sizeof(uint32_t) * 3,
-                &pool_count,     sizeof(uint32_t));
-    std::memcpy(out.data() + header_offset + sizeof(uint32_t) * 4,
-                &resource_count, sizeof(uint32_t));
+    std::memcpy(out.data() + header_offset + sizeof(uint32_t) * 2, &entity_count, sizeof(uint32_t));
+    std::memcpy(out.data() + header_offset + sizeof(uint32_t) * 3, &pool_count, sizeof(uint32_t));
+    std::memcpy(out.data() + header_offset + sizeof(uint32_t) * 4, &resource_count,
+                sizeof(uint32_t));
 
     return out;
 }
@@ -155,17 +161,14 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
     using namespace serial_detail;
 
     const uint8_t* data = blob.data();
-    const size_t   size = blob.size();
+    const size_t size = blob.size();
     size_t offset = 0;
 
     // ---- Validate header ----
-    uint32_t magic = 0, version = 0, entity_count = 0,
-             pool_count = 0, resource_count = 0;
-    if (!read(data, size, offset, magic)          || magic   != MAGIC   ||
-        !read(data, size, offset, version)        || version != VERSION  ||
-        !read(data, size, offset, entity_count)   ||
-        !read(data, size, offset, pool_count)     ||
-        !read(data, size, offset, resource_count)) {
+    uint32_t magic = 0, version = 0, entity_count = 0, pool_count = 0, resource_count = 0;
+    if (!read(data, size, offset, magic) || magic != MAGIC || !read(data, size, offset, version) ||
+        version != VERSION || !read(data, size, offset, entity_count) ||
+        !read(data, size, offset, pool_count) || !read(data, size, offset, resource_count)) {
         return std::unexpected(Error{"restore: corrupt or incompatible header"});
     }
 
@@ -176,7 +179,8 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
     // map exactly 1-to-1 with the saved slots.
     pending_destroy_.clear();
     for (const auto& pool_ptr : pools_) {
-        if (pool_ptr) pool_ptr->clear_all();
+        if (pool_ptr)
+            pool_ptr->clear_all();
     }
     allocator_.reset();
     component_masks_.clear();
@@ -190,8 +194,7 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
     std::vector<uint32_t> saved_slots(entity_count);
     for (uint32_t i = 0; i < entity_count; ++i) {
         uint32_t slot = 0, gen = 0;
-        if (!read(data, size, offset, slot) ||
-            !read(data, size, offset, gen)) {
+        if (!read(data, size, offset, slot) || !read(data, size, offset, gen)) {
             return std::unexpected(Error{"restore: truncated entity table"});
         }
         saved_slots[i] = slot;
@@ -200,18 +203,19 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
 
     // Build a set of which slots need to be alive after restore.
     std::vector<bool> slot_needed(max_slot + 1, false);
-    for (uint32_t s : saved_slots) slot_needed[s] = true;
+    for (uint32_t s : saved_slots)
+        slot_needed[s] = true;
 
     // After reset(), allocator_.create() issues slot 0, 1, 2, … in order.
     // Allocate every slot from 0 to max_slot; keep the ones that were saved,
     // immediately destroy the gap slots so they return to the free list.
     std::vector<Entity> entity_map(max_slot + 1, Entity{UINT32_MAX});
     for (uint32_t s = 0; s <= max_slot; ++s) {
-        Entity e = allocator_.create();           // slot index == s (gen 0)
+        Entity e = allocator_.create(); // slot index == s (gen 0)
         if (slot_needed[s]) {
-            entity_map[s] = e;                    // keep: restored entity
+            entity_map[s] = e; // keep: restored entity
         } else {
-            allocator_.destroy(e);                // gap: free immediately
+            allocator_.destroy(e); // gap: free immediately
         }
     }
 
@@ -222,8 +226,7 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
             return std::unexpected(Error{"restore: truncated pool name"});
 
         uint32_t record_count = 0, data_len = 0;
-        if (!read(data, size, offset, record_count) ||
-            !read(data, size, offset, data_len)) {
+        if (!read(data, size, offset, record_count) || !read(data, size, offset, data_len)) {
             return std::unexpected(Error{"restore: truncated pool header"});
         }
         if (offset + data_len > size)
@@ -232,19 +235,21 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
         // Find matching pool.
         ISerializablePool* target_pool = nullptr;
         for (const auto& pool_ptr : pools_) {
-            if (!pool_ptr) continue;
+            if (!pool_ptr)
+                continue;
             auto* sp = dynamic_cast<ISerializablePool*>(pool_ptr.get());
-            if (sp && sp->component_name() == name) { target_pool = sp; break; }
+            if (sp && sp->component_name() == name) {
+                target_pool = sp;
+                break;
+            }
         }
 
         if (target_pool) {
             // Sanity check: data_len must equal record_count * bytes_per_record.
-            size_t expected_bytes = static_cast<size_t>(record_count)
-                                    * target_pool->bytes_per_record();
+            size_t expected_bytes =
+                static_cast<size_t>(record_count) * target_pool->bytes_per_record();
             if (data_len != expected_bytes) {
-                return std::unexpected(Error{
-                    "restore: pool '" + name + "' size mismatch"
-                });
+                return std::unexpected(Error{"restore: pool '" + name + "' size mismatch"});
             }
             target_pool->deserialize_all(data + offset, data_len, entity_map);
         }
@@ -285,7 +290,8 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
     {
         std::vector<Entity> ents;
         for (uint32_t pool_id = 0; pool_id < pools_.size(); ++pool_id) {
-            if (!pools_[pool_id]) continue;
+            if (!pools_[pool_id])
+                continue;
             ents.clear();
             pools_[pool_id]->enumerate_entities(ents);
             for (Entity e : ents) {

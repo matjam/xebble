@@ -1,19 +1,20 @@
 /// @file asset_manager.cpp
 /// @brief Asset manager implementation with TOML manifest and ZIP support.
-#include <xebble/asset_manager.hpp>
-#include <xebble/spritesheet.hpp>
-#include <xebble/font.hpp>
-#include <xebble/texture.hpp>
-#include <xebble/log.hpp>
 #include "vulkan/context.hpp"
 
+#include <xebble/asset_manager.hpp>
+#include <xebble/font.hpp>
+#include <xebble/log.hpp>
+#include <xebble/spritesheet.hpp>
+#include <xebble/texture.hpp>
+
 #include <toml++/toml.hpp>
+
+#include <fstream>
 #include <minizip-ng/mz.h>
 #include <minizip-ng/mz_strm.h>
 #include <minizip-ng/mz_zip.h>
 #include <minizip-ng/mz_zip_rw.h>
-
-#include <fstream>
 
 namespace xebble {
 
@@ -123,8 +124,8 @@ struct AssetManager::Impl {
         }
 
         std::vector<uint8_t> data(static_cast<size_t>(file_info->uncompressed_size));
-        int32_t bytes_read = mz_zip_reader_entry_read(reader, data.data(),
-            static_cast<int32_t>(data.size()));
+        int32_t bytes_read =
+            mz_zip_reader_entry_read(reader, data.data(), static_cast<int32_t>(data.size()));
 
         mz_zip_reader_entry_close(reader);
         mz_zip_reader_close(reader);
@@ -149,9 +150,8 @@ struct AssetManager::Impl {
 
 // --- AssetManager ---
 
-std::expected<AssetManager, Error> AssetManager::create(
-    vk::Context& ctx, const AssetConfig& config)
-{
+std::expected<AssetManager, Error> AssetManager::create(vk::Context& ctx,
+                                                        const AssetConfig& config) {
     AssetManager mgr;
     mgr.impl_ = std::make_unique<Impl>();
     mgr.impl_->directory = config.directory;
@@ -164,7 +164,7 @@ std::expected<AssetManager, Error> AssetManager::create(
             return std::unexpected(Error{"Cannot open manifest: " + config.manifest.string()});
         }
         std::string manifest_str((std::istreambuf_iterator<char>(mf)),
-                                  std::istreambuf_iterator<char>());
+                                 std::istreambuf_iterator<char>());
 
         auto manifest = parse_manifest(manifest_str);
 
@@ -172,19 +172,23 @@ std::expected<AssetManager, Error> AssetManager::create(
         for (auto& [name, entry] : manifest.spritesheets) {
             auto data = mgr.impl_->resolve(entry.path);
             if (!data) {
-                log(LogLevel::Warn, "Failed to load spritesheet '" + name + "': " + data.error().message);
+                log(LogLevel::Warn,
+                    "Failed to load spritesheet '" + name + "': " + data.error().message);
                 continue;
             }
 
             auto tex = Texture::load_from_memory(ctx, data->data(), data->size());
             if (!tex) {
-                log(LogLevel::Warn, "Failed to create texture for '" + name + "': " + tex.error().message);
+                log(LogLevel::Warn,
+                    "Failed to create texture for '" + name + "': " + tex.error().message);
                 continue;
             }
 
-            auto sheet = SpriteSheet::from_texture(std::move(*tex), entry.tile_width, entry.tile_height);
+            auto sheet =
+                SpriteSheet::from_texture(std::move(*tex), entry.tile_width, entry.tile_height);
             if (!sheet) {
-                log(LogLevel::Warn, "Failed to create spritesheet '" + name + "': " + sheet.error().message);
+                log(LogLevel::Warn,
+                    "Failed to create spritesheet '" + name + "': " + sheet.error().message);
                 continue;
             }
 
@@ -196,25 +200,30 @@ std::expected<AssetManager, Error> AssetManager::create(
         for (auto& [name, entry] : manifest.bitmap_fonts) {
             auto data = mgr.impl_->resolve(entry.path);
             if (!data) {
-                log(LogLevel::Warn, "Failed to load bitmap font '" + name + "': " + data.error().message);
+                log(LogLevel::Warn,
+                    "Failed to load bitmap font '" + name + "': " + data.error().message);
                 continue;
             }
 
             auto tex = Texture::load_from_memory(ctx, data->data(), data->size());
             if (!tex) {
-                log(LogLevel::Warn, "Failed to create texture for font '" + name + "': " + tex.error().message);
+                log(LogLevel::Warn,
+                    "Failed to create texture for font '" + name + "': " + tex.error().message);
                 continue;
             }
 
-            auto sheet = SpriteSheet::from_texture(std::move(*tex), entry.glyph_width, entry.glyph_height);
+            auto sheet =
+                SpriteSheet::from_texture(std::move(*tex), entry.glyph_width, entry.glyph_height);
             if (!sheet) {
-                log(LogLevel::Warn, "Failed to create spritesheet for font '" + name + "': " + sheet.error().message);
+                log(LogLevel::Warn, "Failed to create spritesheet for font '" + name +
+                                        "': " + sheet.error().message);
                 continue;
             }
 
             auto bmfont = BitmapFont::from_spritesheet(std::move(*sheet), entry.charset);
             if (!bmfont) {
-                log(LogLevel::Warn, "Failed to create bitmap font '" + name + "': " + bmfont.error().message);
+                log(LogLevel::Warn,
+                    "Failed to create bitmap font '" + name + "': " + bmfont.error().message);
                 continue;
             }
 

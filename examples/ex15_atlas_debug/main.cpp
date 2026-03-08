@@ -15,8 +15,8 @@
 ///   [LEFT]/[RIGHT] or press nothing — shows all strips stacked.
 ///   [Esc] quit.
 
-#include <xebble/xebble.hpp>
 #include <xebble/embedded_fonts.hpp>
+#include <xebble/xebble.hpp>
 
 #include <format>
 #include <memory>
@@ -29,10 +29,10 @@ constexpr uint32_t ATLAS_H = 16u;
 
 // How many virtual pixels wide each rendered strip is.
 // At 4× zoom: each strip shows STRIP_VW/4 = 80 atlas columns.
-constexpr float ZOOM      = 4.0f;
-constexpr float STRIP_VW  = 320.0f;           // virtual pixels wide per strip
-constexpr float STRIP_VH  = ATLAS_H * ZOOM;   // 64 virtual pixels tall
-constexpr float ATLAS_COLS_PER_STRIP = STRIP_VW / ZOOM;  // 80 atlas columns
+constexpr float ZOOM = 4.0f;
+constexpr float STRIP_VW = 320.0f;                      // virtual pixels wide per strip
+constexpr float STRIP_VH = ATLAS_H * ZOOM;              // 64 virtual pixels tall
+constexpr float ATLAS_COLS_PER_STRIP = STRIP_VW / ZOOM; // 80 atlas columns
 
 // Number of strips needed to cover the full atlas width.
 // ceil(2048 / 80) = 26 strips
@@ -49,29 +49,31 @@ public:
         auto& ctx = renderer->context();
 
         auto fb = xebble::embedded_fonts::berkelium64::create(ctx);
-        if (fb) font_ = std::make_unique<xebble::Font>(std::move(*fb));
+        if (fb)
+            font_ = std::make_unique<xebble::Font>(std::move(*fb));
 
         theme_berk_ = xebble::UITheme{
-            .bg_color   = {15, 15, 25, 200},
+            .bg_color = {15, 15, 25, 200},
             .text_color = {220, 220, 220, 255},
-            .padding    = 4.0f,
-            .margin     = 2.0f,
-            .z_order    = 50.0f,
+            .padding = 4.0f,
+            .margin = 2.0f,
+            .z_order = 50.0f,
         };
-        if (font_) theme_berk_.font = font_.get();
+        if (font_)
+            theme_berk_.font = font_.get();
     }
 
     void update(xebble::World& world, float dt) override {
         time_ += dt;
         for (const auto& e : world.resource<xebble::EventQueue>().events) {
-            if (e.type == xebble::EventType::KeyPress &&
-                e.key().key == xebble::Key::Escape)
+            if (e.type == xebble::EventType::KeyPress && e.key().key == xebble::Key::Escape)
                 std::exit(0);
         }
     }
 
     void draw(xebble::World& world, xebble::Renderer& renderer) override {
-        if (!font_) return;
+        if (!font_)
+            return;
         const xebble::Texture& atlas_tex = font_->texture();
 
         // ----------------------------------------------------------------
@@ -79,26 +81,25 @@ public:
         // Each strip: 320 virtual px wide, STRIP_VH px tall.
         // We fit as many strips as will fit in the top 250px of the screen.
         // ----------------------------------------------------------------
-        const float uw = float(ATLAS_W);   // atlas texel width
-        const float uh = float(ATLAS_H);   // atlas texel height
+        const float uw = float(ATLAS_W); // atlas texel width
+        const float uh = float(ATLAS_H); // atlas texel height
 
         // How many strips fit in the display area (max ~250px, leaving room below)
         const float display_area_h = 252.0f;
-        const int   strips_visible = std::min(
-            NUM_STRIPS,
-            (int)(display_area_h / STRIP_VH)   // how many fit
+        const int strips_visible = std::min(NUM_STRIPS,
+                                            (int)(display_area_h / STRIP_VH) // how many fit
         );
 
         for (int s = 0; s < strips_visible; ++s) {
             // Atlas X range this strip covers: [s*80, (s+1)*80) texels
             float atlas_x0 = float(s) * ATLAS_COLS_PER_STRIP;
             float atlas_x1 = std::min(atlas_x0 + ATLAS_COLS_PER_STRIP, float(ATLAS_W));
-            float strip_w_atlas = atlas_x1 - atlas_x0;  // actual texels (may be < 80 for last)
+            float strip_w_atlas = atlas_x1 - atlas_x0; // actual texels (may be < 80 for last)
 
             float uv_x = atlas_x0 / uw;
             float uv_y = 0.0f;
             float uv_w = strip_w_atlas / uw;
-            float uv_h = 1.0f;   // full height of atlas
+            float uv_h = 1.0f; // full height of atlas
 
             // Quad size in virtual pixels (4× zoom)
             float quad_w = strip_w_atlas * ZOOM;
@@ -113,12 +114,22 @@ public:
             float pos_y = (s / 2) * STRIP_VH;
 
             xebble::SpriteInstance inst{
-                .pos_x = pos_x,  .pos_y = pos_y,
-                .uv_x  = uv_x,   .uv_y  = uv_y,
-                .uv_w  = uv_w,   .uv_h  = uv_h,
-                .quad_w = quad_w, .quad_h = quad_h,
-                .r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f,
-                .scale = 1.0f, .rotation = 0.0f, .pivot_x = 0.0f, .pivot_y = 0.0f,
+                .pos_x = pos_x,
+                .pos_y = pos_y,
+                .uv_x = uv_x,
+                .uv_y = uv_y,
+                .uv_w = uv_w,
+                .uv_h = uv_h,
+                .quad_w = quad_w,
+                .quad_h = quad_h,
+                .r = 1.0f,
+                .g = 1.0f,
+                .b = 1.0f,
+                .a = 1.0f,
+                .scale = 1.0f,
+                .rotation = 0.0f,
+                .pivot_x = 0.0f,
+                .pivot_y = 0.0f,
             };
             renderer.submit_instances({&inst, 1}, atlas_tex, 1.0f);
         }
@@ -127,31 +138,36 @@ public:
         // Info label at top-right corner
         // ----------------------------------------------------------------
         auto& ui = world.resource<xebble::UIContext>();
-        ui.panel("info", {
-            .anchor = xebble::Anchor::TopRight,
-            .size   = {260, 18},
-            .offset = {0, 0},
-        }, [&](auto& p) {
-            p.text(u8"ex15: Berkelium64 atlas 4x zoom",
-                   {.color = {255, 220, 80}});
-        });
+        ui.panel("info",
+                 {
+                     .anchor = xebble::Anchor::TopRight,
+                     .size = {260, 18},
+                     .offset = {0, 0},
+                 },
+                 [&](auto& p) {
+                     p.text(u8"ex15: Berkelium64 atlas 4x zoom", {.color = {255, 220, 80}});
+                 });
 
         // ----------------------------------------------------------------
         // Bottom panel: normal-size font rendering for comparison
         // ----------------------------------------------------------------
         ui.set_theme(&theme_berk_);
-        ui.panel("sample", {
-            .anchor = xebble::Anchor::Bottom,
-            .size   = {1.0f, 90},
-        }, [&](auto& p) {
-            p.text(u8"Normal size Berkelium64 (compare with atlas above):",
-                   {.color = {180, 180, 255}});
-            p.text(u8"The quick brown fox jumps over the lazy dog.");
-            p.text(u8"ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789");
-            p.text(u8"g p y q j  (descenders)  | ( ) [ ] { }  _ $");
-            { auto s = std::format("ASCENDER=7  LINE_HEIGHT=9  time={:.1f}s", time_);
-              p.text(std::u8string(s.begin(), s.end()), {.color = {150, 150, 150}}); }
-        });
+        ui.panel("sample",
+                 {
+                     .anchor = xebble::Anchor::Bottom,
+                     .size = {1.0f, 90},
+                 },
+                 [&](auto& p) {
+                     p.text(u8"Normal size Berkelium64 (compare with atlas above):",
+                            {.color = {180, 180, 255}});
+                     p.text(u8"The quick brown fox jumps over the lazy dog.");
+                     p.text(u8"ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789");
+                     p.text(u8"g p y q j  (descenders)  | ( ) [ ] { }  _ $");
+                     {
+                         auto s = std::format("ASCENDER=7  LINE_HEIGHT=9  time={:.1f}s", time_);
+                         p.text(std::u8string(s.begin(), s.end()), {.color = {150, 150, 150}});
+                     }
+                 });
         xebble::debug_overlay(world, renderer);
     }
 };
@@ -162,11 +178,9 @@ int main() {
     xebble::World world;
     world.add_system<AtlasDebugSystem>();
 
-    return xebble::run(std::move(world), {
-        .window   = {.title  = "ex15 -- Atlas Debug",
-                     .width  = 1280,
-                     .height = 720},
-        .renderer = {.virtual_width  = 640,
-                     .virtual_height = 360},
-    });
+    return xebble::run(std::move(world),
+                       {
+                           .window = {.title = "ex15 -- Atlas Debug", .width = 1280, .height = 720},
+                           .renderer = {.virtual_width = 640, .virtual_height = 360},
+                       });
 }

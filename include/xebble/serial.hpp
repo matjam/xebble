@@ -141,7 +141,8 @@ void append(std::vector<uint8_t>& buf, const T& value) {
 /// @brief Read sizeof(T) bytes from @p src into @p out. Returns false on overflow.
 template<typename T>
 bool read(const uint8_t* src, size_t src_size, size_t& offset, T& out) {
-    if (offset + sizeof(T) > src_size) return false;
+    if (offset + sizeof(T) > src_size)
+        return false;
     std::memcpy(&out, src + offset, sizeof(T));
     offset += sizeof(T);
     return true;
@@ -155,11 +156,12 @@ inline void append_string(std::vector<uint8_t>& buf, std::string_view s) {
 }
 
 /// @brief Read a uint16_t length-prefixed string. Returns false on overflow.
-inline bool read_string(const uint8_t* src, size_t src_size,
-                        size_t& offset, std::string& out) {
+inline bool read_string(const uint8_t* src, size_t src_size, size_t& offset, std::string& out) {
     uint16_t len = 0;
-    if (!read(src, src_size, offset, len)) return false;
-    if (offset + len > src_size) return false;
+    if (!read(src, src_size, offset, len))
+        return false;
+    if (offset + len > src_size)
+        return false;
     out.assign(reinterpret_cast<const char*>(src + offset), len);
     offset += len;
     return true;
@@ -197,8 +199,7 @@ public:
 
     /// @brief Append all (entity_slot : uint32_t, T : sizeof(T)) pairs to @p out.
     ///        Sets @p record_count_out to the number of records written.
-    virtual void serialize_all(std::vector<uint8_t>& out,
-                               uint32_t& record_count_out) const = 0;
+    virtual void serialize_all(std::vector<uint8_t>& out, uint32_t& record_count_out) const = 0;
 
     /// @brief Restore records from the blob, mapping saved slots through @p entity_map.
     ///
@@ -233,16 +234,11 @@ public:
     void remove(Entity e) override { ComponentPool<T>::remove(e); }
     bool has(Entity e) const override { return ComponentPool<T>::has(e); }
 
-    std::string_view component_name() const override {
-        return ComponentName<T>::value;
-    }
+    std::string_view component_name() const override { return ComponentName<T>::value; }
 
-    size_t bytes_per_record() const override {
-        return sizeof(uint32_t) + sizeof(T);
-    }
+    size_t bytes_per_record() const override { return sizeof(uint32_t) + sizeof(T); }
 
-    void serialize_all(std::vector<uint8_t>& out,
-                       uint32_t& record_count_out) const override {
+    void serialize_all(std::vector<uint8_t>& out, uint32_t& record_count_out) const override {
         record_count_out = static_cast<uint32_t>(this->size());
         for (size_t i = 0; i < this->size(); ++i) {
             uint32_t slot = ecs_detail::entity_index(this->dense_entity(i));
@@ -289,7 +285,7 @@ namespace serial_detail {
 struct ResourceSerializer {
     std::string name;
     std::function<void(const std::any&, std::vector<uint8_t>&)> write;
-    std::function<void(std::any&, const uint8_t*, size_t)>      read;
+    std::function<void(std::any&, const uint8_t*, size_t)> read;
 };
 
 } // namespace serial_detail
@@ -299,8 +295,8 @@ struct ResourceSerializer {
 // ---------------------------------------------------------------------------
 
 namespace serial_detail {
-    constexpr uint32_t MAGIC   = 0x58424C53u;  // "XBLS"
-    constexpr uint32_t VERSION = 1u;
+constexpr uint32_t MAGIC = 0x58424C53u; // "XBLS"
+constexpr uint32_t VERSION = 1u;
 } // namespace serial_detail
 
 } // namespace xebble

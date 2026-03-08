@@ -61,11 +61,11 @@
 /// @endcode
 #pragma once
 
-#include <xebble/types.hpp>
 #include <xebble/event.hpp>
-#include <xebble/renderer.hpp>
 #include <xebble/font.hpp>
+#include <xebble/renderer.hpp>
 #include <xebble/system.hpp>
+#include <xebble/types.hpp>
 
 #include <functional>
 #include <memory>
@@ -95,15 +95,15 @@ class World;
 /// BottomLeft─ Bottom─BottomRight
 /// ```
 enum class Anchor {
-    TopLeft,    ///< Top-left corner of the screen.
-    Top,        ///< Horizontally centred, pinned to the top edge.
-    TopRight,   ///< Top-right corner of the screen.
-    Left,       ///< Vertically centred, pinned to the left edge.
-    Center,     ///< Centred both horizontally and vertically.
-    Right,      ///< Vertically centred, pinned to the right edge.
-    BottomLeft, ///< Bottom-left corner of the screen.
-    Bottom,     ///< Horizontally centred, pinned to the bottom edge.
-    BottomRight,///< Bottom-right corner of the screen.
+    TopLeft,     ///< Top-left corner of the screen.
+    Top,         ///< Horizontally centred, pinned to the top edge.
+    TopRight,    ///< Top-right corner of the screen.
+    Left,        ///< Vertically centred, pinned to the left edge.
+    Center,      ///< Centred both horizontally and vertically.
+    Right,       ///< Vertically centred, pinned to the right edge.
+    BottomLeft,  ///< Bottom-left corner of the screen.
+    Bottom,      ///< Horizontally centred, pinned to the bottom edge.
+    BottomRight, ///< Bottom-right corner of the screen.
 };
 
 /// @brief Describes where and how large a UI panel should be.
@@ -124,8 +124,8 @@ enum class Anchor {
 /// @endcode
 struct PanelPlacement {
     Anchor anchor = Anchor::TopLeft; ///< Screen anchor point.
-    Vec2   size   = {};              ///< Panel size in pixels {width, height}.
-    Vec2   offset = {};              ///< Pixel offset from the anchor point.
+    Vec2 size = {};                  ///< Panel size in pixels {width, height}.
+    Vec2 offset = {};                ///< Pixel offset from the anchor point.
 };
 
 /// @brief Style overrides for a text label widget.
@@ -148,38 +148,38 @@ struct TextStyle {
 /// if (p.button("Delete Save", danger_btn)) { delete_save_file(); }
 /// @endcode
 struct ButtonStyle {
-    Color color       = {0, 0, 0, 0}; ///< Normal button background colour.
+    Color color = {0, 0, 0, 0};       ///< Normal button background colour.
     Color hover_color = {0, 0, 0, 0}; ///< Background colour when the cursor hovers.
-    Color text_color  = {0, 0, 0, 0}; ///< Button label text colour.
-    float width       = 0.0f;         ///< Fixed width in pixels; 0 = fill panel content width.
+    Color text_color = {0, 0, 0, 0};  ///< Button label text colour.
+    float width = 0.0f;               ///< Fixed width in pixels; 0 = fill panel content width.
 };
 
 /// @brief Style overrides for a checkbox widget.
 ///
 /// Any field left at `{0,0,0,0}` inherits from the active theme.
 struct CheckboxStyle {
-    Color color         = {0, 0, 0, 0}; ///< Unchecked box background colour.
+    Color color = {0, 0, 0, 0};         ///< Unchecked box background colour.
     Color checked_color = {0, 0, 0, 0}; ///< Checked box background colour.
-    Color text_color    = {0, 0, 0, 0}; ///< Label text colour.
+    Color text_color = {0, 0, 0, 0};    ///< Label text colour.
 };
 
 /// @brief Style overrides for a scrollable list widget.
 ///
 /// Any field left at `{0,0,0,0}` inherits from the active theme.
 struct ListStyle {
-    Color color          = {0, 0, 0, 0}; ///< Row background colour.
+    Color color = {0, 0, 0, 0};          ///< Row background colour.
     Color selected_color = {0, 0, 0, 0}; ///< Highlighted row background colour.
-    Color text_color     = {0, 0, 0, 0}; ///< Row text colour.
-    float visible_rows   = 8;             ///< Number of rows visible without scrolling.
+    Color text_color = {0, 0, 0, 0};     ///< Row text colour.
+    float visible_rows = 8;              ///< Number of rows visible without scrolling.
 };
 
 /// @brief Style overrides for a single-line text input widget.
 ///
 /// Any field left at `{0,0,0,0}` inherits from the active theme.
 struct TextInputStyle {
-    Color color        = {0, 0, 0, 0}; ///< Background colour when not focused.
+    Color color = {0, 0, 0, 0};        ///< Background colour when not focused.
     Color active_color = {0, 0, 0, 0}; ///< Background colour when focused.
-    Color text_color   = {0, 0, 0, 0}; ///< Input text colour.
+    Color text_color = {0, 0, 0, 0};   ///< Input text colour.
 };
 
 /// @brief Visual theme controlling colours, spacing, and z-ordering for all UI.
@@ -211,20 +211,20 @@ struct UITheme {
     /// roguelike-grid style) or a `Font*` (TrueType, scalable).
     std::variant<const BitmapFont*, const Font*> font = static_cast<const BitmapFont*>(nullptr);
 
-    Color bg_color             = {20,  20,  30,  220}; ///< Panel background fill colour.
-    Color text_color           = {200, 200, 200, 255}; ///< Default label/text colour.
-    Color button_color         = {60,  60,  80,  255}; ///< Button background (normal).
-    Color button_hover_color   = {80,  80,  110, 255}; ///< Button background (hovered).
-    Color button_text_color    = {230, 230, 230, 255}; ///< Button label colour.
-    Color checkbox_color       = {60,  60,  80,  255}; ///< Checkbox background (unchecked).
+    Color bg_color = {20, 20, 30, 220};                  ///< Panel background fill colour.
+    Color text_color = {200, 200, 200, 255};             ///< Default label/text colour.
+    Color button_color = {60, 60, 80, 255};              ///< Button background (normal).
+    Color button_hover_color = {80, 80, 110, 255};       ///< Button background (hovered).
+    Color button_text_color = {230, 230, 230, 255};      ///< Button label colour.
+    Color checkbox_color = {60, 60, 80, 255};            ///< Checkbox background (unchecked).
     Color checkbox_checked_color = {100, 180, 100, 255}; ///< Checkbox background (checked).
-    Color input_color          = {40,  40,  50,  255}; ///< Text input background (inactive).
-    Color input_active_color   = {50,  50,  70,  255}; ///< Text input background (focused).
-    Color list_color           = {40,  40,  50,  255}; ///< List row background.
-    Color list_selected_color  = {70,  70,  100, 255}; ///< Selected list row background.
-    float padding              = 4.0f;                  ///< Inner padding within a panel (px).
-    float margin               = 2.0f;                  ///< Vertical gap between widgets (px).
-    float z_order              = 100.0f;                ///< Base draw depth for all UI elements.
+    Color input_color = {40, 40, 50, 255};               ///< Text input background (inactive).
+    Color input_active_color = {50, 50, 70, 255};        ///< Text input background (focused).
+    Color list_color = {40, 40, 50, 255};                ///< List row background.
+    Color list_selected_color = {70, 70, 100, 255};      ///< Selected list row background.
+    float padding = 4.0f;                                ///< Inner padding within a panel (px).
+    float margin = 2.0f;                                 ///< Vertical gap between widgets (px).
+    float z_order = 100.0f;                              ///< Base draw depth for all UI elements.
 };
 
 class UIContext;
@@ -309,8 +309,8 @@ public:
     ///     load_game(saves[selected_save]);
     /// }
     /// @endcode
-    void list(std::string_view id, std::span<const std::u8string> items,
-              int& selected, ListStyle style = {});
+    void list(std::string_view id, std::span<const std::u8string> items, int& selected,
+              ListStyle style = {});
 
     /// @brief Draw a single-line editable text input. Returns `true` when Enter is pressed.
     ///
@@ -494,7 +494,7 @@ private:
     std::vector<WidgetRect> prev_rects_;
     std::vector<WidgetRect> curr_rects_;
 
-    std::unordered_map<std::string, int>    scroll_offsets_;
+    std::unordered_map<std::string, int> scroll_offsets_;
     std::unordered_map<std::string, size_t> cursor_positions_;
     std::vector<char> input_chars_;
 

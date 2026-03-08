@@ -10,7 +10,9 @@
 #pragma once
 
 #include <xebble/types.hpp>
+
 #include <vulkan/vulkan.h>
+
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -36,11 +38,8 @@ public:
     /// @param vert_path Path to compiled sprite.vert.spv.
     /// @param frag_path Path to compiled sprite.frag.spv.
     static std::expected<Pipeline, Error> create_sprite_pipeline(
-        VkDevice device,
-        VkRenderPass render_pass,
-        VkDescriptorSetLayout descriptor_set_layout,
-        const std::filesystem::path& vert_path,
-        const std::filesystem::path& frag_path);
+        VkDevice device, VkRenderPass render_pass, VkDescriptorSetLayout descriptor_set_layout,
+        const std::filesystem::path& vert_path, const std::filesystem::path& frag_path);
 
     /// @brief Create the fullscreen blit pipeline.
     /// @param device Vulkan logical device.
@@ -49,11 +48,8 @@ public:
     /// @param vert_path Path to compiled blit.vert.spv.
     /// @param frag_path Path to compiled blit.frag.spv.
     static std::expected<Pipeline, Error> create_blit_pipeline(
-        VkDevice device,
-        VkRenderPass render_pass,
-        VkDescriptorSetLayout descriptor_set_layout,
-        const std::filesystem::path& vert_path,
-        const std::filesystem::path& frag_path);
+        VkDevice device, VkRenderPass render_pass, VkDescriptorSetLayout descriptor_set_layout,
+        const std::filesystem::path& vert_path, const std::filesystem::path& frag_path);
 
 private:
     struct Impl;

@@ -119,9 +119,9 @@ private:
     /// Batch metadata for submitting a contiguous run of instances.
     struct BatchRun {
         const Texture* texture = nullptr;
-        float          z_order = 0.0f;
-        uint32_t       first   = 0;
-        uint32_t       count   = 0;
+        float z_order = 0.0f;
+        uint32_t first = 0;
+        uint32_t count = 0;
     };
 
     /// World::generation() at the time the sorted order was last rebuilt.
@@ -129,10 +129,10 @@ private:
 
     /// Parallel array: maps each GPU buffer slot to the entity handle so
     /// we can look up Position for position-only patching.
-    std::vector<Entity>    gpu_entities_;
+    std::vector<Entity> gpu_entities_;
 
     /// Batch runs (same (texture, z_order) group).
-    std::vector<BatchRun>  batch_runs_;
+    std::vector<BatchRun> batch_runs_;
 
     /// Per frame-slot: true if this slot's buffer needs a full rewrite
     /// (either first use or the other slot was rebuilt since last use).
@@ -143,8 +143,7 @@ private:
 
     /// Full rebuild: iterate Position+Sprite, compute all fields, sort,
     /// write directly to the mapped GPU buffer.
-    void rebuild(World& world, Renderer& renderer,
-                 float cam_x, float cam_y, float fvw, float fvh);
+    void rebuild(World& world, Renderer& renderer, float cam_x, float cam_y, float fvw, float fvh);
 };
 
 } // namespace xebble

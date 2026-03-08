@@ -1,4 +1,5 @@
 #include "context.hpp"
+
 #include <xebble/log.hpp>
 
 #define GLFW_INCLUDE_VULKAN
@@ -31,19 +32,26 @@ struct Context::Impl {
     VkCommandPool command_pool = VK_NULL_HANDLE;
 
     ~Impl() {
-        if (device) vkDeviceWaitIdle(device);
-        if (command_pool) vkDestroyCommandPool(device, command_pool, nullptr);
-        if (allocator) vmaDestroyAllocator(allocator);
-        if (device) vkDestroyDevice(device, nullptr);
-        if (surface) vkDestroySurfaceKHR(instance, surface, nullptr);
+        if (device)
+            vkDeviceWaitIdle(device);
+        if (command_pool)
+            vkDestroyCommandPool(device, command_pool, nullptr);
+        if (allocator)
+            vmaDestroyAllocator(allocator);
+        if (device)
+            vkDestroyDevice(device, nullptr);
+        if (surface)
+            vkDestroySurfaceKHR(instance, surface, nullptr);
 #ifndef NDEBUG
         if (debug_messenger) {
             auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
                 vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT"));
-            if (func) func(instance, debug_messenger, nullptr);
+            if (func)
+                func(instance, debug_messenger, nullptr);
         }
 #endif
-        if (instance) vkDestroyInstance(instance, nullptr);
+        if (instance)
+            vkDestroyInstance(instance, nullptr);
     }
 };
 
@@ -51,11 +59,8 @@ namespace {
 
 #ifndef NDEBUG
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-    VkDebugUtilsMessageTypeFlagsEXT /*type*/,
-    const VkDebugUtilsMessengerCallbackDataEXT* data,
-    void* /*user_data*/)
-{
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT /*type*/,
+    const VkDebugUtilsMessengerCallbackDataEXT* data, void* /*user_data*/) {
     LogLevel level = LogLevel::Debug;
     if (severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
         level = LogLevel::Error;
@@ -104,7 +109,8 @@ QueueFamilyIndices find_queue_families(VkPhysicalDevice device, VkSurfaceKHR sur
         if (present_support)
             indices.present = i;
 
-        if (indices.complete()) break;
+        if (indices.complete())
+            break;
     }
     return indices;
 }
@@ -114,7 +120,8 @@ int score_device(VkPhysicalDevice device, VkSurfaceKHR surface) {
     vkGetPhysicalDeviceProperties(device, &props);
 
     auto indices = find_queue_families(device, surface);
-    if (!indices.complete()) return 0;
+    if (!indices.complete())
+        return 0;
 
     // Check swapchain extension support
     uint32_t ext_count;
@@ -129,7 +136,8 @@ int score_device(VkPhysicalDevice device, VkSurfaceKHR surface) {
             break;
         }
     }
-    if (!has_swapchain) return 0;
+    if (!has_swapchain)
+        return 0;
 
     int score = 1;
     if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
@@ -236,7 +244,7 @@ std::expected<Context, Error> Context::create(GLFWwindow* window) {
     VkResult instance_result = vkCreateInstance(&create_info, nullptr, &impl->instance);
     if (instance_result != VK_SUCCESS) {
         return std::unexpected(Error{"Failed to create Vulkan instance (VkResult: " +
-            std::to_string(static_cast<int>(instance_result)) + ")"});
+                                     std::to_string(static_cast<int>(instance_result)) + ")"});
     }
 
     log(LogLevel::Info, "Vulkan instance created");
@@ -245,13 +253,11 @@ std::expected<Context, Error> Context::create(GLFWwindow* window) {
 #ifndef NDEBUG
     VkDebugUtilsMessengerCreateInfoEXT debug_info{};
     debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debug_info.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debug_info.messageType =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    debug_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                                 VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debug_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                             VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     debug_info.pfnUserCallback = debug_callback;
 
     auto create_debug = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
@@ -364,15 +370,35 @@ Context::~Context() = default;
 Context::Context(Context&&) noexcept = default;
 Context& Context::operator=(Context&&) noexcept = default;
 
-VkInstance Context::instance() const { return impl_->instance; }
-VkPhysicalDevice Context::physical_device() const { return impl_->physical_device; }
-VkDevice Context::device() const { return impl_->device; }
-VkQueue Context::graphics_queue() const { return impl_->graphics_queue; }
-VkQueue Context::present_queue() const { return impl_->present_queue; }
-uint32_t Context::graphics_queue_family() const { return impl_->graphics_family; }
-uint32_t Context::present_queue_family() const { return impl_->present_family; }
-VkSurfaceKHR Context::surface() const { return impl_->surface; }
-VmaAllocator Context::allocator() const { return impl_->allocator; }
-VkCommandPool Context::command_pool() const { return impl_->command_pool; }
+VkInstance Context::instance() const {
+    return impl_->instance;
+}
+VkPhysicalDevice Context::physical_device() const {
+    return impl_->physical_device;
+}
+VkDevice Context::device() const {
+    return impl_->device;
+}
+VkQueue Context::graphics_queue() const {
+    return impl_->graphics_queue;
+}
+VkQueue Context::present_queue() const {
+    return impl_->present_queue;
+}
+uint32_t Context::graphics_queue_family() const {
+    return impl_->graphics_family;
+}
+uint32_t Context::present_queue_family() const {
+    return impl_->present_family;
+}
+VkSurfaceKHR Context::surface() const {
+    return impl_->surface;
+}
+VmaAllocator Context::allocator() const {
+    return impl_->allocator;
+}
+VkCommandPool Context::command_pool() const {
+    return impl_->command_pool;
+}
 
 } // namespace xebble::vk

@@ -1,13 +1,13 @@
+#include "vulkan/buffer.hpp"
+#include "vulkan/command.hpp"
+#include "vulkan/context.hpp"
+#include "vulkan/descriptor.hpp"
+#include "vulkan/pipeline.hpp"
+#include "vulkan/swapchain.hpp"
+
+#include <xebble/log.hpp>
 #include <xebble/renderer.hpp>
 #include <xebble/window.hpp>
-#include <xebble/log.hpp>
-
-#include "vulkan/context.hpp"
-#include "vulkan/swapchain.hpp"
-#include "vulkan/buffer.hpp"
-#include "vulkan/descriptor.hpp"
-#include "vulkan/command.hpp"
-#include "vulkan/pipeline.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -81,15 +81,15 @@ struct Renderer::Impl {
 
     // Per-frame instance buffers (grow on demand)
     std::vector<vk::Buffer> instance_buffers;
-    uint32_t instance_capacity = INITIAL_INSTANCE_CAPACITY;  // current capacity per buffer
+    uint32_t instance_capacity = INITIAL_INSTANCE_CAPACITY; // current capacity per buffer
 
     // Draw state
     uint32_t current_frame = 0;
     uint32_t current_image_index = 0;
-    std::vector<DrawBatch> batches;          // direct-write batches (absolute offsets)
-    std::vector<DrawBatch> staging_batches;  // submit_instances batches (staging-relative offsets)
-    std::vector<SpriteInstance> staging_instances;  // flat buffer for submit_instances() path
-    uint32_t direct_write_count_ = 0;  // non-zero when map_instance_buffer() was used this frame
+    std::vector<DrawBatch> batches;         // direct-write batches (absolute offsets)
+    std::vector<DrawBatch> staging_batches; // submit_instances batches (staging-relative offsets)
+    std::vector<SpriteInstance> staging_instances; // flat buffer for submit_instances() path
+    uint32_t direct_write_count_ = 0; // non-zero when map_instance_buffer() was used this frame
 
     // Texture descriptor cache
     std::unordered_map<VkImageView, VkDescriptorSet> texture_descriptors;
@@ -114,13 +114,15 @@ struct Renderer::Impl {
     std::optional<std::pair<uint32_t, uint32_t>> pending_virtual_resolution;
 
     ~Impl() {
-        if (!context || !context->device()) return;
+        if (!context || !context->device())
+            return;
         vkDeviceWaitIdle(context->device());
 
         for (auto fb : swapchain_framebuffers)
             vkDestroyFramebuffer(context->device(), fb, nullptr);
         for (auto fb : offscreen_framebuffers)
-            if (fb) vkDestroyFramebuffer(context->device(), fb, nullptr);
+            if (fb)
+                vkDestroyFramebuffer(context->device(), fb, nullptr);
         if (offscreen_render_pass)
             vkDestroyRenderPass(context->device(), offscreen_render_pass, nullptr);
         if (swapchain_render_pass)
@@ -138,7 +140,8 @@ struct Renderer::Impl {
 
     VkDescriptorSet get_or_create_descriptor(const Texture& tex) {
         auto it = texture_descriptors.find(tex.image_view());
-        if (it != texture_descriptors.end()) return it->second;
+        if (it != texture_descriptors.end())
+            return it->second;
 
         auto set = descriptor_pool->allocate(texture_layout);
         if (!set) {
@@ -186,18 +189,18 @@ struct Renderer::Impl {
             //   transition is done, producing garbage rectangles.
             VkSubpassDependency deps[2]{};
 
-            deps[0].srcSubpass    = VK_SUBPASS_EXTERNAL;
-            deps[0].dstSubpass    = 0;
-            deps[0].srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            deps[0].dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+            deps[0].dstSubpass = 0;
+            deps[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            deps[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
             deps[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
             deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             deps[0].dependencyFlags = 0;
 
-            deps[1].srcSubpass    = 0;
-            deps[1].dstSubpass    = VK_SUBPASS_EXTERNAL;
-            deps[1].srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            deps[1].dstStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            deps[1].srcSubpass = 0;
+            deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+            deps[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            deps[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             deps[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             deps[1].dependencyFlags = 0;
@@ -211,7 +214,8 @@ struct Renderer::Impl {
             ci.dependencyCount = 2;
             ci.pDependencies = deps;
 
-            if (vkCreateRenderPass(context->device(), &ci, nullptr, &offscreen_render_pass) != VK_SUCCESS) {
+            if (vkCreateRenderPass(context->device(), &ci, nullptr, &offscreen_render_pass) !=
+                VK_SUCCESS) {
                 return std::unexpected(Error{"Failed to create offscreen render pass"});
             }
         }
@@ -254,7 +258,8 @@ struct Renderer::Impl {
             ci.dependencyCount = 1;
             ci.pDependencies = &dep;
 
-            if (vkCreateRenderPass(context->device(), &ci, nullptr, &swapchain_render_pass) != VK_SUCCESS) {
+            if (vkCreateRenderPass(context->device(), &ci, nullptr, &swapchain_render_pass) !=
+                VK_SUCCESS) {
                 return std::unexpected(Error{"Failed to create swapchain render pass"});
             }
         }
@@ -268,9 +273,11 @@ struct Renderer::Impl {
         offscreen_descriptors.resize(MAX_FRAMES_IN_FLIGHT, VK_NULL_HANDLE);
 
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            auto tex = Texture::create_empty(*context, config.virtual_width, config.virtual_height,
-                VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-            if (!tex) return std::unexpected(tex.error());
+            auto tex =
+                Texture::create_empty(*context, config.virtual_width, config.virtual_height,
+                                      VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+            if (!tex)
+                return std::unexpected(tex.error());
             offscreen_textures[i].emplace(std::move(*tex));
 
             VkImageView view = offscreen_textures[i]->image_view();
@@ -283,7 +290,8 @@ struct Renderer::Impl {
             ci.height = config.virtual_height;
             ci.layers = 1;
 
-            if (vkCreateFramebuffer(context->device(), &ci, nullptr, &offscreen_framebuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(context->device(), &ci, nullptr, &offscreen_framebuffers[i]) !=
+                VK_SUCCESS) {
                 return std::unexpected(Error{"Failed to create offscreen framebuffer"});
             }
         }
@@ -307,7 +315,8 @@ struct Renderer::Impl {
             ci.height = swapchain->extent().height;
             ci.layers = 1;
 
-            if (vkCreateFramebuffer(context->device(), &ci, nullptr, &swapchain_framebuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(context->device(), &ci, nullptr, &swapchain_framebuffers[i]) !=
+                VK_SUCCESS) {
                 return std::unexpected(Error{"Failed to create swapchain framebuffer"});
             }
         }
@@ -332,20 +341,21 @@ struct Renderer::Impl {
         }
 
         // Update config
-        config.virtual_width  = new_w;
+        config.virtual_width = new_w;
         config.virtual_height = new_h;
 
         // Recreate all per-frame offscreen resources
         auto result = create_offscreen_framebuffers();
-        if (!result) return result;
+        if (!result)
+            return result;
 
         // Create blit descriptors for each frame's offscreen texture
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             offscreen_descriptors[i] = get_or_create_descriptor(*offscreen_textures[i]);
         }
 
-        log(LogLevel::Info, "Virtual resolution changed to " +
-            std::to_string(new_w) + "x" + std::to_string(new_h));
+        log(LogLevel::Info,
+            "Virtual resolution changed to " + std::to_string(new_w) + "x" + std::to_string(new_h));
         return {};
     }
 
@@ -362,9 +372,12 @@ struct Renderer::Impl {
         fci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            if (vkCreateSemaphore(context->device(), &sci, nullptr, &image_available_semaphores[i]) != VK_SUCCESS ||
-                vkCreateSemaphore(context->device(), &sci, nullptr, &render_finished_semaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(context->device(), &fci, nullptr, &in_flight_fences[i]) != VK_SUCCESS) {
+            if (vkCreateSemaphore(context->device(), &sci, nullptr,
+                                  &image_available_semaphores[i]) != VK_SUCCESS ||
+                vkCreateSemaphore(context->device(), &sci, nullptr,
+                                  &render_finished_semaphores[i]) != VK_SUCCESS ||
+                vkCreateFence(context->device(), &fci, nullptr, &in_flight_fences[i]) !=
+                    VK_SUCCESS) {
                 return std::unexpected(Error{"Failed to create sync objects"});
             }
         }
@@ -381,33 +394,40 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
 
     // Create Vulkan context
     auto ctx_result = vk::Context::create(window.native_handle());
-    if (!ctx_result) return std::unexpected(ctx_result.error());
+    if (!ctx_result)
+        return std::unexpected(ctx_result.error());
     impl.context.emplace(std::move(*ctx_result));
 
     // Create swapchain
     auto sc = vk::Swapchain::create(*impl.context, window.native_handle(), config.vsync);
-    if (!sc) return std::unexpected(sc.error());
+    if (!sc)
+        return std::unexpected(sc.error());
     impl.swapchain.emplace(std::move(*sc));
 
     // Create render passes
     auto rp_result = impl.create_render_passes();
-    if (!rp_result) return std::unexpected(rp_result.error());
+    if (!rp_result)
+        return std::unexpected(rp_result.error());
 
     // Create per-frame offscreen textures + framebuffers
     auto ofb_result = impl.create_offscreen_framebuffers();
-    if (!ofb_result) return std::unexpected(ofb_result.error());
+    if (!ofb_result)
+        return std::unexpected(ofb_result.error());
     auto sfb_result = impl.create_swapchain_framebuffers();
-    if (!sfb_result) return std::unexpected(sfb_result.error());
+    if (!sfb_result)
+        return std::unexpected(sfb_result.error());
 
     // Create descriptor set layout
     auto layout = vk::create_single_texture_layout(impl.context->device());
-    if (!layout) return std::unexpected(layout.error());
+    if (!layout)
+        return std::unexpected(layout.error());
     impl.texture_layout = *layout;
 
     // Create descriptor pool (enough for many textures + offscreen)
     auto pool = vk::DescriptorPool::create(impl.context->device(), 256,
-        {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256}});
-    if (!pool) return std::unexpected(pool.error());
+                                           {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256}});
+    if (!pool)
+        return std::unexpected(pool.error());
     impl.descriptor_pool.emplace(std::move(*pool));
 
     // Create per-frame offscreen descriptors for blit
@@ -424,8 +444,8 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
         uint32_t exe_size = sizeof(exe_buf);
         if (_NSGetExecutablePath(exe_buf, &exe_size) == 0) {
             auto exe_dir = std::filesystem::path(exe_buf).parent_path();
-            search_paths.push_back(exe_dir / "../Resources/shaders");  // .app bundle
-            search_paths.push_back(exe_dir / "shaders");               // next to exe
+            search_paths.push_back(exe_dir / "../Resources/shaders"); // .app bundle
+            search_paths.push_back(exe_dir / "shaders");              // next to exe
         }
 #endif
         search_paths.push_back("build/debug/shaders");
@@ -447,35 +467,38 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
     auto sprite_pip = vk::Pipeline::create_sprite_pipeline(
         impl.context->device(), impl.offscreen_render_pass, impl.texture_layout,
         shader_dir / "sprite.vert.spv", shader_dir / "sprite.frag.spv");
-    if (!sprite_pip) return std::unexpected(sprite_pip.error());
+    if (!sprite_pip)
+        return std::unexpected(sprite_pip.error());
     impl.sprite_pipeline.emplace(std::move(*sprite_pip));
 
     auto blit_pip = vk::Pipeline::create_blit_pipeline(
         impl.context->device(), impl.swapchain_render_pass, impl.texture_layout,
         shader_dir / "blit.vert.spv", shader_dir / "blit.frag.spv");
-    if (!blit_pip) return std::unexpected(blit_pip.error());
+    if (!blit_pip)
+        return std::unexpected(blit_pip.error());
     impl.blit_pipeline.emplace(std::move(*blit_pip));
 
     // Allocate command buffers
-    auto cmds = vk::allocate_command_buffers(
-        impl.context->device(), impl.context->command_pool(), MAX_FRAMES_IN_FLIGHT);
-    if (!cmds) return std::unexpected(cmds.error());
+    auto cmds = vk::allocate_command_buffers(impl.context->device(), impl.context->command_pool(),
+                                             MAX_FRAMES_IN_FLIGHT);
+    if (!cmds)
+        return std::unexpected(cmds.error());
     impl.command_buffers = std::move(*cmds);
 
     // Create sync objects
     auto sync_result = impl.create_sync_objects();
-    if (!sync_result) return std::unexpected(sync_result.error());
+    if (!sync_result)
+        return std::unexpected(sync_result.error());
 
     // Create per-frame instance buffers
     impl.instance_buffers.reserve(MAX_FRAMES_IN_FLIGHT);
     for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        auto buf = vk::Buffer::create(
-            impl.context->allocator(),
-            sizeof(SpriteInstance) * INITIAL_INSTANCE_CAPACITY,
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VMA_MEMORY_USAGE_AUTO,
-            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
-        if (!buf) return std::unexpected(buf.error());
+        auto buf = vk::Buffer::create(impl.context->allocator(),
+                                      sizeof(SpriteInstance) * INITIAL_INSTANCE_CAPACITY,
+                                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
+                                      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+        if (!buf)
+            return std::unexpected(buf.error());
         impl.instance_buffers.push_back(std::move(*buf));
     }
 
@@ -483,8 +506,8 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
     impl.start_time = Impl::Clock::now();
     impl.last_frame_time = impl.start_time;
 
-    log(LogLevel::Info, "Renderer initialized (" +
-        std::to_string(config.virtual_width) + "x" + std::to_string(config.virtual_height) + ")");
+    log(LogLevel::Info, "Renderer initialized (" + std::to_string(config.virtual_width) + "x" +
+                            std::to_string(config.virtual_height) + ")");
 
     return renderer;
 }
@@ -514,16 +537,17 @@ bool Renderer::begin_frame() {
     }
 
     // Wait for previous frame with this index
-    vkWaitForFences(impl.context->device(), 1, &impl.in_flight_fences[impl.current_frame],
-        VK_TRUE, UINT64_MAX);
+    vkWaitForFences(impl.context->device(), 1, &impl.in_flight_fences[impl.current_frame], VK_TRUE,
+                    UINT64_MAX);
 
     // Acquire swapchain image
-    auto image_result = impl.swapchain->acquire_next_image(
-        impl.image_available_semaphores[impl.current_frame]);
+    auto image_result =
+        impl.swapchain->acquire_next_image(impl.image_available_semaphores[impl.current_frame]);
     if (!image_result) {
         // Swapchain out of date — recreate
         auto recreate = impl.swapchain->recreate(impl.window->native_handle(), impl.config.vsync);
-        if (!recreate) return false;
+        if (!recreate)
+            return false;
         impl.create_swapchain_framebuffers();
         return false; // Skip this frame
     }
@@ -534,8 +558,8 @@ bool Renderer::begin_frame() {
     // image again.  This prevents two different frame slots from rendering to
     // the same swapchain image concurrently.
     if (impl.images_in_flight[impl.current_image_index] != VK_NULL_HANDLE) {
-        vkWaitForFences(impl.context->device(), 1,
-            &impl.images_in_flight[impl.current_image_index], VK_TRUE, UINT64_MAX);
+        vkWaitForFences(impl.context->device(), 1, &impl.images_in_flight[impl.current_image_index],
+                        VK_TRUE, UINT64_MAX);
     }
     impl.images_in_flight[impl.current_image_index] = impl.in_flight_fences[impl.current_frame];
 
@@ -580,10 +604,9 @@ bool Renderer::begin_frame() {
 
     // Push orthographic projection
     auto projection = glm::ortho(0.0f, static_cast<float>(impl.config.virtual_width),
-                                  static_cast<float>(impl.config.virtual_height), 0.0f,
-                                  -1.0f, 1.0f);
-    vkCmdPushConstants(cmd, impl.sprite_pipeline->layout(),
-        VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &projection);
+                                 static_cast<float>(impl.config.virtual_height), 0.0f, -1.0f, 1.0f);
+    vkCmdPushConstants(cmd, impl.sprite_pipeline->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(glm::mat4), &projection);
 
     // Clear batches and staging buffer for this frame
     impl.batches.clear();
@@ -594,14 +617,13 @@ bool Renderer::begin_frame() {
     return true;
 }
 
-void Renderer::submit_instances(std::span<const SpriteInstance> instances,
-                                 const Texture& texture, float z_order)
-{
+void Renderer::submit_instances(std::span<const SpriteInstance> instances, const Texture& texture,
+                                float z_order) {
     auto& impl = *impl_;
     uint32_t first = static_cast<uint32_t>(impl.staging_instances.size());
     impl.staging_instances.insert(impl.staging_instances.end(), instances.begin(), instances.end());
-    impl.staging_batches.push_back({&texture, z_order, first,
-                            static_cast<uint32_t>(instances.size())});
+    impl.staging_batches.push_back(
+        {&texture, z_order, first, static_cast<uint32_t>(instances.size())});
 }
 
 SpriteInstance* Renderer::map_instance_buffer(uint32_t count) {
@@ -612,19 +634,19 @@ SpriteInstance* Renderer::map_instance_buffer(uint32_t count) {
         vkDeviceWaitIdle(impl.context->device());
 
         uint32_t new_cap = impl.instance_capacity;
-        while (new_cap < count) new_cap *= 2;
+        while (new_cap < count)
+            new_cap *= 2;
 
-        log(LogLevel::Info, "Growing instance buffers (direct): " +
-            std::to_string(impl.instance_capacity) + " -> " + std::to_string(new_cap));
+        log(LogLevel::Info,
+            "Growing instance buffers (direct): " + std::to_string(impl.instance_capacity) +
+                " -> " + std::to_string(new_cap));
 
         impl.instance_buffers.clear();
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            auto buf = vk::Buffer::create(
-                impl.context->allocator(),
-                sizeof(SpriteInstance) * new_cap,
-                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                VMA_MEMORY_USAGE_AUTO,
-                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+            auto buf =
+                vk::Buffer::create(impl.context->allocator(), sizeof(SpriteInstance) * new_cap,
+                                   VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
+                                   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
             if (!buf) {
                 log(LogLevel::Error, "Failed to grow instance buffer");
                 return nullptr;
@@ -634,12 +656,11 @@ SpriteInstance* Renderer::map_instance_buffer(uint32_t count) {
         impl.instance_capacity = new_cap;
     }
 
-    return static_cast<SpriteInstance*>(
-        impl.instance_buffers[impl.current_frame].mapped_ptr());
+    return static_cast<SpriteInstance*>(impl.instance_buffers[impl.current_frame].mapped_ptr());
 }
 
-void Renderer::record_batch(const Texture& texture, float z_order,
-                             uint32_t first_instance, uint32_t instance_count) {
+void Renderer::record_batch(const Texture& texture, float z_order, uint32_t first_instance,
+                            uint32_t instance_count) {
     impl_->batches.push_back({&texture, z_order, first_instance, instance_count});
 }
 
@@ -673,7 +694,7 @@ void Renderer::end_frame() {
 
     // Sort all batch metadata by z_order (tiny array — typically < 10 entries).
     std::sort(impl.batches.begin(), impl.batches.end(),
-        [](const DrawBatch& a, const DrawBatch& b) { return a.z_order < b.z_order; });
+              [](const DrawBatch& a, const DrawBatch& b) { return a.z_order < b.z_order; });
 
     if (staging_count > 0) {
         uint32_t total_needed = direct_count + staging_count;
@@ -684,19 +705,19 @@ void Renderer::end_frame() {
             vkDeviceWaitIdle(impl.context->device());
 
             uint32_t new_cap = impl.instance_capacity;
-            while (new_cap < total_needed) new_cap *= 2;
+            while (new_cap < total_needed)
+                new_cap *= 2;
 
-            log(LogLevel::Info, "Growing instance buffers: " +
-                std::to_string(impl.instance_capacity) + " -> " + std::to_string(new_cap));
+            log(LogLevel::Info,
+                "Growing instance buffers: " + std::to_string(impl.instance_capacity) + " -> " +
+                    std::to_string(new_cap));
 
             impl.instance_buffers.clear();
             for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-                auto buf = vk::Buffer::create(
-                    impl.context->allocator(),
-                    sizeof(SpriteInstance) * new_cap,
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                    VMA_MEMORY_USAGE_AUTO,
-                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
+                auto buf =
+                    vk::Buffer::create(impl.context->allocator(), sizeof(SpriteInstance) * new_cap,
+                                       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO,
+                                       VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT);
                 if (!buf) {
                     log(LogLevel::Error, "Failed to grow instance buffer");
                     return;
@@ -707,10 +728,9 @@ void Renderer::end_frame() {
         }
 
         // Upload staging data after the direct-written region.
-        auto* dst = static_cast<SpriteInstance*>(
-            impl.instance_buffers[impl.current_frame].mapped_ptr());
-        std::memcpy(dst + direct_count,
-                    impl.staging_instances.data(),
+        auto* dst =
+            static_cast<SpriteInstance*>(impl.instance_buffers[impl.current_frame].mapped_ptr());
+        std::memcpy(dst + direct_count, impl.staging_instances.data(),
                     staging_count * sizeof(SpriteInstance));
 
         VkDeviceSize flush_offset = direct_count * sizeof(SpriteInstance);
@@ -728,13 +748,15 @@ void Renderer::end_frame() {
     vkCmdBindVertexBuffers(cmd, 0, 1, &vb, &zero_offset);
 
     for (auto& batch : impl.batches) {
-        if (batch.instance_count == 0) continue;
+        if (batch.instance_count == 0)
+            continue;
 
         auto desc = impl.get_or_create_descriptor(*batch.texture);
-        if (desc == VK_NULL_HANDLE) continue;
+        if (desc == VK_NULL_HANDLE)
+            continue;
 
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            impl.sprite_pipeline->layout(), 0, 1, &desc, 0, nullptr);
+                                impl.sprite_pipeline->layout(), 0, 1, &desc, 0, nullptr);
 
         vkCmdDraw(cmd, 6, batch.instance_count, 0, batch.first_instance);
     }
@@ -754,24 +776,20 @@ void Renderer::end_frame() {
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barrier.oldLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image         = impl.offscreen_textures[impl.current_frame]->image();
-        barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-        barrier.subresourceRange.baseMipLevel   = 0;
-        barrier.subresourceRange.levelCount     = 1;
+        barrier.image = impl.offscreen_textures[impl.current_frame]->image();
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount     = 1;
+        barrier.subresourceRange.layerCount = 1;
 
-        vkCmdPipelineBarrier(cmd,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            0,
-            0, nullptr,
-            0, nullptr,
-            1, &barrier);
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                             &barrier);
     }
 
     // --- Blit pass: render offscreen to swapchain ---
@@ -782,11 +800,8 @@ void Renderer::end_frame() {
     blit_rpi.renderArea = {{0, 0}, impl.swapchain->extent()};
 
     VkClearValue blit_clear{};
-    blit_clear.color = {{
-        impl.border_color.r / 255.0f,
-        impl.border_color.g / 255.0f,
-        impl.border_color.b / 255.0f,
-        1.0f}};
+    blit_clear.color = {{impl.border_color.r / 255.0f, impl.border_color.g / 255.0f,
+                         impl.border_color.b / 255.0f, 1.0f}};
     blit_rpi.clearValueCount = 1;
     blit_rpi.pClearValues = &blit_clear;
 
@@ -803,7 +818,8 @@ void Renderer::end_frame() {
     float scale = std::min(sw / vw, sh / vh);
     if (impl.config.nearest_filter) {
         scale = std::floor(scale);
-        if (scale < 1.0f) scale = 1.0f;
+        if (scale < 1.0f)
+            scale = 1.0f;
     }
     float scaled_w = vw * scale;
     float scaled_h = vh * scale;
@@ -825,8 +841,8 @@ void Renderer::end_frame() {
     VkRect2D blit_scissor{{0, 0}, impl.swapchain->extent()};
     vkCmdSetScissor(cmd, 0, 1, &blit_scissor);
 
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        impl.blit_pipeline->layout(), 0, 1, &impl.offscreen_descriptors[impl.current_frame], 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, impl.blit_pipeline->layout(), 0,
+                            1, &impl.offscreen_descriptors[impl.current_frame], 0, nullptr);
 
     vkCmdDraw(cmd, 3, 1, 0, 0); // Fullscreen triangle
 
@@ -850,7 +866,8 @@ void Renderer::end_frame() {
     si.signalSemaphoreCount = 1;
     si.pSignalSemaphores = &impl.render_finished_semaphores[impl.current_frame];
 
-    vkQueueSubmit(impl.context->graphics_queue(), 1, &si, impl.in_flight_fences[impl.current_frame]);
+    vkQueueSubmit(impl.context->graphics_queue(), 1, &si,
+                  impl.in_flight_fences[impl.current_frame]);
 
     // Present
     auto present_result = impl.swapchain->present(
@@ -873,25 +890,40 @@ void Renderer::set_display_mode(const DisplayMode& mode) {
     // No need to touch the virtual resolution here — that is a separate concern.
 }
 
-void Renderer::set_border_color(Color color) { impl_->border_color = color; }
-float Renderer::delta_time() const { return impl_->delta_time_; }
-float Renderer::elapsed_time() const { return impl_->elapsed_time_; }
-uint64_t Renderer::frame_count() const { return impl_->frame_count_; }
-uint32_t Renderer::virtual_width() const { return impl_->config.virtual_width; }
-uint32_t Renderer::virtual_height() const { return impl_->config.virtual_height; }
-vk::Context& Renderer::context() { return *impl_->context; }
+void Renderer::set_border_color(Color color) {
+    impl_->border_color = color;
+}
+float Renderer::delta_time() const {
+    return impl_->delta_time_;
+}
+float Renderer::elapsed_time() const {
+    return impl_->elapsed_time_;
+}
+uint64_t Renderer::frame_count() const {
+    return impl_->frame_count_;
+}
+uint32_t Renderer::virtual_width() const {
+    return impl_->config.virtual_width;
+}
+uint32_t Renderer::virtual_height() const {
+    return impl_->config.virtual_height;
+}
+vk::Context& Renderer::context() {
+    return *impl_->context;
+}
 
-uint32_t Renderer::current_frame_index() const { return impl_->current_frame; }
+uint32_t Renderer::current_frame_index() const {
+    return impl_->current_frame;
+}
 
 Vec2 Renderer::screen_to_virtual(Vec2 screen_pos) const {
     float cs = impl_->window->content_scale();
     float fx = screen_pos.x * cs;
     float fy = screen_pos.y * cs;
-    if (impl_->blit_scale == 0.0f) return {fx, fy};
-    return {
-        (fx - impl_->blit_offset_x) / impl_->blit_scale,
-        (fy - impl_->blit_offset_y) / impl_->blit_scale
-    };
+    if (impl_->blit_scale == 0.0f)
+        return {fx, fy};
+    return {(fx - impl_->blit_offset_x) / impl_->blit_scale,
+            (fy - impl_->blit_offset_y) / impl_->blit_scale};
 }
 
 } // namespace xebble

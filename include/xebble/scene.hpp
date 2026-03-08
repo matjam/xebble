@@ -11,11 +11,11 @@
 ///
 /// | Term | Meaning |
 /// |---|---|
-/// | **Scene factory** | `std::function<World(std::any payload)>` — called once when a scene is pushed or replaced |
-/// | **Scene name** | A `std::string` key used to look up the factory |
-/// | **Transition command** | `SceneTransition` resource — systems request push/pop/replace |
-/// | **Payload** | `std::any` value forwarded to the factory of the incoming scene |
-/// | **draw_below** | Whether the scene underneath the stack top keeps rendering |
+/// | **Scene factory** | `std::function<World(std::any payload)>` — called once when a scene is
+/// pushed or replaced | | **Scene name** | A `std::string` key used to look up the factory | |
+/// **Transition command** | `SceneTransition` resource — systems request push/pop/replace | |
+/// **Payload** | `std::any` value forwarded to the factory of the incoming scene | | **draw_below**
+/// | Whether the scene underneath the stack top keeps rendering |
 ///
 /// ## Quick-start
 ///
@@ -98,11 +98,11 @@
 ///
 /// | Command | Stack effect |
 /// |---|---|
-/// | `push(name, payload, draw_below)` | New scene placed on top; old scene paused (update halted) |
-/// | `pop(payload)` | Top scene destroyed; previous scene resumes and receives payload |
-/// | `replace(name, payload)` | Top scene destroyed; new scene pushed in its place |
-/// | `pop_to(name, payload)` | Scenes popped until the named scene is on top; it receives payload |
-/// | `pop_all_and_push(name, payload)` | Entire stack cleared; fresh scene pushed |
+/// | `push(name, payload, draw_below)` | New scene placed on top; old scene paused (update halted)
+/// | | `pop(payload)` | Top scene destroyed; previous scene resumes and receives payload | |
+/// `replace(name, payload)` | Top scene destroyed; new scene pushed in its place | | `pop_to(name,
+/// payload)` | Scenes popped until the named scene is on top; it receives payload | |
+/// `pop_all_and_push(name, payload)` | Entire stack cleared; fresh scene pushed |
 ///
 /// Only one transition fires per tick; the command is cleared after processing.
 /// If the stack becomes empty the game loop exits cleanly.
@@ -156,7 +156,7 @@ namespace xebble {
 /// SceneTransition::push("cutscene", {}, DrawBelow::No);
 /// @endcode
 enum class DrawBelow {
-    No  = 0, ///< Only the top scene draws (default).
+    No = 0,  ///< Only the top scene draws (default).
     Yes = 1, ///< The scene below the top also draws.
 };
 
@@ -183,18 +183,18 @@ enum class DrawBelow {
 struct SceneTransition {
     /// @brief Transition kind.
     enum class Kind {
-        None,            ///< No pending transition (default, no-op).
-        Push,            ///< Push a new scene onto the stack.
-        Pop,             ///< Pop the current scene; resume the one below.
-        Replace,         ///< Destroy current scene; push a new one.
-        PopTo,           ///< Pop until the named scene is on top.
-        PopAllAndPush,   ///< Clear the stack; push a fresh scene.
+        None,          ///< No pending transition (default, no-op).
+        Push,          ///< Push a new scene onto the stack.
+        Pop,           ///< Pop the current scene; resume the one below.
+        Replace,       ///< Destroy current scene; push a new one.
+        PopTo,         ///< Pop until the named scene is on top.
+        PopAllAndPush, ///< Clear the stack; push a fresh scene.
     };
 
-    Kind        kind        = Kind::None; ///< Which transition to perform.
+    Kind kind = Kind::None;               ///< Which transition to perform.
     std::string scene_name;               ///< Target scene name (unused for Pop).
-    std::any    payload;                  ///< Forwarded to the incoming/resuming scene.
-    DrawBelow   draw_below  = DrawBelow::No; ///< Only meaningful for Push.
+    std::any payload;                     ///< Forwarded to the incoming/resuming scene.
+    DrawBelow draw_below = DrawBelow::No; ///< Only meaningful for Push.
 
     // -----------------------------------------------------------------------
     // Factory helpers
@@ -222,14 +222,13 @@ struct SceneTransition {
     /// world.resource<SceneTransition>() =
     ///     SceneTransition::push("inventory", player_entity, DrawBelow::Yes);
     /// @endcode
-    static SceneTransition push(std::string name,
-                                std::any payload   = {},
+    static SceneTransition push(std::string name, std::any payload = {},
                                 DrawBelow draw_below = DrawBelow::No) {
         SceneTransition t;
-        t.kind        = Kind::Push;
-        t.scene_name  = std::move(name);
-        t.payload     = std::move(payload);
-        t.draw_below  = draw_below;
+        t.kind = Kind::Push;
+        t.scene_name = std::move(name);
+        t.payload = std::move(payload);
+        t.draw_below = draw_below;
         return t;
     }
 
@@ -248,7 +247,7 @@ struct SceneTransition {
     /// @endcode
     static SceneTransition pop(std::any payload = {}) {
         SceneTransition t;
-        t.kind    = Kind::Pop;
+        t.kind = Kind::Pop;
         t.payload = std::move(payload);
         return t;
     }
@@ -266,9 +265,9 @@ struct SceneTransition {
     /// @endcode
     static SceneTransition replace(std::string name, std::any payload = {}) {
         SceneTransition t;
-        t.kind       = Kind::Replace;
+        t.kind = Kind::Replace;
         t.scene_name = std::move(name);
-        t.payload    = std::move(payload);
+        t.payload = std::move(payload);
         return t;
     }
 
@@ -283,9 +282,9 @@ struct SceneTransition {
     /// @endcode
     static SceneTransition pop_to(std::string name, std::any payload = {}) {
         SceneTransition t;
-        t.kind       = Kind::PopTo;
+        t.kind = Kind::PopTo;
         t.scene_name = std::move(name);
-        t.payload    = std::move(payload);
+        t.payload = std::move(payload);
         return t;
     }
 
@@ -299,9 +298,9 @@ struct SceneTransition {
     /// @endcode
     static SceneTransition pop_all_and_push(std::string name, std::any payload = {}) {
         SceneTransition t;
-        t.kind       = Kind::PopAllAndPush;
+        t.kind = Kind::PopAllAndPush;
         t.scene_name = std::move(name);
-        t.payload    = std::move(payload);
+        t.payload = std::move(payload);
         return t;
     }
 
@@ -374,7 +373,7 @@ public:
     /// router.set_initial("gameplay", loaded_save_data);
     /// @endcode
     void set_initial(std::string name, std::any payload = {}) {
-        initial_name_    = std::move(name);
+        initial_name_ = std::move(name);
         initial_payload_ = std::move(payload);
     }
 
@@ -398,9 +397,7 @@ public:
     }
 
     /// @brief Return true if a scene with @p name has been registered.
-    bool has_scene(const std::string& name) const {
-        return factories_.contains(name);
-    }
+    bool has_scene(const std::string& name) const { return factories_.contains(name); }
 
     /// @brief Return the initial scene name (empty if not set).
     const std::string& initial_name() const { return initial_name_; }
@@ -408,7 +405,7 @@ public:
 private:
     std::unordered_map<std::string, Factory> factories_;
     std::string initial_name_;
-    std::any    initial_payload_;
+    std::any initial_payload_;
 };
 
 // ---------------------------------------------------------------------------
@@ -458,13 +455,16 @@ public:
     /// @param injector  Callable `void(World&)` that injects engine resources
     ///                  into newly created Worlds.
     void apply_transition(const std::function<void(World&)>& injector) {
-        if (frames_.empty()) return;
+        if (frames_.empty())
+            return;
 
         auto& top = frames_.back().world;
-        if (!top.has_resource<SceneTransition>()) return;
+        if (!top.has_resource<SceneTransition>())
+            return;
 
         SceneTransition& tr = top.resource<SceneTransition>();
-        if (!tr.pending()) return;
+        if (!tr.pending())
+            return;
 
         // Capture the transition then immediately clear it so the old World
         // is in a clean state before we potentially destroy it.
@@ -472,40 +472,40 @@ public:
         tr = SceneTransition::none();
 
         switch (cmd.kind) {
-            case SceneTransition::Kind::Push: {
-                World new_world = router_.build(cmd.scene_name, cmd.payload);
-                frames_.back().draw_below = (cmd.draw_below == DrawBelow::Yes);
-                push_scene(cmd.scene_name, std::move(new_world), injector);
-                break;
+        case SceneTransition::Kind::Push: {
+            World new_world = router_.build(cmd.scene_name, cmd.payload);
+            frames_.back().draw_below = (cmd.draw_below == DrawBelow::Yes);
+            push_scene(cmd.scene_name, std::move(new_world), injector);
+            break;
+        }
+        case SceneTransition::Kind::Pop: {
+            frames_.pop_back();
+            if (!frames_.empty()) {
+                notify_resume(frames_.back().world, std::move(cmd.payload));
             }
-            case SceneTransition::Kind::Pop: {
+            break;
+        }
+        case SceneTransition::Kind::Replace: {
+            frames_.pop_back();
+            World new_world = router_.build(cmd.scene_name, cmd.payload);
+            push_scene(cmd.scene_name, std::move(new_world), injector);
+            break;
+        }
+        case SceneTransition::Kind::PopTo: {
+            while (frames_.size() > 1 && frames_.back().name != cmd.scene_name)
                 frames_.pop_back();
-                if (!frames_.empty()) {
-                    notify_resume(frames_.back().world, std::move(cmd.payload));
-                }
-                break;
-            }
-            case SceneTransition::Kind::Replace: {
-                frames_.pop_back();
-                World new_world = router_.build(cmd.scene_name, cmd.payload);
-                push_scene(cmd.scene_name, std::move(new_world), injector);
-                break;
-            }
-            case SceneTransition::Kind::PopTo: {
-                while (frames_.size() > 1 && frames_.back().name != cmd.scene_name)
-                    frames_.pop_back();
-                if (!frames_.empty())
-                    notify_resume(frames_.back().world, std::move(cmd.payload));
-                break;
-            }
-            case SceneTransition::Kind::PopAllAndPush: {
-                frames_.clear();
-                World new_world = router_.build(cmd.scene_name, cmd.payload);
-                push_scene(cmd.scene_name, std::move(new_world), injector);
-                break;
-            }
-            case SceneTransition::Kind::None:
-                break;
+            if (!frames_.empty())
+                notify_resume(frames_.back().world, std::move(cmd.payload));
+            break;
+        }
+        case SceneTransition::Kind::PopAllAndPush: {
+            frames_.clear();
+            World new_world = router_.build(cmd.scene_name, cmd.payload);
+            push_scene(cmd.scene_name, std::move(new_world), injector);
+            break;
+        }
+        case SceneTransition::Kind::None:
+            break;
         }
     }
 
@@ -520,7 +520,8 @@ public:
     /// If the top scene's `draw_below` flag is set, also calls `tick_draw` on
     /// the scene underneath.
     void tick_draw(Renderer& renderer) {
-        if (frames_.empty()) return;
+        if (frames_.empty())
+            return;
 
         // Find the lowest frame that still needs to draw.
         size_t start = frames_.size() - 1;
@@ -534,15 +535,15 @@ public:
 private:
     struct Frame {
         std::string name;
-        World       world;
-        bool        draw_below = false; ///< True if the frame BELOW this one keeps drawing.
+        World world;
+        bool draw_below = false; ///< True if the frame BELOW this one keeps drawing.
     };
 
     void push_scene(const std::string& name, World world,
                     const std::function<void(World&)>& injector) {
         injector(world);
         world.init_systems();
-        frames_.push_back(Frame{ name, std::move(world), false });
+        frames_.push_back(Frame{name, std::move(world), false});
     }
 
     static void notify_resume(World& world, std::any payload) {

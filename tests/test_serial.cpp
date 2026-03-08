@@ -3,10 +3,10 @@
 ///
 /// All tests use only the ECS (World, entities, components, resources) and the
 /// serial infrastructure — no GPU context is needed.
-#include <xebble/world.hpp>
-#include <xebble/serial.hpp>
 #include <xebble/components.hpp>
 #include <xebble/rng.hpp>
+#include <xebble/serial.hpp>
+#include <xebble/world.hpp>
 
 #include <gtest/gtest.h>
 
@@ -15,35 +15,55 @@
 // ---------------------------------------------------------------------------
 
 /// @brief Simple position component used in tests.
-struct TestPos { float x = 0.0f; float y = 0.0f; };
+struct TestPos {
+    float x = 0.0f;
+    float y = 0.0f;
+};
 
 /// @brief Simple health component used in tests.
-struct TestHealth { int hp = 0; int max_hp = 0; };
+struct TestHealth {
+    int hp = 0;
+    int max_hp = 0;
+};
 
 /// @brief A tag component (zero-size would be UB with trivial types; use 1 byte).
-struct TestTag { uint8_t active = 1; };
+struct TestTag {
+    uint8_t active = 1;
+};
 
 /// @brief A component NOT opted into serialization (should be silently skipped).
-struct NonSerial { int value = 99; };
+struct NonSerial {
+    int value = 99;
+};
 
 /// @brief A resource type used in tests.
-struct TestScore { int value = 0; };
+struct TestScore {
+    int value = 0;
+};
 
 // ---------------------------------------------------------------------------
 // ComponentName / ResourceName specializations
 // ---------------------------------------------------------------------------
 
-template<> struct xebble::ComponentName<TestPos>
-    { static constexpr std::string_view value = "test::TestPos"; };
+template<>
+struct xebble::ComponentName<TestPos> {
+    static constexpr std::string_view value = "test::TestPos";
+};
 
-template<> struct xebble::ComponentName<TestHealth>
-    { static constexpr std::string_view value = "test::TestHealth"; };
+template<>
+struct xebble::ComponentName<TestHealth> {
+    static constexpr std::string_view value = "test::TestHealth";
+};
 
-template<> struct xebble::ComponentName<TestTag>
-    { static constexpr std::string_view value = "test::TestTag"; };
+template<>
+struct xebble::ComponentName<TestTag> {
+    static constexpr std::string_view value = "test::TestTag";
+};
 
-template<> struct xebble::ResourceName<TestScore>
-    { static constexpr std::string_view value = "test::TestScore"; };
+template<>
+struct xebble::ResourceName<TestScore> {
+    static constexpr std::string_view value = "test::TestScore";
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -64,9 +84,9 @@ static xebble::World make_world() {
 // ---------------------------------------------------------------------------
 
 TEST(Serial_Traits, ComponentNameValue) {
-    EXPECT_EQ(xebble::ComponentName<TestPos>::value,    "test::TestPos");
+    EXPECT_EQ(xebble::ComponentName<TestPos>::value, "test::TestPos");
     EXPECT_EQ(xebble::ComponentName<TestHealth>::value, "test::TestHealth");
-    EXPECT_EQ(xebble::ComponentName<TestTag>::value,    "test::TestTag");
+    EXPECT_EQ(xebble::ComponentName<TestTag>::value, "test::TestTag");
 }
 
 TEST(Serial_Traits, ResourceNameValue) {
@@ -100,9 +120,9 @@ TEST(Serial_Snapshot, EmptyWorldHasCorrectMagicAndVersion) {
     xebble::World w = make_world();
     auto blob = w.snapshot();
     uint32_t magic = 0, version = 0;
-    std::memcpy(&magic,   blob.data(),     sizeof(uint32_t));
+    std::memcpy(&magic, blob.data(), sizeof(uint32_t));
     std::memcpy(&version, blob.data() + 4, sizeof(uint32_t));
-    EXPECT_EQ(magic,   0x58424C53u);
+    EXPECT_EQ(magic, 0x58424C53u);
     EXPECT_EQ(version, 1u);
 }
 
@@ -112,9 +132,7 @@ TEST(Serial_Snapshot, EmptyWorldHasCorrectMagicAndVersion) {
 
 TEST(Serial_RoundTrip, SingleEntitySingleComponent) {
     xebble::World src = make_world();
-    auto e = src.build_entity()
-        .with(TestPos{3.0f, 7.0f})
-        .build();
+    auto e = src.build_entity().with(TestPos{3.0f, 7.0f}).build();
     (void)e;
 
     auto blob = src.snapshot();
@@ -175,7 +193,7 @@ TEST(Serial_RoundTrip, MultipleComponentsOnOneEntity) {
         [&](xebble::Entity, TestPos& p, TestHealth& h, TestTag& t) {
             EXPECT_FLOAT_EQ(p.x, 10.0f);
             EXPECT_FLOAT_EQ(p.y, 20.0f);
-            EXPECT_EQ(h.hp,     15);
+            EXPECT_EQ(h.hp, 15);
             EXPECT_EQ(h.max_hp, 30);
             EXPECT_EQ(t.active, 1u);
             ++count;
@@ -189,10 +207,7 @@ TEST(Serial_RoundTrip, MultipleComponentsOnOneEntity) {
 
 TEST(Serial_RoundTrip, NonSerializableComponentNotRestored) {
     xebble::World src = make_world();
-    auto e = src.build_entity()
-        .with(TestPos{5.0f, 5.0f})
-        .with(NonSerial{42})
-        .build();
+    auto e = src.build_entity().with(TestPos{5.0f, 5.0f}).with(NonSerial{42}).build();
     (void)e;
 
     auto blob = src.snapshot();
@@ -271,7 +286,7 @@ TEST(Serial_RoundTrip, ComponentsAndResourcesTogether) {
     dst.each<TestPos>([&](xebble::Entity, TestPos&) { ++pos_count; });
     dst.each<TestHealth>([&](xebble::Entity, TestHealth&) { ++hp_count; });
     EXPECT_EQ(pos_count, 1);
-    EXPECT_EQ(hp_count,  1);
+    EXPECT_EQ(hp_count, 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -301,7 +316,10 @@ TEST(Serial_RoundTrip, SecondRestoreClearsFirstRestore) {
     ASSERT_TRUE(dst.restore(blob1).has_value()); // now 1 entity — old ones gone
     count = 0;
     float x = 0.0f;
-    dst.each<TestPos>([&](xebble::Entity, TestPos& p) { x = p.x; ++count; });
+    dst.each<TestPos>([&](xebble::Entity, TestPos& p) {
+        x = p.x;
+        ++count;
+    });
     EXPECT_EQ(count, 1);
     EXPECT_FLOAT_EQ(x, 99.0f);
 }
@@ -320,7 +338,10 @@ TEST(Serial_Corrupt, EmptyBlobReturnsError) {
 TEST(Serial_Corrupt, WrongMagicReturnsError) {
     xebble::World src = make_world();
     auto blob = src.snapshot();
-    blob[0] = 0xDE; blob[1] = 0xAD; blob[2] = 0xBE; blob[3] = 0xEF;
+    blob[0] = 0xDE;
+    blob[1] = 0xAD;
+    blob[2] = 0xBE;
+    blob[3] = 0xEF;
 
     xebble::World dst = make_world();
     auto result = dst.restore(blob);
@@ -359,10 +380,7 @@ TEST(Serial_Compat, UnknownPoolInBlobIsSkipped) {
     xebble::World src;
     src.register_serializable_component<TestPos>();
     src.register_serializable_component<TestHealth>();
-    src.build_entity()
-        .with(TestPos{7.0f, 8.0f})
-        .with(TestHealth{5, 10})
-        .build();
+    src.build_entity().with(TestPos{7.0f, 8.0f}).with(TestHealth{5, 10}).build();
     auto blob = src.snapshot();
 
     // Destination does NOT register TestPos — should skip it gracefully.
@@ -372,7 +390,7 @@ TEST(Serial_Compat, UnknownPoolInBlobIsSkipped) {
 
     int hp_count = 0;
     dst.each<TestHealth>([&](xebble::Entity, TestHealth& h) {
-        EXPECT_EQ(h.hp,     5);
+        EXPECT_EQ(h.hp, 5);
         EXPECT_EQ(h.max_hp, 10);
         ++hp_count;
     });

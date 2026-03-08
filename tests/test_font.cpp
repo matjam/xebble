@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <xebble/font.hpp>
+
+#include <gtest/gtest.h>
 
 using namespace xebble;
 

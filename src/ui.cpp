@@ -1,11 +1,11 @@
 /// @file ui.cpp
 /// @brief Immediate-mode UI system implementation.
+#include "utf8.hpp"
+
+#include <xebble/ecs.hpp>
+#include <xebble/spritesheet.hpp>
 #include <xebble/ui.hpp>
 #include <xebble/world.hpp>
-#include <xebble/spritesheet.hpp>
-#include <xebble/ecs.hpp>
-
-#include "utf8.hpp"
 
 #include <algorithm>
 
@@ -35,15 +35,42 @@ Rect resolve_panel_placement(const PanelPlacement& p, uint32_t screen_w, uint32_
     float x = 0, y = 0;
 
     switch (p.anchor) {
-        case Anchor::TopLeft:     x = 0;            y = 0;            break;
-        case Anchor::Top:         x = (sw - w) / 2; y = 0;            break;
-        case Anchor::TopRight:    x = sw - w;        y = 0;            break;
-        case Anchor::Left:        x = 0;            y = (sh - h) / 2; break;
-        case Anchor::Center:      x = (sw - w) / 2; y = (sh - h) / 2; break;
-        case Anchor::Right:       x = sw - w;        y = (sh - h) / 2; break;
-        case Anchor::BottomLeft:  x = 0;            y = sh - h;        break;
-        case Anchor::Bottom:      x = (sw - w) / 2; y = sh - h;        break;
-        case Anchor::BottomRight: x = sw - w;        y = sh - h;        break;
+    case Anchor::TopLeft:
+        x = 0;
+        y = 0;
+        break;
+    case Anchor::Top:
+        x = (sw - w) / 2;
+        y = 0;
+        break;
+    case Anchor::TopRight:
+        x = sw - w;
+        y = 0;
+        break;
+    case Anchor::Left:
+        x = 0;
+        y = (sh - h) / 2;
+        break;
+    case Anchor::Center:
+        x = (sw - w) / 2;
+        y = (sh - h) / 2;
+        break;
+    case Anchor::Right:
+        x = sw - w;
+        y = (sh - h) / 2;
+        break;
+    case Anchor::BottomLeft:
+        x = 0;
+        y = sh - h;
+        break;
+    case Anchor::Bottom:
+        x = (sw - w) / 2;
+        y = sh - h;
+        break;
+    case Anchor::BottomRight:
+        x = sw - w;
+        y = sh - h;
+        break;
     }
 
     return {x + p.offset.x, y + p.offset.y, w, h};
@@ -68,43 +95,44 @@ void UIContext::begin_frame(std::vector<Event>& events, const Renderer& renderer
     mouse_clicked_ = false;
 
     for (auto& e : events) {
-        if (e.consumed) continue;
+        if (e.consumed)
+            continue;
         switch (e.type) {
-            case EventType::MouseMove:
-                mouse_pos_ = renderer.screen_to_virtual(e.mouse_move().position);
-                break;
-            case EventType::MousePress:
-                if (e.mouse_button().button == MouseButton::Left) {
-                    mouse_down_ = true;
-                    mouse_clicked_ = true;
-                    mouse_pos_ = renderer.screen_to_virtual(e.mouse_button().position);
-                }
-                break;
-            case EventType::MouseRelease:
-                if (e.mouse_button().button == MouseButton::Left) {
-                    mouse_down_ = false;
-                }
-                break;
-            case EventType::KeyPress:
-            case EventType::KeyRepeat: {
-                auto k = e.key().key;
-                auto mods = e.key().mods;
-                int kv = static_cast<int>(k);
-                // Printable characters: Space through Z (GLFW key codes 32-90)
-                if (kv >= static_cast<int>(Key::Space) && kv <= static_cast<int>(Key::Z)) {
-                    char ch = static_cast<char>(kv);
-                    // Letters: apply lowercase unless shift is held
-                    if (kv >= static_cast<int>(Key::A) && kv <= static_cast<int>(Key::Z)) {
-                        if (!mods.shift) {
-                            ch = static_cast<char>(ch + 32); // to lowercase
-                        }
-                    }
-                    input_chars_.push_back(ch);
-                }
-                break;
+        case EventType::MouseMove:
+            mouse_pos_ = renderer.screen_to_virtual(e.mouse_move().position);
+            break;
+        case EventType::MousePress:
+            if (e.mouse_button().button == MouseButton::Left) {
+                mouse_down_ = true;
+                mouse_clicked_ = true;
+                mouse_pos_ = renderer.screen_to_virtual(e.mouse_button().position);
             }
-            default:
-                break;
+            break;
+        case EventType::MouseRelease:
+            if (e.mouse_button().button == MouseButton::Left) {
+                mouse_down_ = false;
+            }
+            break;
+        case EventType::KeyPress:
+        case EventType::KeyRepeat: {
+            auto k = e.key().key;
+            auto mods = e.key().mods;
+            int kv = static_cast<int>(k);
+            // Printable characters: Space through Z (GLFW key codes 32-90)
+            if (kv >= static_cast<int>(Key::Space) && kv <= static_cast<int>(Key::Z)) {
+                char ch = static_cast<char>(kv);
+                // Letters: apply lowercase unless shift is held
+                if (kv >= static_cast<int>(Key::A) && kv <= static_cast<int>(Key::Z)) {
+                    if (!mods.shift) {
+                        ch = static_cast<char>(ch + 32); // to lowercase
+                    }
+                }
+                input_chars_.push_back(ch);
+            }
+            break;
+        }
+        default:
+            break;
         }
     }
 
@@ -138,32 +166,44 @@ void UIContext::draw_panel_bg(Rect rect) {
 }
 
 void UIContext::ensure_white_texture(vk::Context& ctx) {
-    if (white_texture_) return;
+    if (white_texture_)
+        return;
     // 1×1 opaque white RGBA pixel — used as the source for all filled rect draws.
     static constexpr uint8_t WHITE[4] = {255, 255, 255, 255};
     auto result = Texture::create_from_pixels(ctx, WHITE, 1, 1);
-    if (result) white_texture_ = std::make_shared<Texture>(std::move(*result));
+    if (result)
+        white_texture_ = std::make_shared<Texture>(std::move(*result));
 }
 
 void UIContext::draw_rect(Rect rect, Color color, float z) {
-    if (!white_texture_) return;
+    if (!white_texture_)
+        return;
     const Texture* tex = white_texture_.get();
 
     SpriteInstance inst{
-        .pos_x = rect.x, .pos_y = rect.y,
-        .uv_x = 0.0f, .uv_y = 0.0f, .uv_w = 1.0f, .uv_h = 1.0f,
-        .quad_w = rect.w, .quad_h = rect.h,
+        .pos_x = rect.x,
+        .pos_y = rect.y,
+        .uv_x = 0.0f,
+        .uv_y = 0.0f,
+        .uv_w = 1.0f,
+        .uv_h = 1.0f,
+        .quad_w = rect.w,
+        .quad_h = rect.h,
         .r = static_cast<float>(color.r) / 255.0f,
         .g = static_cast<float>(color.g) / 255.0f,
         .b = static_cast<float>(color.b) / 255.0f,
         .a = static_cast<float>(color.a) / 255.0f,
-        .scale = 1.0f, .rotation = 0.0f, .pivot_x = 0.0f, .pivot_y = 0.0f,
+        .scale = 1.0f,
+        .rotation = 0.0f,
+        .pivot_x = 0.0f,
+        .pivot_y = 0.0f,
     };
     batches_.push_back({{inst}, tex, z});
 }
 
 void UIContext::draw_text_at(std::u8string_view text, float x, float y, Color color, float z) {
-    if (text.empty()) return;
+    if (text.empty())
+        return;
 
     float cr = static_cast<float>(color.r) / 255.0f;
     float cg = static_cast<float>(color.g) / 255.0f;
@@ -171,7 +211,8 @@ void UIContext::draw_text_at(std::u8string_view text, float x, float y, Color co
     float ca = static_cast<float>(color.a) / 255.0f;
 
     if (auto* bf = std::get_if<const BitmapFont*>(&theme_->font)) {
-        if (!*bf) return;
+        if (!*bf)
+            return;
         const Texture* tex = &(*bf)->sheet().texture();
         std::vector<SpriteInstance> instances;
         float gw = static_cast<float>((*bf)->glyph_width());
@@ -180,15 +221,28 @@ void UIContext::draw_text_at(std::u8string_view text, float x, float y, Color co
         float cx = x;
         for (uint32_t cp : utf8::codepoints(std::u8string_view{text})) {
             auto gi = (*bf)->glyph_index(cp);
-            if (!gi) { cx += gw; continue; } // advance past unknown glyphs
+            if (!gi) {
+                cx += gw;
+                continue;
+            } // advance past unknown glyphs
             auto r = (*bf)->sheet().region(*gi);
             instances.push_back(SpriteInstance{
                 .pos_x = cx,
                 .pos_y = y,
-                .uv_x = r.x, .uv_y = r.y, .uv_w = r.w, .uv_h = r.h,
-                .quad_w = gw, .quad_h = gh,
-                .r = cr, .g = cg, .b = cb, .a = ca,
-                .scale = 1.0f, .rotation = 0.0f, .pivot_x = 0.0f, .pivot_y = 0.0f,
+                .uv_x = r.x,
+                .uv_y = r.y,
+                .uv_w = r.w,
+                .uv_h = r.h,
+                .quad_w = gw,
+                .quad_h = gh,
+                .r = cr,
+                .g = cg,
+                .b = cb,
+                .a = ca,
+                .scale = 1.0f,
+                .rotation = 0.0f,
+                .pivot_x = 0.0f,
+                .pivot_y = 0.0f,
             });
             cx += gw;
         }
@@ -196,7 +250,8 @@ void UIContext::draw_text_at(std::u8string_view text, float x, float y, Color co
             batches_.push_back({std::move(instances), tex, z});
         }
     } else if (auto* f = std::get_if<const Font*>(&theme_->font)) {
-        if (!*f) return;
+        if (!*f)
+            return;
         const Texture* tex = &(*f)->texture();
         std::vector<SpriteInstance> instances;
         float asc = (*f)->ascender();
@@ -204,15 +259,27 @@ void UIContext::draw_text_at(std::u8string_view text, float x, float y, Color co
 
         for (uint32_t cp : utf8::codepoints(text)) {
             auto gm = (*f)->glyph(cp);
-            if (!gm) { cx += (*f)->line_height() * 0.5f; continue; } // half-em skip
+            if (!gm) {
+                cx += (*f)->line_height() * 0.5f;
+                continue;
+            } // half-em skip
             instances.push_back(SpriteInstance{
                 .pos_x = cx + gm->bearing_x,
                 .pos_y = y + asc - gm->bearing_y,
-                .uv_x = gm->uv.x, .uv_y = gm->uv.y,
-                .uv_w = gm->uv.w, .uv_h = gm->uv.h,
-                .quad_w = gm->width, .quad_h = gm->height,
-                .r = cr, .g = cg, .b = cb, .a = ca,
-                .scale = 1.0f, .rotation = 0.0f, .pivot_x = 0.0f, .pivot_y = 0.0f,
+                .uv_x = gm->uv.x,
+                .uv_y = gm->uv.y,
+                .uv_w = gm->uv.w,
+                .uv_h = gm->uv.h,
+                .quad_w = gm->width,
+                .quad_h = gm->height,
+                .r = cr,
+                .g = cg,
+                .b = cb,
+                .a = ca,
+                .scale = 1.0f,
+                .rotation = 0.0f,
+                .pivot_x = 0.0f,
+                .pivot_y = 0.0f,
             });
             cx += gm->advance;
         }
@@ -224,11 +291,13 @@ void UIContext::draw_text_at(std::u8string_view text, float x, float y, Color co
 
 float UIContext::glyph_width() const {
     if (auto* bf = std::get_if<const BitmapFont*>(&theme_->font)) {
-        if (*bf) return static_cast<float>((*bf)->glyph_width());
+        if (*bf)
+            return static_cast<float>((*bf)->glyph_width());
     } else if (auto* f = std::get_if<const Font*>(&theme_->font)) {
         if (*f) {
             auto gm = (*f)->glyph('M');
-            if (gm) return gm->advance;
+            if (gm)
+                return gm->advance;
         }
     }
     return 8.0f;
@@ -236,9 +305,11 @@ float UIContext::glyph_width() const {
 
 float UIContext::glyph_height() const {
     if (auto* bf = std::get_if<const BitmapFont*>(&theme_->font)) {
-        if (*bf) return static_cast<float>((*bf)->glyph_height());
+        if (*bf)
+            return static_cast<float>((*bf)->glyph_height());
     } else if (auto* f = std::get_if<const Font*>(&theme_->font)) {
-        if (*f) return (*f)->line_height();
+        if (*f)
+            return (*f)->line_height();
     }
     return 12.0f;
 }
@@ -258,11 +329,14 @@ bool UIContext::is_clicked(std::string_view id) const {
 // --- PanelBuilder ---
 
 PanelBuilder::PanelBuilder(UIContext& ctx, Rect panel_rect, float z_base)
-    : ctx_(ctx), panel_rect_(panel_rect), z_base_(z_base),
+    : ctx_(ctx),
+      panel_rect_(panel_rect),
+      z_base_(z_base),
       cursor_y_(panel_rect.y + ctx.theme_->padding),
       content_x_(panel_rect.x + ctx.theme_->padding),
       content_width_(panel_rect.w - 2 * ctx.theme_->padding),
-      padding_(ctx.theme_->padding), margin_(ctx.theme_->margin) {}
+      padding_(ctx.theme_->padding),
+      margin_(ctx.theme_->margin) {}
 
 Rect PanelBuilder::next_control_rect(float height) {
     Rect r;
@@ -283,7 +357,9 @@ void PanelBuilder::correct_horiz_advance(float actual_w) {
     horiz_cursor_x_ += actual_w + margin_;
 }
 
-float PanelBuilder::text_height() const { return ctx_.glyph_height(); }
+float PanelBuilder::text_height() const {
+    return ctx_.glyph_height();
+}
 float PanelBuilder::measure_text_width(std::u8string_view text) const {
     if (auto* f = std::get_if<const Font*>(&ctx_.theme_->font)) {
         if (*f) {
@@ -311,7 +387,8 @@ bool PanelBuilder::button(std::u8string_view label, ButtonStyle style) {
     auto r = next_control_rect(h);
     if (style.width > 0.0f) {
         r.w = style.width;
-        if (in_horizontal_) correct_horiz_advance(style.width);
+        if (in_horizontal_)
+            correct_horiz_advance(style.width);
     }
 
     // Widget id is ASCII-reinterpreted label bytes — buttons are expected to
@@ -322,9 +399,8 @@ bool PanelBuilder::button(std::u8string_view label, ButtonStyle style) {
     bool hovered = ctx_.is_hot(id);
     bool clicked = ctx_.is_clicked(id);
 
-    Color bg = hovered
-        ? pick_color(style.hover_color, ctx_.theme_->button_hover_color)
-        : pick_color(style.color, ctx_.theme_->button_color);
+    Color bg = hovered ? pick_color(style.hover_color, ctx_.theme_->button_hover_color)
+                       : pick_color(style.color, ctx_.theme_->button_color);
     Color text_col = pick_color(style.text_color, ctx_.theme_->button_text_color);
 
     ctx_.draw_rect(r, bg, z_base_ + 0.05f);
@@ -348,19 +424,18 @@ void PanelBuilder::checkbox(std::u8string_view label, bool& value, CheckboxStyle
     ctx_.register_widget(id, r);
 
     bool clicked = ctx_.is_clicked(id);
-    if (clicked) value = !value;
+    if (clicked)
+        value = !value;
 
     float box_size = text_height();
     Rect box_rect = {r.x + padding_, r.y + padding_, box_size, box_size};
-    Color box_color = value
-        ? pick_color(style.checked_color, ctx_.theme_->checkbox_checked_color)
-        : pick_color(style.color, ctx_.theme_->checkbox_color);
+    Color box_color = value ? pick_color(style.checked_color, ctx_.theme_->checkbox_checked_color)
+                            : pick_color(style.color, ctx_.theme_->checkbox_color);
     ctx_.draw_rect(box_rect, box_color, z_base_ + 0.05f);
 
     if (value) {
         ctx_.draw_text_at(u8"X", box_rect.x, box_rect.y,
-                          pick_color(style.text_color, ctx_.theme_->text_color),
-                          z_base_ + 0.1f);
+                          pick_color(style.text_color, ctx_.theme_->text_color), z_base_ + 0.1f);
     }
 
     float text_x = box_rect.x + box_size + padding_;
@@ -377,8 +452,8 @@ void PanelBuilder::checkbox(std::u8string_view label, bool& value, CheckboxStyle
     }
 }
 
-void PanelBuilder::list(std::string_view id, std::span<const std::u8string> items,
-                         int& selected, ListStyle style) {
+void PanelBuilder::list(std::string_view id, std::span<const std::u8string> items, int& selected,
+                        ListStyle style) {
     float row_h = text_height() + padding_ * 2;
     float visible_rows = style.visible_rows;
     float total_h = row_h * visible_rows;
@@ -396,7 +471,8 @@ void PanelBuilder::list(std::string_view id, std::span<const std::u8string> item
         for (auto& e : *ctx_.frame_events_) {
             if (e.type == EventType::MouseScroll && !e.consumed) {
                 scroll_offset -= static_cast<int>(e.mouse_scroll().dy);
-                int max_scroll = std::max(0, static_cast<int>(items.size()) - static_cast<int>(visible_rows));
+                int max_scroll =
+                    std::max(0, static_cast<int>(items.size()) - static_cast<int>(visible_rows));
                 scroll_offset = std::clamp(scroll_offset, 0, max_scroll);
                 e.consumed = true;
                 break;
@@ -407,13 +483,15 @@ void PanelBuilder::list(std::string_view id, std::span<const std::u8string> item
     int max_scroll = std::max(0, static_cast<int>(items.size()) - static_cast<int>(visible_rows));
     scroll_offset = std::clamp(scroll_offset, 0, max_scroll);
 
-    int vis_count = std::min(static_cast<int>(visible_rows), static_cast<int>(items.size()) - scroll_offset);
+    int vis_count =
+        std::min(static_cast<int>(visible_rows), static_cast<int>(items.size()) - scroll_offset);
     Color text_col = pick_color(style.text_color, ctx_.theme_->text_color);
     Color sel_color = pick_color(style.selected_color, ctx_.theme_->list_selected_color);
 
     for (int i = 0; i < vis_count; ++i) {
         int item_idx = scroll_offset + i;
-        if (item_idx < 0 || item_idx >= static_cast<int>(items.size())) break;
+        if (item_idx < 0 || item_idx >= static_cast<int>(items.size()))
+            break;
 
         float item_y = r.y + static_cast<float>(i) * row_h;
         Rect item_rect = {r.x, item_y, r.w, row_h};
@@ -436,7 +514,8 @@ void PanelBuilder::list(std::string_view id, std::span<const std::u8string> item
             }
         }
 
-        ctx_.draw_text_at(items[item_idx], r.x + padding_, item_y + padding_, text_col, z_base_ + 0.1f);
+        ctx_.draw_text_at(items[item_idx], r.x + padding_, item_y + padding_, text_col,
+                          z_base_ + 0.1f);
     }
 }
 
@@ -465,10 +544,12 @@ bool PanelBuilder::text_input(std::string_view id, std::u8string& value, TextInp
 
     if (is_focused && ctx_.frame_events_) {
         size_t& cursor = ctx_.cursor_positions_[id_str];
-        if (cursor > value.size()) cursor = value.size();
+        if (cursor > value.size())
+            cursor = value.size();
 
         for (auto& e : *ctx_.frame_events_) {
-            if (e.consumed) continue;
+            if (e.consumed)
+                continue;
             if (e.type == EventType::KeyPress || e.type == EventType::KeyRepeat) {
                 Key k = e.key().key;
                 if (k == Key::Enter) {
@@ -485,8 +566,9 @@ bool PanelBuilder::text_input(std::string_view id, std::u8string& value, TextInp
                 } else if (k == Key::Backspace) {
                     if (cursor > 0) {
                         // Step back over any UTF-8 continuation bytes (10xxxxxx).
-                        do { --cursor; }
-                        while (cursor > 0 && (value[cursor] & 0xC0u) == 0x80u);
+                        do {
+                            --cursor;
+                        } while (cursor > 0 && (value[cursor] & 0xC0u) == 0x80u);
                         value.erase(cursor);
                     }
                     e.consumed = true;
@@ -494,20 +576,23 @@ bool PanelBuilder::text_input(std::string_view id, std::u8string& value, TextInp
                     if (cursor < value.size()) {
                         // Erase the codepoint starting at cursor.
                         size_t end = cursor + 1;
-                        while (end < value.size() && (value[end] & 0xC0u) == 0x80u) ++end;
+                        while (end < value.size() && (value[end] & 0xC0u) == 0x80u)
+                            ++end;
                         value.erase(cursor, end - cursor);
                     }
                     e.consumed = true;
                 } else if (k == Key::Left) {
                     if (cursor > 0) {
-                        do { --cursor; }
-                        while (cursor > 0 && (value[cursor] & 0xC0u) == 0x80u);
+                        do {
+                            --cursor;
+                        } while (cursor > 0 && (value[cursor] & 0xC0u) == 0x80u);
                     }
                     e.consumed = true;
                 } else if (k == Key::Right) {
                     if (cursor < value.size()) {
                         ++cursor;
-                        while (cursor < value.size() && (value[cursor] & 0xC0u) == 0x80u) ++cursor;
+                        while (cursor < value.size() && (value[cursor] & 0xC0u) == 0x80u)
+                            ++cursor;
                     }
                     e.consumed = true;
                 } else {
@@ -516,7 +601,8 @@ bool PanelBuilder::text_input(std::string_view id, std::u8string& value, TextInp
                     if (kv >= static_cast<int>(Key::Space) && kv <= static_cast<int>(Key::Z)) {
                         char8_t ch = static_cast<char8_t>(kv);
                         if (kv >= static_cast<int>(Key::A) && kv <= static_cast<int>(Key::Z)) {
-                            if (!e.key().mods.shift) ch = static_cast<char8_t>(ch + 32);
+                            if (!e.key().mods.shift)
+                                ch = static_cast<char8_t>(ch + 32);
                         }
                         value.insert(value.begin() + static_cast<std::ptrdiff_t>(cursor), ch);
                         ++cursor;
@@ -527,15 +613,15 @@ bool PanelBuilder::text_input(std::string_view id, std::u8string& value, TextInp
         }
     }
 
-    Color bg = is_focused
-        ? pick_color(style.active_color, ctx_.theme_->input_active_color)
-        : pick_color(style.color, ctx_.theme_->input_color);
+    Color bg = is_focused ? pick_color(style.active_color, ctx_.theme_->input_active_color)
+                          : pick_color(style.color, ctx_.theme_->input_color);
     ctx_.draw_rect(r, bg, z_base_ + 0.05f);
 
     Color text_col = pick_color(style.text_color, ctx_.theme_->text_color);
     if (is_focused) {
         size_t cursor = ctx_.cursor_positions_[id_str];
-        if (cursor > value.size()) cursor = value.size();
+        if (cursor > value.size())
+            cursor = value.size();
         std::u8string display = value;
         display.insert(cursor, 1, u8'|');
         ctx_.draw_text_at(display, r.x + padding_, r.y + padding_, text_col, z_base_ + 0.1f);
