@@ -276,7 +276,8 @@ struct Renderer::Impl {
         for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
             auto tex =
                 Texture::create_empty(*context, config.virtual_width, config.virtual_height,
-                                      VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+                                      VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                                      config.nearest_sample ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
             if (!tex)
                 return std::unexpected(tex.error());
             offscreen_textures[i].emplace(std::move(*tex));

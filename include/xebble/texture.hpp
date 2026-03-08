@@ -105,10 +105,10 @@ public:
     /// @param height  Height in pixels.
     /// @param format  Vulkan image format (e.g. `VK_FORMAT_R8G8B8A8_UNORM`).
     /// @param usage   Additional `VkImageUsageFlags` beyond `SAMPLED | TRANSFER_DST`.
-    [[nodiscard]] static std::expected<Texture, Error> create_empty(vk::Context& ctx,
-                                                                    uint32_t width, uint32_t height,
-                                                                    VkFormat format,
-                                                                    VkImageUsageFlags usage = 0);
+    /// @param filter  Sampler filter for magnification/minification (default: nearest).
+    [[nodiscard]] static std::expected<Texture, Error>
+    create_empty(vk::Context& ctx, uint32_t width, uint32_t height, VkFormat format,
+                 VkImageUsageFlags usage = 0, VkFilter filter = VK_FILTER_NEAREST);
 
     /// @brief Create a texture from a raw RGBA pixel buffer in CPU memory.
     ///

@@ -215,7 +215,7 @@ std::expected<Texture, Error> Texture::load_from_memory(vk::Context& ctx, const 
 
 std::expected<Texture, Error> Texture::create_empty(vk::Context& ctx, uint32_t width,
                                                     uint32_t height, VkFormat format,
-                                                    VkImageUsageFlags usage) {
+                                                    VkImageUsageFlags usage, VkFilter filter) {
     VkImageCreateInfo ici{};
     ici.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     ici.imageType = VK_IMAGE_TYPE_2D;
@@ -258,15 +258,16 @@ std::expected<Texture, Error> Texture::create_empty(vk::Context& ctx, uint32_t w
         return std::unexpected(Error{"Failed to create empty texture image view"});
     }
 
-    // Nearest-neighbor sampler
+    // Blit sampler — filter is caller-controlled (nearest for pixel-art, linear for smooth scaling)
     VkSamplerCreateInfo si{};
     si.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    si.magFilter = VK_FILTER_NEAREST;
-    si.minFilter = VK_FILTER_NEAREST;
+    si.magFilter = filter;
+    si.minFilter = filter;
     si.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     si.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     si.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    si.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    si.mipmapMode = (filter == VK_FILTER_LINEAR) ? VK_SAMPLER_MIPMAP_MODE_LINEAR
+                                                 : VK_SAMPLER_MIPMAP_MODE_NEAREST;
 
     if (vkCreateSampler(ctx.device(), &si, nullptr, &tex.impl_->sampler) != VK_SUCCESS) {
         return std::unexpected(Error{"Failed to create empty texture sampler"});
