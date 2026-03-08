@@ -114,6 +114,53 @@ struct Renderer::Impl {
     // Pending virtual resolution change (applied at next begin_frame)
     std::optional<std::pair<uint32_t, uint32_t>> pending_virtual_resolution;
 
+    // ---------------------------------------------------------------------------
+    // update_auto_filter()
+    //
+    // Called after every swapchain resize (and after virtual resolution changes)
+    // when auto_filter is enabled.  Checks whether the blit from the virtual
+    // framebuffer to the current swapchain extent is integer-exact on both axes
+    // (i.e. sw % vw == 0 && sh % vh == 0 && sw/vw == sh/vh for Fit).  If so,
+    // nearest-neighbour filtering is used; otherwise bilinear.
+    //
+    // The filter is baked into the offscreen texture's VkSampler, so a sampler
+    // change requires an offscreen recreate.  We only queue one when the filter
+    // actually changes to avoid unnecessary GPU stalls.
+    // ---------------------------------------------------------------------------
+    void update_auto_filter() {
+        if (!config.auto_filter) {
+            return;
+        }
+        if (!swapchain) {
+            return;
+        }
+
+        const uint32_t sw = swapchain->extent().width;
+        const uint32_t sh = swapchain->extent().height;
+        const uint32_t vw = config.virtual_width;
+        const uint32_t vh = config.virtual_height;
+
+        bool want_nearest = false;
+        if (sw > 0 && sh > 0 && vw > 0 && vh > 0 && sw >= vw && sh >= vh) {
+            // Pixel-perfect (for Fit) when both axes divide evenly at the fit
+            // scale.  sx == sy means no bars; sx != sy means letterbox/pillarbox
+            // bars, which are still pixel-perfect — every virtual pixel maps to
+            // exactly min(sx,sy) × min(sx,sy) physical pixels.
+            want_nearest = (sw % vw == 0 && sh % vh == 0);
+        }
+
+        if (config.nearest_sample == want_nearest) {
+            return; // Already correct — no GPU work needed.
+        }
+
+        log(LogLevel::Info, std::format("auto_filter: blit {}x{} -> {}x{}  =>  filter={}", vw, vh,
+                                        sw, sh, want_nearest ? "nearest" : "bilinear"));
+
+        config.nearest_sample = want_nearest;
+        // Queue offscreen recreate to rebake the sampler.
+        pending_virtual_resolution = {vw, vh};
+    }
+
     ~Impl() {
         if (!context || !context->device())
             return;
@@ -549,6 +596,7 @@ bool Renderer::begin_frame() {
         if (fw > 0 && fh > 0 && (fw != ext.width || fh != ext.height)) {
             impl.swapchain->recreate(impl.window->native_handle(), impl.config.vsync);
             impl.create_swapchain_framebuffers();
+            impl.update_auto_filter();
         }
     }
 
@@ -565,6 +613,7 @@ bool Renderer::begin_frame() {
         if (!recreate)
             return false;
         impl.create_swapchain_framebuffers();
+        impl.update_auto_filter();
         return false; // Skip this frame
     }
     impl.current_image_index = *image_result;
@@ -922,12 +971,24 @@ void Renderer::set_fullscreen(bool fullscreen) {
 
 void Renderer::set_nearest_sample(bool nearest) {
     auto& impl = *impl_;
-    if (impl.config.nearest_sample == nearest)
+    // Manual override — disable auto-filter so the renderer doesn't
+    // immediately undo the caller's choice on the next resize.
+    impl.config.auto_filter = false;
+    if (impl.config.nearest_sample == nearest) {
         return;
+    }
     impl.config.nearest_sample = nearest;
     // Queue an offscreen recreate so the new sampler filter is baked in.
-    // Reuse the current virtual resolution dimensions.
     impl.pending_virtual_resolution = {impl.config.virtual_width, impl.config.virtual_height};
+}
+
+void Renderer::set_auto_filter(bool enabled) {
+    auto& impl = *impl_;
+    impl.config.auto_filter = enabled;
+    if (enabled) {
+        // Re-evaluate immediately against the current swapchain extent.
+        impl.update_auto_filter();
+    }
 }
 
 void Renderer::handle_resize() {
@@ -935,6 +996,7 @@ void Renderer::handle_resize() {
     vkDeviceWaitIdle(impl.context->device());
     impl.swapchain->recreate(impl.window->native_handle(), impl.config.vsync);
     impl.create_swapchain_framebuffers();
+    impl.update_auto_filter();
 }
 
 void Renderer::set_border_color(Color color) {

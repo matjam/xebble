@@ -82,6 +82,9 @@ struct RendererConfig {
     bool vsync = true;                     ///< Enable vertical sync (prevents tearing).
     bool nearest_sample = false;           ///< Use nearest-neighbour sampling on blit (sharp pixel
                                            ///< edges at integer scales). Default false (bilinear).
+    bool auto_filter = true;               ///< Automatically switch between nearest/bilinear based
+                                           ///< on whether the current blit is integer-exact.
+                                           ///< Overrides nearest_sample when true (the default).
     ScaleMode scale_mode = ScaleMode::Fit; ///< How to handle aspect ratio mismatch.
 };
 
@@ -299,22 +302,44 @@ public:
     /// @endcode
     void set_fullscreen(bool fullscreen);
 
-    /// @brief Switch the blit sampler filter at runtime.
+    /// @brief Switch the blit sampler filter at runtime (manual override).
     ///
     /// When `nearest` is true the offscreen framebuffer is blitted to the
     /// swapchain with nearest-neighbour filtering — giving hard pixel edges at
-    /// any integer scale. When false (the default) bilinear filtering is used
-    /// for smooth scaling at non-integer ratios.
+    /// any integer scale. When false bilinear filtering is used for smooth
+    /// scaling at non-integer ratios.
+    ///
+    /// Calling this disables auto-filter mode (`RendererConfig::auto_filter`).
+    /// Re-enable automatic filter selection with `set_auto_filter(true)`.
     ///
     /// Internally this queues an offscreen framebuffer recreate (which rebakes
     /// the sampler), taking effect at the start of the next frame.
     ///
     /// @code
-    /// // Crisp pixel art at a 2x pixel-perfect scale:
+    /// // Force crisp pixel art regardless of window size:
     /// renderer.set_nearest_sample(true);
-    /// renderer.set_virtual_resolution(960, 540);
     /// @endcode
     void set_nearest_sample(bool nearest);
+
+    /// @brief Enable or disable automatic filter selection.
+    ///
+    /// When enabled (the default, `RendererConfig::auto_filter = true`) the
+    /// renderer checks after every window resize whether the blit from the
+    /// virtual framebuffer to the swapchain is integer-exact on both axes.
+    /// If it is, nearest-neighbour filtering is used (crisp pixel edges); if
+    /// not, bilinear filtering is used (smooth scaling).
+    ///
+    /// Disabling auto-filter lets you manage the filter manually via
+    /// `set_nearest_sample()`. The setting takes effect immediately: if you
+    /// pass `true` the renderer re-evaluates the current framebuffer size and
+    /// updates the filter if needed.
+    ///
+    /// @code
+    /// renderer.set_auto_filter(false);   // take manual control
+    /// renderer.set_nearest_sample(true); // force nearest
+    /// renderer.set_auto_filter(true);    // hand back to the renderer
+    /// @endcode
+    void set_auto_filter(bool enabled);
 
     /// @brief Notify the renderer that the window framebuffer has been resized.
     ///

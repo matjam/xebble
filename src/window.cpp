@@ -229,10 +229,17 @@ constexpr auto k_common_resolutions = std::to_array<CommonRes>({
 // Return the integer scale factor if (vw,vh) is pixel-perfect on native
 // (nw,nh) under Fit or Crop, or 0 if it is not.
 //
-// Fit:  scale = min(nw/vw, nh/vh).  Pixel-perfect when both axes divide at
-//       that same integer: nw%vw==0 && nh%vh==0 && nw/vw == nh/vh.
-// Crop: scale = max(nw/vw, nh/vh).  Same divisibility requirement but using
-//       the larger ratio (one axis will be cropped).
+// Fit:  scale = min(nw/vw, nh/vh).
+//   The virtual canvas is scaled uniformly so the larger axis fits exactly;
+//   the shorter axis may have letterbox/pillarbox bars.  Pixel-perfect when
+//   both nw%vw==0 and nh%vh==0 — the bars are whole-pixel wide and every
+//   virtual pixel maps to exactly scale×scale physical pixels.
+//   Note: sx != sy is allowed (bars present); sx == sy means no bars.
+//
+// Crop: scale = max(nw/vw, nh/vh).
+//   The virtual canvas is scaled so the shorter axis fills exactly; the
+//   longer axis overflows and is cropped symmetrically.  Pixel-perfect when
+//   both nw%vw==0 and nh%vh==0.
 uint32_t pixel_perfect_scale(uint32_t vw, uint32_t vh, uint32_t nw, uint32_t nh, ScaleMode mode) {
     if (vw == 0 || vh == 0 || nw < vw || nh < vh) {
         return 0;
@@ -242,11 +249,9 @@ uint32_t pixel_perfect_scale(uint32_t vw, uint32_t vh, uint32_t nw, uint32_t nh,
     }
     const uint32_t sx = nw / vw;
     const uint32_t sy = nh / vh;
-    if (mode == ScaleMode::Fit) {
-        return (sx == sy) ? sx : 0;
-    }
-    // Crop: the larger scale is used; both axes must still divide cleanly.
-    return (sx == sy) ? sx : 0;
+    // Fit uses the smaller scale (virtual canvas fits inside native with bars).
+    // Crop uses the larger scale (virtual canvas overflows, cropped).
+    return (mode == ScaleMode::Fit) ? std::min(sx, sy) : std::max(sx, sy);
 }
 
 std::string aspect_ratio_label(uint32_t w, uint32_t h) {

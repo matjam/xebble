@@ -184,9 +184,15 @@ public:
                              const auto info = std::format("Pixel perfect x{}", sel.scale_factor);
                              p.text(std::u8string(info.begin(), info.end()),
                                     {.color = {140, 255, 140}});
-                             p.text(u8"Filter: nearest (crisp)", {.color = {140, 220, 255}});
+                         }
+
+                         // Filter is chosen automatically by the renderer based
+                         // on actual window/framebuffer size vs virtual resolution.
+                         p.text(u8"Filter: auto", {.color = {160, 160, 160}});
+                         if (sel.pixel_perfect) {
+                             p.text(u8"  nearest when fullscreen", {.color = {130, 130, 130}});
                          } else {
-                             p.text(u8"Filter: bilinear (smooth)", {.color = {180, 180, 180}});
+                             p.text(u8"  bilinear (non-integer)", {.color = {130, 130, 130}});
                          }
                      }
 
@@ -232,7 +238,7 @@ private:
         }
         const auto& sel = state.resolutions[static_cast<size_t>(state.pending_res_index)];
 
-        renderer.set_nearest_sample(sel.pixel_perfect);
+        // Filter is managed automatically by the renderer (auto_filter=true).
         renderer.set_virtual_resolution(sel.width, sel.height);
         renderer.set_fullscreen(state.pending_fullscreen);
 
@@ -240,10 +246,9 @@ private:
         state.applied_fullscreen = state.pending_fullscreen;
         state.applied_vsync = state.pending_vsync;
 
-        const auto msg = std::format(
-            "Applied: {}x{}  filter={}  fullscreen={}  vsync={}", sel.width, sel.height,
-            sel.pixel_perfect ? "nearest" : "bilinear", state.applied_fullscreen ? "on" : "off",
-            state.applied_vsync ? "on" : "off");
+        const auto msg = std::format("Applied: {}x{}  fullscreen={}  vsync={}", sel.width,
+                                     sel.height, state.applied_fullscreen ? "on" : "off",
+                                     state.applied_vsync ? "on" : "off");
         state.status_msg = std::u8string(msg.begin(), msg.end());
     }
 };
