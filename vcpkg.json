@@ -3,7 +3,15 @@
   "version-string": "0.1.0",
   "description": "2D rendering API for cross-platform Vulkan roguelike games",
   "dependencies": [
-    "glfw3",
+    {
+      "name": "glfw3",
+      "features": ["wayland"],
+      "platform": "linux"
+    },
+    {
+      "name": "glfw3",
+      "platform": "!linux"
+    },
     "vulkan-headers",
     "vulkan-loader",
     "vulkan-memory-allocator",

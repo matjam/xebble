@@ -5,6 +5,14 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# On Linux the vcpkg-built vulkan-loader would end up in each binary's RUNPATH,
+# shadowing the system libvulkan.so.1 that GLFW dlopen()s internally to detect
+# Vulkan support.  The system loader already lives in the ldconfig cache
+# (/usr/lib), so no RPATH is needed at all for it.
+if(UNIX AND NOT APPLE)
+    set(CMAKE_SKIP_RPATH TRUE)
+endif()
+
 # Suppress "ignoring duplicate libraries" warning on macOS.
 # vcpkg's freetype port lists zlib twice in its link interface: once as
 # the ZLIB::ZLIB imported target and again as a hard-coded libz.a path

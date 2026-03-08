@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <filesystem>
 #include <optional>
 #include <unordered_map>

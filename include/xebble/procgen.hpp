@@ -45,6 +45,7 @@
 #include <xebble/rng.hpp>
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 namespace xebble {
