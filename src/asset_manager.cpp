@@ -54,6 +54,22 @@ Manifest parse_manifest(std::string_view toml_str) {
         }
     }
 
+    if (auto sounds = tbl["sounds"].as_table()) {
+        for (auto& [name, val] : *sounds) {
+            auto& entry = manifest.sounds[std::string(name.str())];
+            auto& t = *val.as_table();
+            entry.path = t["path"].value_or(std::string{});
+        }
+    }
+
+    if (auto music = tbl["music"].as_table()) {
+        for (auto& [name, val] : *music) {
+            auto& entry = manifest.music[std::string(name.str())];
+            auto& t = *val.as_table();
+            entry.path = t["path"].value_or(std::string{});
+        }
+    }
+
     return manifest;
 }
 
@@ -217,6 +233,28 @@ std::expected<AssetManager, Error> AssetManager::create(vk::Context& ctx,
 
             mgr.assets_[name] = std::make_shared<Font>(std::move(*font));
             log(LogLevel::Info, "Loaded font: " + name);
+        }
+
+        // Load sound effects (raw bytes — decoded by AudioEngine on first play)
+        for (auto& [name, entry] : manifest.sounds) {
+            auto data = mgr.impl_->resolve(entry.path);
+            if (!data) {
+                log(LogLevel::Warn, "Failed to load sound '" + name + "': " + data.error().message);
+                continue;
+            }
+            mgr.assets_[name] = std::make_shared<std::vector<uint8_t>>(std::move(*data));
+            log(LogLevel::Info, "Loaded sound: " + name);
+        }
+
+        // Load music tracks (raw bytes — decoded by AudioEngine at playtime)
+        for (auto& [name, entry] : manifest.music) {
+            auto data = mgr.impl_->resolve(entry.path);
+            if (!data) {
+                log(LogLevel::Warn, "Failed to load music '" + name + "': " + data.error().message);
+                continue;
+            }
+            mgr.assets_[name] = std::make_shared<std::vector<uint8_t>>(std::move(*data));
+            log(LogLevel::Info, "Loaded music: " + name);
         }
     }
 

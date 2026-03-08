@@ -1,5 +1,6 @@
 /// @file game.cpp
 /// @brief Game loop implementation — single-world and scene-stack variants.
+#include <xebble/audio.hpp>
 #include <xebble/builtin_systems.hpp>
 #include <xebble/components.hpp>
 #include <xebble/embedded_font.hpp>
@@ -27,6 +28,7 @@ struct EngineHandle {
     std::optional<Window> window;
     std::optional<Renderer> renderer;
     std::optional<AssetManager> assets;
+    std::optional<AudioEngine> audio;
     bool ok = false;
 };
 
@@ -54,6 +56,13 @@ static EngineHandle make_engine(const GameConfig& config) {
     }
     h.assets = std::move(*ast);
 
+    auto aud = AudioEngine::create();
+    if (!aud) {
+        // Non-fatal: log and continue with a null-mode AudioEngine.
+        log(LogLevel::Warn, "AudioEngine: " + aud.error().message);
+    }
+    h.audio = std::move(*aud);
+
     h.ok = true;
     return h;
 }
@@ -68,10 +77,11 @@ static EngineHandle make_engine(const GameConfig& config) {
 // ---------------------------------------------------------------------------
 
 static bool inject_and_init(World& world, Renderer& renderer, AssetManager& assets,
-                            std::shared_ptr<BitmapFont>& shared_font) {
+                            AudioEngine& audio, std::shared_ptr<BitmapFont>& shared_font) {
     // Engine resources
     world.add_resource<Renderer*>(&renderer);
     world.add_resource<AssetManager*>(&assets);
+    world.add_resource<AudioEngine*>(&audio);
     if (!world.has_resource<EventQueue>())
         world.add_resource<EventQueue>(EventQueue{});
 
@@ -135,7 +145,7 @@ int run(World world, const GameConfig& config) {
         return 1;
 
     std::shared_ptr<BitmapFont> shared_font;
-    if (!inject_and_init(world, *h.renderer, *h.assets, shared_font))
+    if (!inject_and_init(world, *h.renderer, *h.assets, *h.audio, shared_font))
         return 1;
 
     while (!h.window->should_close()) {
@@ -146,6 +156,7 @@ int run(World world, const GameConfig& config) {
 
         if (h.renderer->begin_frame()) {
             float dt = h.renderer->delta_time();
+            h.audio->update();
             world.tick_update(dt);
             world.tick_draw(*h.renderer);
             h.renderer->end_frame();
@@ -177,7 +188,7 @@ int run(SceneRouter router, const GameConfig& config) {
     // The injector lambda captures engine singletons and calls inject_and_init
     // on each freshly built World before it starts ticking.
     auto injector = [&](World& world) -> bool {
-        return inject_and_init(world, *h.renderer, *h.assets, shared_font);
+        return inject_and_init(world, *h.renderer, *h.assets, *h.audio, shared_font);
     };
 
     SceneStack stack(router);
@@ -199,6 +210,7 @@ int run(SceneRouter router, const GameConfig& config) {
 
         if (!stack.empty() && h.renderer->begin_frame()) {
             float dt = h.renderer->delta_time();
+            h.audio->update();
             stack.tick_update(dt);
             // Apply any pending transition after the tick.
             stack.apply_transition([&](World& w) {

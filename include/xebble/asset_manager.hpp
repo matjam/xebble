@@ -10,7 +10,7 @@
 ///
 /// ## Asset manifest format
 ///
-/// The TOML manifest uses three top-level tables:
+/// The TOML manifest uses five top-level tables:
 ///
 /// ```toml
 /// # assets/manifest.toml
@@ -32,6 +32,14 @@
 /// [fonts.ui]
 /// path         = "fonts/inter.ttf"
 /// pixel_size   = 18
+///
+/// [sounds]
+/// [sounds.sword_hit]
+/// path = "sfx/sword_hit.wav"
+///
+/// [music]
+/// [music.dungeon_theme]
+/// path = "music/dungeon.xm"
 /// ```
 ///
 /// ## Quick-start
@@ -151,6 +159,42 @@ struct FontEntry {
     uint32_t pixel_size = 16; ///< Render size in pixels (height).
 };
 
+/// @brief Parsed sound-effect entry from the manifest.
+///
+/// References an audio file that will be decoded and cached on load.
+/// Supported formats: WAV, FLAC, MP3, OGG Vorbis.
+///
+/// Manifest example:
+/// ```toml
+/// [sounds.sword_hit]
+/// path = "sfx/sword_hit.wav"
+/// ```
+struct SoundEntry {
+    std::string path; ///< Relative path to the audio file.
+};
+
+/// @brief Parsed music entry from the manifest.
+///
+/// References a music file. The format is detected from the extension:
+///   - WAV / FLAC / MP3 / OGG → miniaudio PCM streaming
+///   - MOD / XM / IT / S3M / … → libxmp tracker music
+///   - SID / PSID / RSID → libsidplayfp (if compiled in)
+///
+/// Music assets are stored as raw bytes and passed to `AudioEngine` at
+/// playtime. They are not decoded eagerly.
+///
+/// Manifest example:
+/// ```toml
+/// [music.dungeon_theme]
+/// path = "music/dungeon.xm"
+///
+/// [music.boss_fight]
+/// path = "music/boss.sid"
+/// ```
+struct MusicEntry {
+    std::string path; ///< Relative path to the music file.
+};
+
 /// @brief Parsed manifest data.
 ///
 /// The in-memory representation of the TOML manifest. Normally you do not
@@ -159,7 +203,9 @@ struct FontEntry {
 struct Manifest {
     std::unordered_map<std::string, SpriteSheetEntry> spritesheets; ///< All declared spritesheets.
     std::unordered_map<std::string, BitmapFontEntry> bitmap_fonts;  ///< All declared bitmap fonts.
-    std::unordered_map<std::string, FontEntry> fonts; ///< All declared TrueType fonts.
+    std::unordered_map<std::string, FontEntry> fonts;   ///< All declared TrueType fonts.
+    std::unordered_map<std::string, SoundEntry> sounds; ///< All declared sound effects.
+    std::unordered_map<std::string, MusicEntry> music;  ///< All declared music tracks.
 };
 
 /// @brief Parse a TOML manifest string into a Manifest struct.

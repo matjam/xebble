@@ -163,3 +163,19 @@ xebble_example(ex13_serial          ex13_serial)
 xebble_example(ex14_fonts           ex14_fonts)
 xebble_example(ex15_atlas_debug     ex15_atlas_debug)
 xebble_example(ex16_graphics_settings ex16_graphics_settings)
+xebble_example(ex17_audio           ex17_audio)
+
+# Copy bundled audio assets next to the ex17_audio binary so they are found
+# at runtime regardless of the working directory.
+add_custom_command(TARGET ex17_audio POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/ex17_audio/test.sid"
+        "$<TARGET_FILE_DIR:ex17_audio>/test.sid"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/ex17_audio/coin.wav"
+        "$<TARGET_FILE_DIR:ex17_audio>/coin.wav"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/ex17_audio/test.mp3"
+        "$<TARGET_FILE_DIR:ex17_audio>/test.mp3"
+    COMMENT "Copying audio assets next to ex17_audio"
+)

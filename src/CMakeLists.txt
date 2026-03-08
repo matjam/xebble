@@ -32,6 +32,7 @@ add_library(xebble STATIC
     grid.cpp
     fov.cpp
     pathfinding.cpp
+    audio.cpp
 )
 
 target_include_directories(xebble PUBLIC
@@ -46,7 +47,14 @@ target_link_libraries(xebble PUBLIC
     glm::glm
     tomlplusplus::tomlplusplus
     miniz::miniz
+    miniaudio::miniaudio
+    $<IF:$<TARGET_EXISTS:libxmp::xmp_shared>,libxmp::xmp_shared,libxmp::xmp_static>
 )
+
+# Threading required by miniaudio on Linux/macOS
+if(UNIX)
+    target_link_libraries(xebble PUBLIC pthread dl m)
+endif()
 
 # stb is header-only, add include path
 target_include_directories(xebble PRIVATE ${Stb_INCLUDE_DIR})
@@ -58,4 +66,12 @@ if(XEBBLE_MOLTENVK_ICD_PATH)
     target_compile_definitions(xebble PRIVATE
         XEBBLE_MOLTENVK_ICD="${XEBBLE_MOLTENVK_ICD_PATH}"
     )
+endif()
+
+# Optional SID chiptune support via libsidplayfp
+if(XEBBLE_HAS_SIDPLAYFP)
+    target_compile_definitions(xebble PUBLIC XEBBLE_HAS_SIDPLAYFP)
+    target_include_directories(xebble PRIVATE ${SIDPLAYFP_INCLUDE_DIRS})
+    target_link_libraries(xebble PUBLIC ${SIDPLAYFP_LIBRARIES})
+    target_link_options(xebble PUBLIC ${SIDPLAYFP_LDFLAGS_OTHER})
 endif()

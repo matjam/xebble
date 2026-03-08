@@ -32,7 +32,36 @@ find_package(freetype CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(tomlplusplus CONFIG REQUIRED)
 find_package(miniz CONFIG REQUIRED)
+find_package(libxmp CONFIG REQUIRED)
+
+# miniaudio is header-only; vcpkg does not install a CMake config file for it.
+# Locate the header manually and create a lightweight imported target.
+find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h
+    HINTS
+        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/include"
+    REQUIRED
+)
+add_library(miniaudio::miniaudio INTERFACE IMPORTED)
+target_include_directories(miniaudio::miniaudio INTERFACE "${MINIAUDIO_INCLUDE_DIR}")
+message(STATUS "Found miniaudio: ${MINIAUDIO_INCLUDE_DIR}/miniaudio.h")
 find_package(GTest CONFIG REQUIRED)
+
+# libsidplayfp is optional — not in vcpkg. Install via your OS package manager:
+#   Arch:   pacman -S libsidplayfp
+#   Debian: apt install libsidplayfp-dev
+#   macOS:  brew install libsidplayfp
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(SIDPLAYFP QUIET libsidplayfp)
+endif()
+if(SIDPLAYFP_FOUND)
+    message(STATUS "Found libsidplayfp: SID chiptune support enabled")
+    set(XEBBLE_HAS_SIDPLAYFP TRUE)
+else()
+    message(STATUS "libsidplayfp not found: SID chiptune support disabled")
+    set(XEBBLE_HAS_SIDPLAYFP FALSE)
+endif()
 
 # shaderc for shader compilation
 find_package(unofficial-shaderc CONFIG REQUIRED)

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <xebble/asset_manager.hpp>
+#include <xebble/audio.hpp>
 #include <xebble/builtin_systems.hpp>
 #include <xebble/components.hpp>
 #include <xebble/debug.hpp>

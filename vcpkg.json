@@ -21,6 +21,11 @@
     "glm",
     "tomlplusplus",
     "miniz",
+    "miniaudio",
+    {
+      "name": "libxmp",
+      "features": ["depackers", "prowizard"]
+    },
     "gtest"
   ]
 }
