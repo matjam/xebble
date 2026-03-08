@@ -159,6 +159,6 @@ int main() {
     return xebble::run(std::move(world),
                        {
                            .window = {.title = "ex05 \u2014 UI", .width = 1280, .height = 720},
-                           .renderer = {.virtual_width = 640, .virtual_height = 360},
+                           .renderer = {.virtual_width = 960, .virtual_height = 540},
                        });
 }

@@ -180,6 +180,6 @@ int main() {
         std::move(router),
         {
             .window = {.title = "ex07 — Scene Manager", .width = 1280, .height = 720},
-            .renderer = {.virtual_width = 640, .virtual_height = 360},
+            .renderer = {.virtual_width = 960, .virtual_height = 540},
         });
 }
