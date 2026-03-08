@@ -53,6 +53,31 @@ bool already_in(const std::vector<ResolutionEntry>& entries, uint32_t w, uint32_
         entries, [w, h](const ResolutionEntry& e) { return e.width == w && e.height == h; });
 }
 
+/// Return true if virtual resolution (vw, vh) scales to an exact integer
+/// pixel scale on native display (nw, nh) under Fit mode.
+///
+/// Fit scale = min(nw/vw, nh/vh).  This is integer-pixel-perfect when both
+/// nw and nh are exact multiples of vw and vh respectively at that scale —
+/// i.e. nw % vw == 0  AND  nh % vh == 0  AND  nw/vw == nh/vh.
+///
+/// When the ratios differ (bars on one axis), the constraining axis still
+/// lands on an integer multiple as long as both axes divide cleanly at the
+/// same integer scale.  Example: 1280×720 on 5120×1440 → scale=2 on both
+/// axes (5120/1280=4 but constrained by 1440/720=2; 1280×2=2560 ≤ 5120 ✓,
+/// 720×2=1440 ≤ 1440 ✓) — pixel-perfect with pillarboxing.
+bool is_pixel_perfect(uint32_t vw, uint32_t vh,
+                      const std::vector<std::pair<uint32_t, uint32_t>>& natives) {
+    return std::ranges::any_of(natives, [vw, vh](const std::pair<uint32_t, uint32_t>& n) {
+        const uint32_t nw = n.first;
+        const uint32_t nh = n.second;
+        if (vw == 0 || vh == 0 || nw < vw || nh < vh) {
+            return false;
+        }
+        // Both axes must divide evenly and yield the same integer scale.
+        return (nw % vw == 0) && (nh % vh == 0) && (nw / vw == nh / vh);
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Curated list of common industry-standard resolutions.
 // These are added after the pixel-perfect entries so they appear below.
@@ -120,11 +145,16 @@ std::vector<ResolutionEntry> build_resolution_list() {
     }
 
     // Phase 1: pixel-perfect entries.
+    // Seed with exact integer-divisor sub-resolutions of each native.
     std::vector<ResolutionEntry> pp_entries;
     for (const auto& [nw, nh] : natives) {
-        for (uint32_t d = 1; d <= 4; ++d) {
+        for (uint32_t d = 1; d <= 8; ++d) {
             const uint32_t w = nw / d;
             const uint32_t h = nh / d;
+            // Only exact divisors (no remainder on either axis).
+            if (nw % d != 0 || nh % d != 0) {
+                continue;
+            }
             if (w < 320 || h < 180) {
                 break;
             }
@@ -160,14 +190,22 @@ std::vector<ResolutionEntry> build_resolution_list() {
             continue; // larger than any display
         }
         if (already_in(pp_entries, cr.w, cr.h)) {
-            continue; // already covered as pixel-perfect
+            continue; // already listed in phase 1
         }
         if (already_in(common_entries, cr.w, cr.h)) {
             continue;
         }
-        const auto s = std::format("{}x{}  ({})", cr.w, cr.h, cr.name);
+        // Check if this common resolution happens to be pixel-perfect on any
+        // native display (e.g. 1280x720 on a 5120x1440 display: scale=2).
+        const bool pp = is_pixel_perfect(cr.w, cr.h, natives);
+        std::string s;
+        if (pp) {
+            s = std::format("{}x{}  ({}, pixel perfect)", cr.w, cr.h, cr.name);
+        } else {
+            s = std::format("{}x{}  ({})", cr.w, cr.h, cr.name);
+        }
         common_entries.push_back(
-            {cr.w, cr.h, false, std::u8string(s.begin(), s.end()), aspect_ratio_str(cr.w, cr.h)});
+            {cr.w, cr.h, pp, std::u8string(s.begin(), s.end()), aspect_ratio_str(cr.w, cr.h)});
     }
     std::ranges::sort(common_entries, [](const ResolutionEntry& a, const ResolutionEntry& b) {
         return (a.width * a.height) > (b.width * b.height);
