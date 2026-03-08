@@ -1,10 +1,11 @@
 CompileFlags:
   CompilationDatabase: build/debug
-  Add:
-    - --stdlib=libc++
-    - -std=c++2b
-    - -I/Users/matjam/src/xebble/include
-    - -isystem/Users/matjam/src/xebble/build/debug/vcpkg_installed/arm64-osx/include
+  Remove:
+    # GCC C++23 module-scanning flags — clangd doesn't understand them.
+    - -fmodules-ts
+    - -fmodule-mapper=*
+    - -fdeps-format=*
+    - -MD
 
 Index:
   Background: Build
