@@ -34,21 +34,21 @@ namespace xebble {
 // linux_available_display_modes
 // ---------------------------------------------------------------------------
 
-std::vector<DisplayMode> linux_available_display_modes() {
+std::vector<DisplayMode> linux_available_display_modes() { // NOLINT(misc-use-internal-linkage)
     // Ensure GLFW is initialised before querying monitors.
     // (Window::create() calls glfwInit() before any platform function, so
     // this is always satisfied when called from Window::available_display_modes()
     // after at least one Window has been created.  For a pre-window call the
     // caller receives an empty list, matching the documented fallback.)
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-    if (!monitor) {
+    if (monitor == nullptr) {
         log(LogLevel::Warn, "linux_available_display_modes: no primary monitor reported by GLFW");
         return {};
     }
 
     int count = 0;
     const GLFWvidmode* modes = glfwGetVideoModes(monitor, &count);
-    if (!modes || count == 0) {
+    if (modes == nullptr || count == 0) {
         log(LogLevel::Warn, "linux_available_display_modes: glfwGetVideoModes returned no modes");
         return {};
     }
@@ -75,8 +75,9 @@ std::vector<DisplayMode> linux_available_display_modes() {
 // linux_set_window_display_mode
 // ---------------------------------------------------------------------------
 
+// NOLINTNEXTLINE(misc-use-internal-linkage) -- declared extern in window.cpp
 void linux_set_window_display_mode(GLFWwindow* window, const DisplayMode& mode) {
-    if (!window) {
+    if (window == nullptr) {
         log(LogLevel::Warn, "linux_set_window_display_mode: null window handle");
         return;
     }
