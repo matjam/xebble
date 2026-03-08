@@ -34,10 +34,10 @@ namespace xebble {
 #ifdef __APPLE__
 std::vector<DisplayMode> macos_available_display_modes();
 void macos_set_window_display_mode(GLFWwindow* window, const DisplayMode& mode);
-#elif defined(_WIN32)
+#elifdef _WIN32
 std::vector<DisplayMode> windows_available_display_modes();
 void windows_set_window_display_mode(GLFWwindow* window, const DisplayMode& mode);
-#elif defined(__linux__)
+#elifdef __linux__
 std::vector<DisplayMode> linux_available_display_modes();
 void linux_set_window_display_mode(GLFWwindow* window, const DisplayMode& mode);
 #endif
@@ -71,7 +71,7 @@ struct Window::Impl {
     bool is_fullscreen = false;
 
     ~Impl() {
-        if (window) {
+        if (window != nullptr) {
             glfwDestroyWindow(window);
             window = nullptr;
         }
@@ -101,11 +101,12 @@ struct Window::Impl {
 
     static void mouse_button_callback(GLFWwindow* w, int button, int action, int mods) {
         auto* impl = static_cast<Impl*>(glfwGetWindowUserPointer(w));
-        double xpos, ypos;
+        double xpos = 0.0;
+        double ypos = 0.0;
         glfwGetCursorPos(w, &xpos, &ypos);
         auto btn = static_cast<MouseButton>(button);
         auto m = glfw_mods(mods);
-        Vec2 pos{static_cast<float>(xpos), static_cast<float>(ypos)};
+        const Vec2 pos{static_cast<float>(xpos), static_cast<float>(ypos)};
         switch (action) {
         case GLFW_PRESS:
             impl->event_queue.push_back(Event::mouse_press(btn, m, pos));
@@ -138,10 +139,11 @@ struct Window::Impl {
 
     static void focus_callback(GLFWwindow* w, int focused) {
         auto* impl = static_cast<Impl*>(glfwGetWindowUserPointer(w));
-        if (focused)
+        if (focused != 0) {
             impl->event_queue.push_back(Event::window_focus_gained());
-        else
+        } else {
             impl->event_queue.push_back(Event::window_focus_lost());
+        }
     }
 
     static void close_callback(GLFWwindow* w) {
@@ -157,9 +159,9 @@ struct Window::Impl {
 std::vector<DisplayMode> Window::available_display_modes() {
 #ifdef __APPLE__
     return macos_available_display_modes();
-#elif defined(_WIN32)
+#elifdef _WIN32
     return windows_available_display_modes();
-#elif defined(__linux__)
+#elifdef __linux__
     return linux_available_display_modes();
 #else
     return {};
@@ -270,14 +272,14 @@ std::vector<ResolutionInfo> Window::available_resolutions([[maybe_unused]] uint3
     // -----------------------------------------------------------------------
     std::vector<ResolutionInfo> pp_entries;
     for (const auto& [nw, nh] : natives) {
-        for (uint32_t d = 1; d <= 8; ++d) {
+        for (uint32_t d = 1; d <= 4; ++d) {
             if (nw % d != 0 || nh % d != 0) {
                 continue;
             }
             const uint32_t w = nw / d;
             const uint32_t h = nh / d;
-            if (w < 320 || h < 180) {
-                break;
+            if (w < 320 || h < 270) {
+                continue;
             }
             if (already_in(pp_entries, w, h)) {
                 continue;
@@ -368,7 +370,7 @@ std::expected<Window, Error> Window::create(const WindowConfig& config) {
             }
         }
 #endif
-        if (!glfwInit()) {
+        if (glfwInit() == 0) {
             g_glfw_ref_count--;
             return std::unexpected(Error{"Failed to initialize GLFW"});
         }
@@ -377,11 +379,10 @@ std::expected<Window, Error> Window::create(const WindowConfig& config) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, config.resizable ? GLFW_TRUE : GLFW_FALSE);
 
+#ifdef __APPLE__
     int win_w = static_cast<int>(config.width);
     int win_h = static_cast<int>(config.height);
     bool retina_disabled = false;
-
-#ifdef __APPLE__
     if (config.display_mode.has_value()) {
         // Disable Retina/HiDPI so framebuffer pixels == window pixels 1:1.
         // glfwCreateWindow will then treat the dimensions as physical pixels.
@@ -391,15 +392,20 @@ std::expected<Window, Error> Window::create(const WindowConfig& config) {
         retina_disabled = true;
         log(LogLevel::Info, "Native-pixel display mode: " + config.display_mode->label);
     }
+#else
+    const int win_w = static_cast<int>(config.width);
+    const int win_h = static_cast<int>(config.height);
+    const bool retina_disabled = false;
 #endif
 
     GLFWmonitor* monitor = config.fullscreen ? glfwGetPrimaryMonitor() : nullptr;
     GLFWwindow* glfw_window =
         glfwCreateWindow(win_w, win_h, config.title.c_str(), monitor, nullptr);
 
-    if (!glfw_window) {
-        if (--g_glfw_ref_count == 0)
+    if (glfw_window == nullptr) {
+        if (--g_glfw_ref_count == 0) {
             glfwTerminate();
+        }
         return std::unexpected(Error{"Failed to create GLFW window"});
     }
 
@@ -426,7 +432,7 @@ Window::Window(Window&& other) noexcept = default;
 Window& Window::operator=(Window&& other) noexcept = default;
 
 bool Window::should_close() const {
-    return glfwWindowShouldClose(impl_->window);
+    return glfwWindowShouldClose(impl_->window) != 0;
 }
 
 void Window::poll_events() {
@@ -439,21 +445,25 @@ std::span<const Event> Window::events() const {
 }
 
 float Window::content_scale() const {
-    if (impl_->retina_disabled)
+    if (impl_->retina_disabled) {
         return 1.0f;
-    float xscale, yscale;
+    }
+    float xscale = 0.0F;
+    float yscale = 0.0F;
     glfwGetWindowContentScale(impl_->window, &xscale, &yscale);
     return xscale;
 }
 
 std::pair<uint32_t, uint32_t> Window::framebuffer_size() const {
-    int w, h;
+    int w = 0;
+    int h = 0;
     glfwGetFramebufferSize(impl_->window, &w, &h);
     return {static_cast<uint32_t>(w), static_cast<uint32_t>(h)};
 }
 
 std::pair<uint32_t, uint32_t> Window::window_size() const {
-    int w, h;
+    int w = 0;
+    int h = 0;
     glfwGetWindowSize(impl_->window, &w, &h);
     return {static_cast<uint32_t>(w), static_cast<uint32_t>(h)};
 }
@@ -461,9 +471,9 @@ std::pair<uint32_t, uint32_t> Window::window_size() const {
 void Window::set_display_mode(const DisplayMode& mode) {
 #ifdef __APPLE__
     macos_set_window_display_mode(impl_->window, mode);
-#elif defined(_WIN32)
+#elifdef _WIN32
     windows_set_window_display_mode(impl_->window, mode);
-#elif defined(__linux__)
+#elifdef __linux__
     linux_set_window_display_mode(impl_->window, mode);
 #else
     (void)mode;
