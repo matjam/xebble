@@ -32,12 +32,15 @@ namespace xebble {
 // ---------------------------------------------------------------------------
 
 #ifdef __APPLE__
+std::vector<MonitorInfo> macos_monitors();
 std::vector<DisplayMode> macos_available_display_modes();
 void macos_set_window_display_mode(GLFWwindow* window, const DisplayMode& mode);
 #elifdef _WIN32
+std::vector<MonitorInfo> windows_monitors();
 std::vector<DisplayMode> windows_available_display_modes();
 void windows_set_window_display_mode(GLFWwindow* window, const DisplayMode& mode);
 #elifdef __linux__
+std::vector<MonitorInfo> linux_monitors();
 std::vector<DisplayMode> linux_available_display_modes();
 void linux_set_window_display_mode(GLFWwindow* window, const DisplayMode& mode);
 #endif
@@ -169,6 +172,22 @@ std::vector<DisplayMode> Window::available_display_modes() {
 }
 
 // ---------------------------------------------------------------------------
+// Window::monitors()
+// ---------------------------------------------------------------------------
+
+std::vector<MonitorInfo> Window::monitors() {
+#ifdef __APPLE__
+    return macos_monitors();
+#elifdef _WIN32
+    return windows_monitors();
+#elifdef __linux__
+    return linux_monitors();
+#else
+    return {};
+#endif
+}
+
+// ---------------------------------------------------------------------------
 // Window::available_resolutions()
 // ---------------------------------------------------------------------------
 
@@ -230,17 +249,6 @@ uint32_t pixel_perfect_scale(uint32_t vw, uint32_t vh, uint32_t nw, uint32_t nh,
     return (sx == sy) ? sx : 0;
 }
 
-// Return the best (largest) pixel-perfect scale across all natives, or 0.
-uint32_t best_pixel_perfect_scale(uint32_t vw, uint32_t vh,
-                                  const std::vector<std::pair<uint32_t, uint32_t>>& natives,
-                                  ScaleMode mode) {
-    uint32_t best = 0;
-    for (const auto& [nw, nh] : natives) {
-        best = std::max(best, pixel_perfect_scale(vw, vh, nw, nh, mode));
-    }
-    return best;
-}
-
 std::string aspect_ratio_label(uint32_t w, uint32_t h) {
     const uint32_t g = std::gcd(w, h);
     return std::format("{}:{}", w / g, h / g);
@@ -253,47 +261,37 @@ bool already_in(const std::vector<ResolutionInfo>& v, uint32_t w, uint32_t h) {
 
 } // namespace
 
-std::vector<ResolutionInfo> Window::available_resolutions([[maybe_unused]] uint32_t virtual_width,
-                                                          [[maybe_unused]] uint32_t virtual_height,
+std::vector<ResolutionInfo> Window::available_resolutions(const MonitorInfo& monitor,
                                                           ScaleMode scale_mode) {
-    // Collect unique native (w, h) pairs from display modes.
-    const auto modes = available_display_modes();
-    std::vector<std::pair<uint32_t, uint32_t>> natives;
-    for (const auto& m : modes) {
-        auto entry = std::make_pair(m.pixel_width, m.pixel_height);
-        if (std::ranges::find(natives, entry) == natives.end()) {
-            natives.push_back(entry);
-        }
-    }
+    const uint32_t nw = monitor.native_width;
+    const uint32_t nh = monitor.native_height;
 
     // -----------------------------------------------------------------------
-    // Phase 1: exact integer-divisor sub-resolutions of each native display.
-    // These are always pixel-perfect (scale == divisor).
+    // Phase 1: exact integer-divisor sub-resolutions of this monitor's native.
+    // These are always pixel-perfect on this monitor (scale == divisor d).
     // -----------------------------------------------------------------------
     std::vector<ResolutionInfo> pp_entries;
-    for (const auto& [nw, nh] : natives) {
-        for (uint32_t d = 1; d <= 4; ++d) {
-            if (nw % d != 0 || nh % d != 0) {
-                continue;
-            }
-            const uint32_t w = nw / d;
-            const uint32_t h = nh / d;
-            if (w < 320 || h < 270) {
-                continue;
-            }
-            if (already_in(pp_entries, w, h)) {
-                continue;
-            }
-            const uint32_t scale = best_pixel_perfect_scale(w, h, natives, scale_mode);
-            const auto ar = aspect_ratio_label(w, h);
-            std::string lbl;
-            if (d == 1) {
-                lbl = std::format("{}x{}  (native, {})", w, h, ar);
-            } else {
-                lbl = std::format("{}x{}  (pixel perfect x{}, {})", w, h, scale, ar);
-            }
-            pp_entries.push_back({w, h, scale > 0, scale, std::move(lbl)});
+    for (uint32_t d = 1; d <= 4; ++d) {
+        if (nw % d != 0 || nh % d != 0) {
+            continue;
         }
+        const uint32_t w = nw / d;
+        const uint32_t h = nh / d;
+        if (w < 320 || h < 270) {
+            continue;
+        }
+        if (already_in(pp_entries, w, h)) {
+            continue;
+        }
+        const uint32_t scale = pixel_perfect_scale(w, h, nw, nh, scale_mode);
+        const auto ar = aspect_ratio_label(w, h);
+        std::string lbl;
+        if (d == 1) {
+            lbl = std::format("{}x{}  (native, {})", w, h, ar);
+        } else {
+            lbl = std::format("{}x{}  (pixel perfect x{}, {})", w, h, scale, ar);
+        }
+        pp_entries.push_back({w, h, scale > 0, scale, std::move(lbl)});
     }
     std::ranges::sort(pp_entries, [](const ResolutionInfo& a, const ResolutionInfo& b) {
         return (a.width * a.height) > (b.width * b.height);
@@ -301,12 +299,9 @@ std::vector<ResolutionInfo> Window::available_resolutions([[maybe_unused]] uint3
 
     // -----------------------------------------------------------------------
     // Phase 2: curated common resolutions not already covered by phase 1.
-    // Capped at the largest native area.
+    // Capped at the native area of this monitor.
     // -----------------------------------------------------------------------
-    uint32_t max_area = 0;
-    for (const auto& [nw, nh] : natives) {
-        max_area = std::max(max_area, nw * nh);
-    }
+    const uint32_t max_area = nw * nh;
 
     std::vector<ResolutionInfo> common_entries;
     for (const auto& cr : k_common_resolutions) {
@@ -316,7 +311,7 @@ std::vector<ResolutionInfo> Window::available_resolutions([[maybe_unused]] uint3
         if (already_in(pp_entries, cr.w, cr.h) || already_in(common_entries, cr.w, cr.h)) {
             continue;
         }
-        const uint32_t scale = best_pixel_perfect_scale(cr.w, cr.h, natives, scale_mode);
+        const uint32_t scale = pixel_perfect_scale(cr.w, cr.h, nw, nh, scale_mode);
         const bool pp = scale > 0;
         const auto ar = aspect_ratio_label(cr.w, cr.h);
         std::string lbl;
@@ -331,7 +326,7 @@ std::vector<ResolutionInfo> Window::available_resolutions([[maybe_unused]] uint3
         return (a.width * a.height) > (b.width * b.height);
     });
 
-    // Merge: pixel-perfect first, then common.
+    // Merge: pixel-perfect entries first, then common resolutions.
     std::vector<ResolutionInfo> result;
     result.insert(result.end(), pp_entries.begin(), pp_entries.end());
     result.insert(result.end(), common_entries.begin(), common_entries.end());

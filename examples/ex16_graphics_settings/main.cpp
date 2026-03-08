@@ -1,10 +1,11 @@
 /// @file main.cpp  (ex16_graphics_settings)
 /// @brief Typical in-game "Graphics Settings" screen.
 ///
-/// Demonstrates Window::available_resolutions() — the library API that returns
-/// a sorted, annotated list of candidate virtual resolutions for a settings
-/// menu, including pixel-perfect integer-scale entries and common industry
-/// resolutions (1080p, 1440p, etc.).
+/// Demonstrates Window::monitors() and Window::available_resolutions() — the
+/// library API that returns a sorted, annotated list of candidate virtual
+/// resolutions for a settings menu, scoped to a specific physical monitor so
+/// that pixel-perfect detection is always accurate for the display the player
+/// will actually see the game on.
 
 #include <xebble/embedded_fonts.hpp>
 #include <xebble/xebble.hpp>
@@ -20,6 +21,11 @@ namespace {
 // ---------------------------------------------------------------------------
 
 struct GraphicsState {
+    // Monitor list (built once in init).
+    std::vector<xebble::MonitorInfo> monitors;
+    std::vector<std::u8string> monitor_labels;
+    int selected_monitor_index = 0;
+
     // Current (applied) settings.
     int applied_res_index = 0;
     bool applied_fullscreen = false;
@@ -30,13 +36,32 @@ struct GraphicsState {
     bool pending_fullscreen = false;
     bool pending_vsync = true;
 
-    // Resolution list and labels (built once in init).
+    // Resolution list for the currently selected monitor.
     std::vector<xebble::ResolutionInfo> resolutions;
     std::vector<std::u8string> res_labels;
 
     // Feedback message shown after Apply / Revert.
     std::u8string status_msg;
 };
+
+// Rebuild the resolution list for the monitor at `index`.
+void rebuild_resolutions(GraphicsState& state, int index) {
+    state.selected_monitor_index = index;
+    state.resolutions.clear();
+    state.res_labels.clear();
+    state.pending_res_index = 0;
+
+    if (index < 0 || static_cast<size_t>(index) >= state.monitors.size()) {
+        return;
+    }
+
+    state.resolutions = xebble::Window::available_resolutions(
+        state.monitors[static_cast<size_t>(index)], xebble::ScaleMode::Fit);
+
+    for (const auto& r : state.resolutions) {
+        state.res_labels.emplace_back(r.label.begin(), r.label.end());
+    }
+}
 
 // ---------------------------------------------------------------------------
 // System
@@ -49,17 +74,18 @@ public:
         world.add_resource(GraphicsState{});
 
         auto& state = world.resource<GraphicsState>();
-        auto* renderer = world.resource<xebble::Renderer*>();
 
-        // Ask the library for the full annotated resolution list.
-        state.resolutions = xebble::Window::available_resolutions(
-            renderer->virtual_width(), renderer->virtual_height(), xebble::ScaleMode::Fit);
-
-        for (const auto& r : state.resolutions) {
-            state.res_labels.emplace_back(r.label.begin(), r.label.end());
+        // Enumerate monitors.
+        state.monitors = xebble::Window::monitors();
+        for (const auto& m : state.monitors) {
+            state.monitor_labels.emplace_back(m.label.begin(), m.label.end());
         }
 
+        // Default to primary monitor (index 0 — monitors() puts primary first).
+        rebuild_resolutions(state, 0);
+
         // Pre-select the entry matching the current virtual resolution.
+        auto* renderer = world.resource<xebble::Renderer*>();
         const uint32_t cur_w = renderer->virtual_width();
         const uint32_t cur_h = renderer->virtual_height();
         const auto n = static_cast<int>(state.resolutions.size());
@@ -94,22 +120,37 @@ public:
         });
 
         // ---------------------------------------------------------------
-        // Left column: resolution list
+        // Left column: monitor selector + resolution list
         // ---------------------------------------------------------------
         ui.panel("res_panel",
                  {
                      .anchor = xebble::Anchor::Left,
-                     .size = {380, 1.0f},
+                     .size = {420, 1.0f},
                      .offset = {4, 40},
                  },
                  [&](auto& p) {
-                     p.text(u8"Resolution", {.color = {200, 200, 255}});
+                     // Monitor selector
+                     p.text(u8"Display", {.color = {200, 200, 255}});
+                     if (state.monitor_labels.empty()) {
+                         p.text(u8"(no monitors detected)", {.color = {200, 100, 100}});
+                     } else {
+                         const int prev = state.selected_monitor_index;
+                         p.list("mon_list", state.monitor_labels, state.selected_monitor_index,
+                                {.visible_rows = static_cast<float>(state.monitor_labels.size())});
+                         if (state.selected_monitor_index != prev) {
+                             rebuild_resolutions(state, state.selected_monitor_index);
+                         }
+                     }
 
+                     p.text(u8"");
+
+                     // Resolution list for selected monitor
+                     p.text(u8"Resolution", {.color = {200, 200, 255}});
                      if (state.res_labels.empty()) {
                          p.text(u8"(no display modes detected)", {.color = {200, 100, 100}});
                      } else {
                          p.list("res_list", state.res_labels, state.pending_res_index,
-                                {.visible_rows = 14});
+                                {.visible_rows = 12});
                      }
                  });
 
@@ -140,6 +181,9 @@ public:
                          p.text(std::u8string(dim.begin(), dim.end()), {.color = {220, 220, 220}});
 
                          if (sel.pixel_perfect) {
+                             const auto info = std::format("Pixel perfect x{}", sel.scale_factor);
+                             p.text(std::u8string(info.begin(), info.end()),
+                                    {.color = {140, 255, 140}});
                              p.text(u8"Filter: nearest (crisp)", {.color = {140, 220, 255}});
                          } else {
                              p.text(u8"Filter: bilinear (smooth)", {.color = {180, 180, 180}});
