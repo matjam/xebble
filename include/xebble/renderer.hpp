@@ -302,6 +302,16 @@ public:
     /// @endcode
     void set_fullscreen(bool fullscreen);
 
+    /// @brief Enable or disable vertical sync at runtime.
+    ///
+    /// When enabled the swapchain uses `VK_PRESENT_MODE_FIFO_KHR` (strict
+    /// vsync). When disabled it prefers `VK_PRESENT_MODE_MAILBOX_KHR` for
+    /// lower latency, falling back to `VK_PRESENT_MODE_IMMEDIATE_KHR`.
+    ///
+    /// The swapchain is recreated immediately (blocking until the GPU is idle),
+    /// so the change takes effect on the next rendered frame.
+    void set_vsync(bool enabled);
+
     /// @brief Switch the blit sampler filter at runtime (manual override).
     ///
     /// When `nearest` is true the offscreen framebuffer is blitted to the

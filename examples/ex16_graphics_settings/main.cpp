@@ -241,6 +241,7 @@ private:
         // Filter is managed automatically by the renderer (auto_filter=true).
         renderer.set_virtual_resolution(sel.width, sel.height);
         renderer.set_fullscreen(state.pending_fullscreen);
+        renderer.set_vsync(state.pending_vsync);
 
         state.applied_res_index = state.pending_res_index;
         state.applied_fullscreen = state.pending_fullscreen;

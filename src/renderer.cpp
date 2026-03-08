@@ -969,6 +969,19 @@ void Renderer::set_fullscreen(bool fullscreen) {
     // recreate in begin_frame() — no explicit action needed here.
 }
 
+void Renderer::set_vsync(bool enabled) {
+    auto& impl = *impl_;
+    if (impl.config.vsync == enabled) {
+        return;
+    }
+    impl.config.vsync = enabled;
+    vkDeviceWaitIdle(impl.context->device());
+    impl.swapchain->recreate(impl.window->native_handle(), impl.config.vsync);
+    impl.create_swapchain_framebuffers();
+    impl.update_auto_filter();
+    log(LogLevel::Info, std::string("vsync: ") + (enabled ? "on" : "off"));
+}
+
 void Renderer::set_nearest_sample(bool nearest) {
     auto& impl = *impl_;
     // Manual override — disable auto-filter so the renderer doesn't
