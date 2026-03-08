@@ -141,6 +141,7 @@ int run(World world, const GameConfig& config) {
     while (!h.window->should_close()) {
         h.window->poll_events();
         auto raw = h.window->events();
+
         world.resource<EventQueue>().events.assign(raw.begin(), raw.end());
 
         if (h.renderer->begin_frame()) {
@@ -193,6 +194,7 @@ int run(SceneRouter router, const GameConfig& config) {
     while (!h.window->should_close() && !stack.empty()) {
         h.window->poll_events();
         auto raw = h.window->events();
+
         stack.top_world().resource<EventQueue>().events.assign(raw.begin(), raw.end());
 
         if (!stack.empty() && h.renderer->begin_frame()) {

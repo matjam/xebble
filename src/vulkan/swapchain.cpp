@@ -160,9 +160,14 @@ struct Swapchain::Impl {
             }
         }
 
-        log(LogLevel::Info, "Swapchain created: " + std::to_string(extent.width) + "x" +
-                                std::to_string(extent.height) + ", " + std::to_string(count) +
-                                " images");
+        // Log on creation and on any size change; suppress duplicates during
+        // window animations where many same-size recreates fire in one frame.
+        if (extent.width != this->extent.width || extent.height != this->extent.height) {
+            log(LogLevel::Info, "Swapchain created: " + std::to_string(extent.width) + "x" +
+                                    std::to_string(extent.height) + ", " + std::to_string(count) +
+                                    " images");
+            this->extent = extent;
+        }
 
         return {};
     }

@@ -312,6 +312,14 @@ public:
     /// @endcode
     void set_display_mode(const DisplayMode& mode);
 
+    /// @brief Notify the renderer that the window framebuffer has been resized.
+    ///
+    /// Call this immediately after receiving a `EventType::WindowResize` event
+    /// (before `begin_frame()`). The swapchain and framebuffers are recreated
+    /// to match the new surface dimensions so the compositor does not have to
+    /// scale a stale-sized surface (which causes stretching on Wayland).
+    void handle_resize();
+
     /// @brief Convert a screen-space position to virtual pixel coordinates.
     ///
     /// Mouse event positions are in screen (physical) pixels. Use this to map

@@ -538,6 +538,20 @@ bool Renderer::begin_frame() {
         }
     }
 
+    // Proactively recreate the swapchain if the window framebuffer size has
+    // changed since the last frame.  On Wayland compositors (e.g. Hyprland)
+    // the compositor may resize the window tile without ever returning
+    // VK_ERROR_OUT_OF_DATE_KHR — it simply scales the surface.  Detecting the
+    // mismatch here and recreating before acquire prevents that scaling.
+    {
+        auto [fw, fh] = impl.window->framebuffer_size();
+        auto ext = impl.swapchain->extent();
+        if (fw > 0 && fh > 0 && (fw != ext.width || fh != ext.height)) {
+            impl.swapchain->recreate(impl.window->native_handle(), impl.config.vsync);
+            impl.create_swapchain_framebuffers();
+        }
+    }
+
     // Wait for previous frame with this index
     vkWaitForFences(impl.context->device(), 1, &impl.in_flight_fences[impl.current_frame], VK_TRUE,
                     UINT64_MAX);
@@ -898,6 +912,13 @@ void Renderer::set_display_mode(const DisplayMode& mode) {
     impl_->window->set_display_mode(mode);
     // The window resize triggers a swapchain recreation automatically.
     // No need to touch the virtual resolution here — that is a separate concern.
+}
+
+void Renderer::handle_resize() {
+    auto& impl = *impl_;
+    vkDeviceWaitIdle(impl.context->device());
+    impl.swapchain->recreate(impl.window->native_handle(), impl.config.vsync);
+    impl.create_swapchain_framebuffers();
 }
 
 void Renderer::set_border_color(Color color) {
