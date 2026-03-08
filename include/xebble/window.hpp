@@ -82,6 +82,35 @@ struct DisplayMode {
 };
 
 // ---------------------------------------------------------------------------
+// ResolutionInfo
+// ---------------------------------------------------------------------------
+
+/// @brief A candidate virtual resolution, ready to pass to
+///        `Renderer::set_virtual_resolution()`.
+///
+/// Returned by `Window::available_resolutions()`. Includes all pixel-perfect
+/// integer-scale sub-resolutions of the connected displays as well as a
+/// curated list of common industry-standard resolutions (1080p, 1440p, etc.).
+///
+/// A resolution is **pixel-perfect** when the Fit (or Crop) scale factor from
+/// the virtual canvas to a connected native display is a whole integer on both
+/// axes. With Fit this allows letterbox/pillarbox bars while keeping every
+/// virtual pixel mapping to exactly `scale x scale` physical pixels.
+///
+/// @code
+/// auto resolutions = Window::available_resolutions(960, 540, ScaleMode::Fit);
+/// for (auto& r : resolutions)
+///     std::cout << r.label << '\n';
+/// @endcode
+struct ResolutionInfo {
+    uint32_t width;        ///< Virtual framebuffer width in pixels.
+    uint32_t height;       ///< Virtual framebuffer height in pixels.
+    bool pixel_perfect;    ///< True if scale is an integer on both axes vs any native display.
+    uint32_t scale_factor; ///< Integer scale when pixel_perfect; 0 otherwise.
+    std::string label;     ///< Human-readable, e.g. "1280x720 (pixel perfect x2, 16:9)".
+};
+
+// ---------------------------------------------------------------------------
 // WindowConfig
 // ---------------------------------------------------------------------------
 
@@ -147,6 +176,38 @@ public:
     ///     std::cout << m.label << '\n';
     /// @endcode
     [[nodiscard]] static std::vector<DisplayMode> available_display_modes();
+
+    /// @brief Enumerate candidate virtual resolutions for a settings menu.
+    ///
+    /// Returns pixel-perfect integer-scale sub-resolutions of every connected
+    /// display (e.g. 2560x720, 1280x360 from a 5120x1440 ultrawide) plus a
+    /// curated set of common industry-standard resolutions (1080p, 1440p, …).
+    /// Each entry is annotated with a `pixel_perfect` flag, an integer
+    /// `scale_factor`, and a human-readable `label`.
+    ///
+    /// The `virtual_width`/`virtual_height` and `scale_mode` arguments are
+    /// used only to compute pixel-perfect status — a resolution is
+    /// pixel-perfect when the Fit or Crop scale from that virtual canvas to
+    /// a native display is a whole integer.
+    ///
+    /// Results are sorted: pixel-perfect entries first (largest to smallest),
+    /// then common resolutions (largest to smallest). Duplicates are removed.
+    ///
+    /// @param virtual_width   Proposed virtual canvas width in pixels.
+    /// @param virtual_height  Proposed virtual canvas height in pixels.
+    /// @param scale_mode      `ScaleMode::Fit` (default) or `ScaleMode::Crop`.
+    ///
+    /// @code
+    /// auto resolutions = Window::available_resolutions(960, 540, ScaleMode::Fit);
+    /// for (auto& r : resolutions) {
+    ///     std::cout << r.label;
+    ///     if (r.pixel_perfect) std::cout << "  [x" << r.scale_factor << "]";
+    ///     std::cout << '\n';
+    /// }
+    /// @endcode
+    [[nodiscard]] static std::vector<ResolutionInfo>
+    available_resolutions(uint32_t virtual_width, uint32_t virtual_height,
+                          ScaleMode scale_mode = ScaleMode::Fit);
 
     /// @brief Create a new window and initialise GLFW if needed.
     ///

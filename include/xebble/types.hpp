@@ -313,6 +313,30 @@ struct Modifiers {
 // LogLevel
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// ScaleMode
+// ---------------------------------------------------------------------------
+
+/// @brief How the virtual framebuffer is scaled to fit the window.
+///
+/// Both modes maintain the exact aspect ratio of the virtual resolution and
+/// center the image in the window. They differ only in how they handle windows
+/// whose aspect ratio does not match the virtual canvas:
+///
+/// - **Fit**  — the entire canvas is always visible; empty bars fill the gaps
+///              (letterbox or pillarbox). Safe for all content.
+/// - **Crop** — the canvas fills the entire window; edges that fall outside
+///              the window area are cropped. No bars, but some content may be
+///              invisible near the edges.
+enum class ScaleMode {
+    Fit,  ///< Letterbox / pillarbox — entire canvas visible, bars on short sides.
+    Crop, ///< Fill window — canvas edges cropped on long sides, no bars.
+};
+
+// ---------------------------------------------------------------------------
+// LogLevel
+// ---------------------------------------------------------------------------
+
 /// @brief Severity levels for the Xebble logging system.
 ///
 /// Passed to `log()` and delivered to the log callback set by

@@ -11,9 +11,13 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
+#include <array>
 #include <atomic>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
+#include <numeric>
 #include <vector>
 
 #ifdef __APPLE__
@@ -160,6 +164,176 @@ std::vector<DisplayMode> Window::available_display_modes() {
 #else
     return {};
 #endif
+}
+
+// ---------------------------------------------------------------------------
+// Window::available_resolutions()
+// ---------------------------------------------------------------------------
+
+namespace {
+
+struct CommonRes {
+    uint32_t w;
+    uint32_t h;
+    const char* name;
+};
+
+// clang-format off
+constexpr auto k_common_resolutions = std::to_array<CommonRes>({
+    // 16:9
+    {7680, 4320, "8K UHD"},
+    {5120, 2880, "5K"},
+    {3840, 2160, "4K UHD"},
+    {2560, 1440, "1440p QHD"},
+    {1920, 1080, "1080p FHD"},
+    {1280,  720, "720p HD"},
+    {854,   480, "480p"},
+    {640,   360, "360p"},
+    // 21:9 ultrawide
+    {5120, 2160, "5K ultrawide"},
+    {3440, 1440, "1440p ultrawide"},
+    {2560, 1080, "1080p ultrawide"},
+    // 4:3
+    {1600, 1200, "UXGA"},
+    {1024,  768, "XGA"},
+    {800,   600, "SVGA"},
+    {640,   480, "VGA"},
+    // 16:10
+    {2560, 1600, "WQXGA"},
+    {1920, 1200, "WUXGA"},
+    {1280,  800, "WXGA"},
+});
+// clang-format on
+
+// Return the integer scale factor if (vw,vh) is pixel-perfect on native
+// (nw,nh) under Fit or Crop, or 0 if it is not.
+//
+// Fit:  scale = min(nw/vw, nh/vh).  Pixel-perfect when both axes divide at
+//       that same integer: nw%vw==0 && nh%vh==0 && nw/vw == nh/vh.
+// Crop: scale = max(nw/vw, nh/vh).  Same divisibility requirement but using
+//       the larger ratio (one axis will be cropped).
+uint32_t pixel_perfect_scale(uint32_t vw, uint32_t vh, uint32_t nw, uint32_t nh, ScaleMode mode) {
+    if (vw == 0 || vh == 0 || nw < vw || nh < vh) {
+        return 0;
+    }
+    if (nw % vw != 0 || nh % vh != 0) {
+        return 0;
+    }
+    const uint32_t sx = nw / vw;
+    const uint32_t sy = nh / vh;
+    if (mode == ScaleMode::Fit) {
+        return (sx == sy) ? sx : 0;
+    }
+    // Crop: the larger scale is used; both axes must still divide cleanly.
+    return (sx == sy) ? sx : 0;
+}
+
+// Return the best (largest) pixel-perfect scale across all natives, or 0.
+uint32_t best_pixel_perfect_scale(uint32_t vw, uint32_t vh,
+                                  const std::vector<std::pair<uint32_t, uint32_t>>& natives,
+                                  ScaleMode mode) {
+    uint32_t best = 0;
+    for (const auto& [nw, nh] : natives) {
+        best = std::max(best, pixel_perfect_scale(vw, vh, nw, nh, mode));
+    }
+    return best;
+}
+
+std::string aspect_ratio_label(uint32_t w, uint32_t h) {
+    const uint32_t g = std::gcd(w, h);
+    return std::format("{}:{}", w / g, h / g);
+}
+
+bool already_in(const std::vector<ResolutionInfo>& v, uint32_t w, uint32_t h) {
+    return std::ranges::any_of(
+        v, [w, h](const ResolutionInfo& r) { return r.width == w && r.height == h; });
+}
+
+} // namespace
+
+std::vector<ResolutionInfo> Window::available_resolutions([[maybe_unused]] uint32_t virtual_width,
+                                                          [[maybe_unused]] uint32_t virtual_height,
+                                                          ScaleMode scale_mode) {
+    // Collect unique native (w, h) pairs from display modes.
+    const auto modes = available_display_modes();
+    std::vector<std::pair<uint32_t, uint32_t>> natives;
+    for (const auto& m : modes) {
+        auto entry = std::make_pair(m.pixel_width, m.pixel_height);
+        if (std::ranges::find(natives, entry) == natives.end()) {
+            natives.push_back(entry);
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Phase 1: exact integer-divisor sub-resolutions of each native display.
+    // These are always pixel-perfect (scale == divisor).
+    // -----------------------------------------------------------------------
+    std::vector<ResolutionInfo> pp_entries;
+    for (const auto& [nw, nh] : natives) {
+        for (uint32_t d = 1; d <= 8; ++d) {
+            if (nw % d != 0 || nh % d != 0) {
+                continue;
+            }
+            const uint32_t w = nw / d;
+            const uint32_t h = nh / d;
+            if (w < 320 || h < 180) {
+                break;
+            }
+            if (already_in(pp_entries, w, h)) {
+                continue;
+            }
+            const uint32_t scale = best_pixel_perfect_scale(w, h, natives, scale_mode);
+            const auto ar = aspect_ratio_label(w, h);
+            std::string lbl;
+            if (d == 1) {
+                lbl = std::format("{}x{}  (native, {})", w, h, ar);
+            } else {
+                lbl = std::format("{}x{}  (pixel perfect x{}, {})", w, h, scale, ar);
+            }
+            pp_entries.push_back({w, h, scale > 0, scale, std::move(lbl)});
+        }
+    }
+    std::ranges::sort(pp_entries, [](const ResolutionInfo& a, const ResolutionInfo& b) {
+        return (a.width * a.height) > (b.width * b.height);
+    });
+
+    // -----------------------------------------------------------------------
+    // Phase 2: curated common resolutions not already covered by phase 1.
+    // Capped at the largest native area.
+    // -----------------------------------------------------------------------
+    uint32_t max_area = 0;
+    for (const auto& [nw, nh] : natives) {
+        max_area = std::max(max_area, nw * nh);
+    }
+
+    std::vector<ResolutionInfo> common_entries;
+    for (const auto& cr : k_common_resolutions) {
+        if (cr.w * cr.h > max_area) {
+            continue;
+        }
+        if (already_in(pp_entries, cr.w, cr.h) || already_in(common_entries, cr.w, cr.h)) {
+            continue;
+        }
+        const uint32_t scale = best_pixel_perfect_scale(cr.w, cr.h, natives, scale_mode);
+        const bool pp = scale > 0;
+        const auto ar = aspect_ratio_label(cr.w, cr.h);
+        std::string lbl;
+        if (pp) {
+            lbl = std::format("{}x{}  ({}, pixel perfect x{}, {})", cr.w, cr.h, cr.name, scale, ar);
+        } else {
+            lbl = std::format("{}x{}  ({}, {})", cr.w, cr.h, cr.name, ar);
+        }
+        common_entries.push_back({cr.w, cr.h, pp, scale, std::move(lbl)});
+    }
+    std::ranges::sort(common_entries, [](const ResolutionInfo& a, const ResolutionInfo& b) {
+        return (a.width * a.height) > (b.width * b.height);
+    });
+
+    // Merge: pixel-perfect first, then common.
+    std::vector<ResolutionInfo> result;
+    result.insert(result.end(), pp_entries.begin(), pp_entries.end());
+    result.insert(result.end(), common_entries.begin(), common_entries.end());
+    return result;
 }
 
 // ---------------------------------------------------------------------------
