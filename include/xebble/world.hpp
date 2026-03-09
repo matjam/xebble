@@ -202,23 +202,48 @@ public:
     /// Like `register_component<T>()`, but the component will also be
     /// included in `snapshot()` blobs and restored by `restore()`.
     ///
-    /// Requires that `ComponentName<T>` is specialized and that T is
-    /// trivially copyable.
+    /// Requires that `ComponentName<T>` is specialized.
+    ///
+    /// **Trivially-copyable** types are serialized automatically via memcpy.
+    ///
+    /// **Non-trivially-copyable** types must provide custom hooks:
+    /// - `void serialize(BinaryWriter&) const`
+    /// - `static T deserialize(BinaryReader&)`
     ///
     /// @code
+    /// // Trivially-copyable — automatic.
     /// struct Health { int hp; int max_hp; };
     /// template<> struct xebble::ComponentName<Health>
     ///     { static constexpr std::string_view value = "game::Health"; };
     ///
+    /// // Non-trivially-copyable — custom hooks.
+    /// struct Inventory {
+    ///     std::vector<std::string> items;
+    ///     void serialize(xebble::BinaryWriter& w) const { /* ... */ }
+    ///     static Inventory deserialize(xebble::BinaryReader& r) { /* ... */ }
+    /// };
+    /// template<> struct xebble::ComponentName<Inventory>
+    ///     { static constexpr std::string_view value = "game::Inventory"; };
+    ///
     /// world.register_serializable_component<Health>();
+    /// world.register_serializable_component<Inventory>();
     /// @endcode
     template<typename T>
-        requires serial_detail::HasComponentName<T> && std::is_trivially_copyable_v<T>
+        requires serial_detail::HasComponentName<T>
     void register_serializable_component() {
+        static_assert(std::is_trivially_copyable_v<T> || serial_detail::CustomSerializable<T>,
+                      "Serializable component must be either trivially copyable or provide "
+                      "serialize(BinaryWriter&) const and static deserialize(BinaryReader&) hooks");
+
         auto id = ecs_detail::component_id<T>();
         if (id >= pools_.size())
             pools_.resize(id + 1);
-        pools_[id] = std::make_unique<SerializableComponentPool<T>>();
+
+        if constexpr (std::is_trivially_copyable_v<T>) {
+            pools_[id] = std::make_unique<SerializableComponentPool<T>>();
+        } else {
+            pools_[id] = std::make_unique<CustomSerializableComponentPool<T>>();
+        }
         grow_mask_width(id);
     }
 
@@ -385,8 +410,10 @@ public:
     /// Like `add_resource<T>()`, but the resource will also be included in
     /// `snapshot()` blobs and restored by `restore()`.
     ///
-    /// Requires that `ResourceName<T>` is specialized and that T is
-    /// trivially copyable.
+    /// Requires that `ResourceName<T>` is specialized. Trivially-copyable
+    /// types are serialized automatically; non-trivially-copyable types must
+    /// provide `serialize(BinaryWriter&) const` and
+    /// `static T deserialize(BinaryReader&)` hooks.
     ///
     /// @code
     /// struct WorldSeed { uint64_t value; };
@@ -396,24 +423,41 @@ public:
     /// world.add_serializable_resource(WorldSeed{42u});
     /// @endcode
     template<typename T>
-        requires serial_detail::HasResourceName<T> && std::is_trivially_copyable_v<T>
+        requires serial_detail::HasResourceName<T>
     void add_serializable_resource(T value) {
+        static_assert(std::is_trivially_copyable_v<T> || serial_detail::CustomSerializable<T>,
+                      "Serializable resource must be either trivially copyable or provide "
+                      "serialize(BinaryWriter&) const and static deserialize(BinaryReader&) hooks");
+
         auto id = ecs_detail::component_id<T>();
         resources_[id] = std::move(value);
 
         serial_detail::ResourceSerializer ser;
         ser.name = std::string(ResourceName<T>::value);
-        ser.write = [](const std::any& a, std::vector<uint8_t>& out) {
-            const T& v = std::any_cast<const T&>(a);
-            serial_detail::append(out, v);
-        };
-        ser.read = [](std::any& a, const uint8_t* data, size_t size) {
-            if (size < sizeof(T))
-                return;
-            T v{};
-            std::memcpy(&v, data, sizeof(T));
-            a = v;
-        };
+
+        if constexpr (std::is_trivially_copyable_v<T>) {
+            ser.write = [](const std::any& a, std::vector<uint8_t>& out) {
+                const T& v = std::any_cast<const T&>(a);
+                serial_detail::append(out, v);
+            };
+            ser.read = [](std::any& a, const uint8_t* data, size_t size) {
+                if (size < sizeof(T))
+                    return;
+                T v{};
+                std::memcpy(&v, data, sizeof(T));
+                a = v;
+            };
+        } else {
+            ser.write = [](const std::any& a, std::vector<uint8_t>& out) {
+                const T& v = std::any_cast<const T&>(a);
+                BinaryWriter writer(out);
+                v.serialize(writer);
+            };
+            ser.read = [](std::any& a, const uint8_t* data, size_t size) {
+                BinaryReader reader(data, size);
+                a = T::deserialize(reader);
+            };
+        }
         resource_serializers_[id] = std::move(ser);
     }
 

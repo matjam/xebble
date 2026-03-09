@@ -245,11 +245,16 @@ std::expected<void, Error> World::restore(std::span<const uint8_t> blob) {
         }
 
         if (target_pool) {
-            // Sanity check: data_len must equal record_count * bytes_per_record.
-            size_t expected_bytes =
-                static_cast<size_t>(record_count) * target_pool->bytes_per_record();
-            if (data_len != expected_bytes) {
-                return std::unexpected(Error{"restore: pool '" + name + "' size mismatch"});
+            // Sanity check for fixed-size pools: data_len must equal
+            // record_count * bytes_per_record.  Custom-serializable pools
+            // return bytes_per_record() == 0 (variable-size records) and
+            // skip this check.
+            size_t bpr = target_pool->bytes_per_record();
+            if (bpr > 0) {
+                size_t expected_bytes = static_cast<size_t>(record_count) * bpr;
+                if (data_len != expected_bytes) {
+                    return std::unexpected(Error{"restore: pool '" + name + "' size mismatch"});
+                }
             }
             target_pool->deserialize_all(data + offset, data_len, entity_map);
         }

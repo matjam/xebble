@@ -19,7 +19,7 @@ Future features beyond the core renderer and ECS. The goal is for Xebble to hand
 
 ## Serialization
 
-- [ ] Support non-trivially-copyable components via a custom hook (e.g. `serialize(BinaryWriter&)` / `deserialize(BinaryReader&)` opt-in interface), so components containing `string`, `vector`, `shared_ptr` etc. can participate in save games
+- [x] Support non-trivially-copyable components via a custom hook (`serialize(BinaryWriter&)` / `static T deserialize(BinaryReader&)` opt-in interface), so components containing `string`, `vector`, etc. can participate in save games
 - [ ] Schema versioning / migration path for save files — currently version=1 with no forward compatibility; old saves break when components change
 
 ## UI Widgets

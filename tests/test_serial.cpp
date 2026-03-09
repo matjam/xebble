@@ -439,3 +439,417 @@ TEST(Serial_BuiltIn, CameraResourceRoundTrip) {
     EXPECT_FLOAT_EQ(cam.x, 100.0f);
     EXPECT_FLOAT_EQ(cam.y, 200.0f);
 }
+
+// ===========================================================================
+// Custom serialization tests — non-trivially-copyable components
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Test types with custom serialize/deserialize hooks
+// ---------------------------------------------------------------------------
+
+/// @brief A component containing a std::string (not trivially copyable).
+struct NameTag {
+    std::string name;
+
+    void serialize(xebble::BinaryWriter& w) const { w.write_string(name); }
+    static NameTag deserialize(xebble::BinaryReader& r) { return NameTag{r.read_string()}; }
+};
+
+/// @brief A component containing a vector of strings.
+struct Inventory {
+    std::vector<std::string> items;
+
+    void serialize(xebble::BinaryWriter& w) const {
+        w.write(static_cast<uint32_t>(items.size()));
+        for (const auto& s : items) {
+            w.write_string(s);
+        }
+    }
+    static Inventory deserialize(xebble::BinaryReader& r) {
+        Inventory inv;
+        const auto count = r.read<uint32_t>();
+        inv.items.reserve(count);
+        for (uint32_t i = 0; i < count; ++i) {
+            inv.items.push_back(r.read_string());
+        }
+        return inv;
+    }
+};
+
+/// @brief A component with mixed trivial and non-trivial data.
+struct Stats {
+    int strength = 0;
+    int dexterity = 0;
+    std::string title;
+    std::vector<float> modifiers;
+
+    void serialize(xebble::BinaryWriter& w) const {
+        w.write(strength);
+        w.write(dexterity);
+        w.write_string(title);
+        w.write_vector(modifiers);
+    }
+    static Stats deserialize(xebble::BinaryReader& r) {
+        Stats s;
+        s.strength = r.read<int>();
+        s.dexterity = r.read<int>();
+        s.title = r.read_string();
+        s.modifiers = r.read_vector<float>();
+        return s;
+    }
+};
+
+/// @brief A custom-serializable resource (non-trivially-copyable).
+struct GameLog {
+    std::vector<std::string> entries;
+
+    void serialize(xebble::BinaryWriter& w) const {
+        w.write(static_cast<uint32_t>(entries.size()));
+        for (const auto& e : entries) {
+            w.write_string(e);
+        }
+    }
+    static GameLog deserialize(xebble::BinaryReader& r) {
+        GameLog log;
+        const auto count = r.read<uint32_t>();
+        log.entries.reserve(count);
+        for (uint32_t i = 0; i < count; ++i) {
+            log.entries.push_back(r.read_string());
+        }
+        return log;
+    }
+};
+
+// ComponentName / ResourceName specializations for custom types.
+template<>
+struct xebble::ComponentName<NameTag> {
+    static constexpr std::string_view value = "test::NameTag";
+};
+template<>
+struct xebble::ComponentName<Inventory> {
+    static constexpr std::string_view value = "test::Inventory";
+};
+template<>
+struct xebble::ComponentName<Stats> {
+    static constexpr std::string_view value = "test::Stats";
+};
+template<>
+struct xebble::ResourceName<GameLog> {
+    static constexpr std::string_view value = "test::GameLog";
+};
+
+// ---------------------------------------------------------------------------
+// Tests: BinaryWriter / BinaryReader round-trip
+// ---------------------------------------------------------------------------
+
+TEST(Serial_BinaryIO, WriterReaderRoundTrip) {
+    std::vector<uint8_t> buf;
+    xebble::BinaryWriter w(buf);
+
+    w.write(int32_t{42});
+    w.write(3.14f);
+    w.write_string("hello world");
+    const std::vector<int> vec = {1, 2, 3, 4, 5};
+    w.write_vector(vec);
+
+    xebble::BinaryReader r(buf.data(), buf.size());
+    EXPECT_EQ(r.read<int32_t>(), 42);
+    EXPECT_FLOAT_EQ(r.read<float>(), 3.14f);
+    EXPECT_EQ(r.read_string(), "hello world");
+    auto restored_vec = r.read_vector<int>();
+    EXPECT_EQ(restored_vec, vec);
+    EXPECT_EQ(r.remaining(), 0u);
+}
+
+TEST(Serial_BinaryIO, EmptyStringRoundTrip) {
+    std::vector<uint8_t> buf;
+    xebble::BinaryWriter w(buf);
+    w.write_string("");
+
+    xebble::BinaryReader r(buf.data(), buf.size());
+    EXPECT_EQ(r.read_string(), "");
+    EXPECT_EQ(r.remaining(), 0u);
+}
+
+TEST(Serial_BinaryIO, EmptyVectorRoundTrip) {
+    std::vector<uint8_t> buf;
+    xebble::BinaryWriter w(buf);
+    const std::vector<int> empty;
+    w.write_vector(empty);
+
+    xebble::BinaryReader r(buf.data(), buf.size());
+    auto v = r.read_vector<int>();
+    EXPECT_TRUE(v.empty());
+    EXPECT_EQ(r.remaining(), 0u);
+}
+
+TEST(Serial_BinaryIO, ReaderThrowsOnOverrun) {
+    std::vector<uint8_t> buf = {0x01, 0x02}; // only 2 bytes
+    xebble::BinaryReader r(buf.data(), buf.size());
+    EXPECT_THROW(static_cast<void>(r.read<uint32_t>()), std::runtime_error);
+}
+
+TEST(Serial_BinaryIO, WriteAndReadBytes) {
+    std::vector<uint8_t> buf;
+    xebble::BinaryWriter w(buf);
+    std::vector<uint8_t> raw_data = {0xDE, 0xAD, 0xBE, 0xEF};
+    w.write_bytes(raw_data);
+
+    xebble::BinaryReader r(buf.data(), buf.size());
+    auto result = r.read_bytes(4);
+    EXPECT_EQ(result, raw_data);
+    EXPECT_EQ(r.remaining(), 0u);
+}
+
+// ---------------------------------------------------------------------------
+// Tests: custom serializable concept check
+// ---------------------------------------------------------------------------
+
+static_assert(!std::is_trivially_copyable_v<NameTag>,
+              "NameTag must NOT be trivially copyable for this test");
+static_assert(!std::is_trivially_copyable_v<Inventory>,
+              "Inventory must NOT be trivially copyable for this test");
+static_assert(!std::is_trivially_copyable_v<Stats>,
+              "Stats must NOT be trivially copyable for this test");
+static_assert(xebble::serial_detail::CustomSerializable<NameTag>,
+              "NameTag must satisfy CustomSerializable");
+static_assert(xebble::serial_detail::CustomSerializable<Inventory>,
+              "Inventory must satisfy CustomSerializable");
+static_assert(xebble::serial_detail::CustomSerializable<Stats>,
+              "Stats must satisfy CustomSerializable");
+
+// ---------------------------------------------------------------------------
+// Tests: single custom-serializable component round-trip
+// ---------------------------------------------------------------------------
+
+TEST(Serial_Custom, SingleEntityNameTag) {
+    xebble::World src;
+    src.register_serializable_component<NameTag>();
+    (void)src.build_entity().with(NameTag{"Goblin King"}).build();
+
+    auto blob = src.snapshot();
+
+    xebble::World dst;
+    dst.register_serializable_component<NameTag>();
+    ASSERT_TRUE(dst.restore(blob).has_value());
+
+    int count = 0;
+    dst.each<NameTag>([&](xebble::Entity, NameTag& n) {
+        EXPECT_EQ(n.name, "Goblin King");
+        ++count;
+    });
+    EXPECT_EQ(count, 1);
+}
+
+TEST(Serial_Custom, MultipleEntitiesWithInventory) {
+    xebble::World src;
+    src.register_serializable_component<Inventory>();
+    (void)src.build_entity().with(Inventory{{"sword", "shield", "potion"}}).build();
+    (void)src.build_entity().with(Inventory{{"bow", "arrows"}}).build();
+    (void)src.build_entity().with(Inventory{{}}).build(); // empty inventory
+
+    auto blob = src.snapshot();
+
+    xebble::World dst;
+    dst.register_serializable_component<Inventory>();
+    ASSERT_TRUE(dst.restore(blob).has_value());
+
+    int count = 0;
+    size_t total_items = 0;
+    dst.each<Inventory>([&](xebble::Entity, Inventory& inv) {
+        total_items += inv.items.size();
+        ++count;
+    });
+    EXPECT_EQ(count, 3);
+    EXPECT_EQ(total_items, 5u); // 3 + 2 + 0
+}
+
+TEST(Serial_Custom, MixedTrivialAndCustomComponents) {
+    xebble::World src;
+    src.register_serializable_component<TestPos>();
+    src.register_serializable_component<NameTag>();
+    (void)src.build_entity().with(TestPos{1.0f, 2.0f}).with(NameTag{"Hero"}).build();
+    (void)src.build_entity().with(TestPos{3.0f, 4.0f}).with(NameTag{"Villain"}).build();
+
+    auto blob = src.snapshot();
+
+    xebble::World dst;
+    dst.register_serializable_component<TestPos>();
+    dst.register_serializable_component<NameTag>();
+    ASSERT_TRUE(dst.restore(blob).has_value());
+
+    int count = 0;
+    dst.each<TestPos, NameTag>([&](xebble::Entity, TestPos& p, NameTag& n) {
+        if (n.name == "Hero") {
+            EXPECT_FLOAT_EQ(p.x, 1.0f);
+            EXPECT_FLOAT_EQ(p.y, 2.0f);
+        } else {
+            EXPECT_EQ(n.name, "Villain");
+            EXPECT_FLOAT_EQ(p.x, 3.0f);
+            EXPECT_FLOAT_EQ(p.y, 4.0f);
+        }
+        ++count;
+    });
+    EXPECT_EQ(count, 2);
+}
+
+TEST(Serial_Custom, ComplexComponentWithMixedData) {
+    xebble::World src;
+    src.register_serializable_component<Stats>();
+    (void)src.build_entity().with(Stats{18, 14, "Warrior", {1.0f, 1.5f, 0.8f}}).build();
+
+    auto blob = src.snapshot();
+
+    xebble::World dst;
+    dst.register_serializable_component<Stats>();
+    ASSERT_TRUE(dst.restore(blob).has_value());
+
+    int count = 0;
+    dst.each<Stats>([&](xebble::Entity, Stats& s) {
+        EXPECT_EQ(s.strength, 18);
+        EXPECT_EQ(s.dexterity, 14);
+        EXPECT_EQ(s.title, "Warrior");
+        ASSERT_EQ(s.modifiers.size(), 3u);
+        EXPECT_FLOAT_EQ(s.modifiers[0], 1.0f);
+        EXPECT_FLOAT_EQ(s.modifiers[1], 1.5f);
+        EXPECT_FLOAT_EQ(s.modifiers[2], 0.8f);
+        ++count;
+    });
+    EXPECT_EQ(count, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Tests: custom-serializable resource round-trip
+// ---------------------------------------------------------------------------
+
+TEST(Serial_Custom, CustomResourceRoundTrip) {
+    xebble::World src;
+    src.add_serializable_resource(GameLog{{"You entered the dungeon.", "A goblin appears!"}});
+
+    auto blob = src.snapshot();
+
+    xebble::World dst;
+    dst.add_serializable_resource(GameLog{{}});
+    ASSERT_TRUE(dst.restore(blob).has_value());
+
+    auto& log = dst.resource<GameLog>();
+    ASSERT_EQ(log.entries.size(), 2u);
+    EXPECT_EQ(log.entries[0], "You entered the dungeon.");
+    EXPECT_EQ(log.entries[1], "A goblin appears!");
+}
+
+// ---------------------------------------------------------------------------
+// Tests: custom component + resource + trivial all together
+// ---------------------------------------------------------------------------
+
+TEST(Serial_Custom, EverythingTogether) {
+    xebble::World src;
+    src.register_serializable_component<TestPos>();
+    src.register_serializable_component<TestHealth>();
+    src.register_serializable_component<NameTag>();
+    src.register_serializable_component<Inventory>();
+    src.add_serializable_resource(TestScore{777});
+    src.add_serializable_resource(GameLog{{"Turn 1", "Turn 2"}});
+
+    (void)src.build_entity()
+        .with(TestPos{10.0f, 20.0f})
+        .with(TestHealth{50, 100})
+        .with(NameTag{"Player"})
+        .with(Inventory{{"magic staff", "robe"}})
+        .build();
+
+    auto blob = src.snapshot();
+
+    xebble::World dst;
+    dst.register_serializable_component<TestPos>();
+    dst.register_serializable_component<TestHealth>();
+    dst.register_serializable_component<NameTag>();
+    dst.register_serializable_component<Inventory>();
+    dst.add_serializable_resource(TestScore{0});
+    dst.add_serializable_resource(GameLog{{}});
+    ASSERT_TRUE(dst.restore(blob).has_value());
+
+    // Verify components
+    int count = 0;
+    dst.each<TestPos, TestHealth, NameTag, Inventory>(
+        [&](xebble::Entity, TestPos& p, TestHealth& h, NameTag& n, Inventory& inv) {
+            EXPECT_FLOAT_EQ(p.x, 10.0f);
+            EXPECT_FLOAT_EQ(p.y, 20.0f);
+            EXPECT_EQ(h.hp, 50);
+            EXPECT_EQ(h.max_hp, 100);
+            EXPECT_EQ(n.name, "Player");
+            ASSERT_EQ(inv.items.size(), 2u);
+            EXPECT_EQ(inv.items[0], "magic staff");
+            EXPECT_EQ(inv.items[1], "robe");
+            ++count;
+        });
+    EXPECT_EQ(count, 1);
+
+    // Verify resources
+    EXPECT_EQ(dst.resource<TestScore>().value, 777);
+    auto& log = dst.resource<GameLog>();
+    ASSERT_EQ(log.entries.size(), 2u);
+    EXPECT_EQ(log.entries[0], "Turn 1");
+    EXPECT_EQ(log.entries[1], "Turn 2");
+}
+
+// ---------------------------------------------------------------------------
+// Tests: unknown custom pool in blob is skipped gracefully
+// ---------------------------------------------------------------------------
+
+TEST(Serial_Custom, UnknownCustomPoolSkipped) {
+    xebble::World src;
+    src.register_serializable_component<NameTag>();
+    src.register_serializable_component<TestPos>();
+    (void)src.build_entity().with(NameTag{"test"}).with(TestPos{5.0f, 5.0f}).build();
+
+    auto blob = src.snapshot();
+
+    // Destination only knows TestPos — NameTag (custom) should be skipped.
+    xebble::World dst;
+    dst.register_serializable_component<TestPos>();
+    ASSERT_TRUE(dst.restore(blob).has_value());
+
+    int count = 0;
+    dst.each<TestPos>([&](xebble::Entity, TestPos& p) {
+        EXPECT_FLOAT_EQ(p.x, 5.0f);
+        ++count;
+    });
+    EXPECT_EQ(count, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Tests: double restore with custom components
+// ---------------------------------------------------------------------------
+
+TEST(Serial_Custom, DoubleRestoreClearsCustomComponents) {
+    xebble::World src1;
+    src1.register_serializable_component<NameTag>();
+    (void)src1.build_entity().with(NameTag{"First"}).build();
+    (void)src1.build_entity().with(NameTag{"Second"}).build();
+    auto blob1 = src1.snapshot();
+
+    xebble::World src2;
+    src2.register_serializable_component<NameTag>();
+    (void)src2.build_entity().with(NameTag{"Only"}).build();
+    auto blob2 = src2.snapshot();
+
+    xebble::World dst;
+    dst.register_serializable_component<NameTag>();
+    ASSERT_TRUE(dst.restore(blob1).has_value());
+
+    int count = 0;
+    dst.each<NameTag>([&](xebble::Entity, NameTag&) { ++count; });
+    EXPECT_EQ(count, 2);
+
+    ASSERT_TRUE(dst.restore(blob2).has_value());
+    count = 0;
+    std::string name;
+    dst.each<NameTag>([&](xebble::Entity, NameTag& n) {
+        name = n.name;
+        ++count;
+    });
+    EXPECT_EQ(count, 1);
+    EXPECT_EQ(name, "Only");
+}
