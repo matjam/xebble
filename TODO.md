@@ -15,7 +15,7 @@ Future features beyond the core renderer and ECS. The goal is for Xebble to hand
 ## Input
 
 - [ ] Gamepad / controller support via GLFW joystick API; add `GamepadButton` and `GamepadAxis` event types to `EventType`
-- [ ] `InputMap` — named action layer (action → key/button binding, rebindable, serializable); replaces per-game "is confirm pressed" boilerplate
+- [x] `InputMap` — named action layer (action → key/button binding, rebindable, serializable); replaces per-game "is confirm pressed" boilerplate
 
 ## Serialization
 

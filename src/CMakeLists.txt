@@ -19,6 +19,7 @@ add_library(xebble STATIC
     font.cpp
     asset_manager.cpp
     game.cpp
+    input_map.cpp
     world.cpp
     builtin_systems.cpp
     embedded_font.cpp

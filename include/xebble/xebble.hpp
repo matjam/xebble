@@ -15,6 +15,7 @@
 #include <xebble/fov.hpp>
 #include <xebble/game.hpp>
 #include <xebble/grid.hpp>
+#include <xebble/input_map.hpp>
 #include <xebble/log.hpp>
 #include <xebble/msglog.hpp>
 #include <xebble/pathfinding.hpp>

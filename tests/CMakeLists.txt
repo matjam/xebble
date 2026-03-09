@@ -17,6 +17,7 @@ add_executable(xebble_tests
     test_msglog.cpp
     test_procgen.cpp
     test_serial.cpp
+    test_input_map.cpp
 )
 
 target_link_libraries(xebble_tests PRIVATE

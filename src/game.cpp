@@ -6,6 +6,7 @@
 #include <xebble/embedded_font.hpp>
 #include <xebble/event.hpp>
 #include <xebble/game.hpp>
+#include <xebble/input_map.hpp>
 #include <xebble/log.hpp>
 #include <xebble/scene.hpp>
 #include <xebble/ui.hpp>
@@ -84,6 +85,8 @@ static bool inject_and_init(World& world, Renderer& renderer, AssetManager& asse
     world.add_resource<AudioEngine*>(&audio);
     if (!world.has_resource<EventQueue>())
         world.add_resource<EventQueue>(EventQueue{});
+    if (!world.has_resource<InputMap>())
+        world.add_resource<InputMap>(InputMap{});
 
     // Built-in components
     world.register_component<Position>();
@@ -128,6 +131,7 @@ static bool inject_and_init(World& world, Renderer& renderer, AssetManager& asse
 
     world.add_resource<UIContext>(UIContext{});
     world.resource<UIContext>().set_theme(&world.resource<UITheme>());
+    world.prepend_system<InputMapSystem>();
     world.prepend_system<UIInputSystem>();
     world.add_system<UIFlushSystem>();
 
