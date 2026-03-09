@@ -509,6 +509,10 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
             search_paths.push_back(exe_dir / "../share/xebble/shaders");
         }
 #endif
+        // When xebble is built as a subdirectory the shader output lands under
+        // <build>/xebble/shaders/ instead of <build>/shaders/.
+        search_paths.push_back("build/debug/xebble/shaders");
+        search_paths.push_back("build/release/xebble/shaders");
         search_paths.push_back("build/debug/shaders");
         search_paths.push_back("build/release/shaders");
         search_paths.push_back("shaders");
