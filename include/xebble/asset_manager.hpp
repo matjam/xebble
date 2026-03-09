@@ -178,7 +178,7 @@ struct SoundEntry {
 /// References a music file. The format is detected from the extension:
 ///   - WAV / FLAC / MP3 / OGG → miniaudio PCM streaming
 ///   - MOD / XM / IT / S3M / … → libxmp tracker music
-///   - SID / PSID / RSID → libsidplayfp (if compiled in)
+///   - SID / PSID / RSID → libsidplayfp
 ///
 /// Music assets are stored as raw bytes and passed to `AudioEngine` at
 /// playtime. They are not decoded eagerly.

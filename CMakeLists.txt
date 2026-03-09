@@ -47,26 +47,11 @@ target_include_directories(miniaudio::miniaudio INTERFACE "${MINIAUDIO_INCLUDE_D
 message(STATUS "Found miniaudio: ${MINIAUDIO_INCLUDE_DIR}/miniaudio.h")
 find_package(GTest CONFIG REQUIRED)
 
-# libsidplayfp is optional — not in vcpkg. Install via your OS package manager:
-#   Arch:   pacman -S libsidplayfp
-#   Debian: apt install libsidplayfp-dev
-#   macOS:  brew install libsidplayfp
-find_package(PkgConfig QUIET)
-if(PKG_CONFIG_FOUND)
-    pkg_check_modules(SIDPLAYFP QUIET libsidplayfp)
-endif()
-if(SIDPLAYFP_FOUND)
-    message(STATUS "Found libsidplayfp: SID chiptune support enabled")
-    set(XEBBLE_HAS_SIDPLAYFP TRUE)
-else()
-    message(STATUS "libsidplayfp not found: SID chiptune support disabled")
-    set(XEBBLE_HAS_SIDPLAYFP FALSE)
-endif()
-
 # shaderc for shader compilation
 find_package(unofficial-shaderc CONFIG REQUIRED)
 
 add_subdirectory(shaders)
+add_subdirectory(src/sidplay)
 add_subdirectory(src)
 add_subdirectory(examples)
 

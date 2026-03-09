@@ -1,11 +1,8 @@
 /// @file audio_sid.hpp
 /// @brief Internal libsidplayfp → miniaudio custom data source adapter.
 ///
-/// Compiled only when `XEBBLE_HAS_SIDPLAYFP` is defined.
 /// This header is private to `audio.cpp` and must not be included elsewhere.
 #pragma once
-
-#ifdef XEBBLE_HAS_SIDPLAYFP
 
 // miniaudio must already have its implementation compiled before this header
 // is pulled in (done once in audio.cpp).
@@ -259,5 +256,3 @@ inline void sid_ds_uninit(SidDataSource& ds) {
 }
 
 } // namespace xebble::internal
-
-#endif // XEBBLE_HAS_SIDPLAYFP

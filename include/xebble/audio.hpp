@@ -8,11 +8,10 @@
 /// |---|---|---|
 /// | WAV, FLAC, MP3, OGG Vorbis | miniaudio built-in decoders | Low-latency SFX + streaming music |
 /// | MOD, XM, IT, S3M, and 50+ tracker formats | libxmp | Classic demoscene / Amiga music |
-/// | SID (.sid) | libsidplayfp (optional) | C64 chiptune music |
+/// | SID (.sid) | libsidplayfp | C64 chiptune music |
 ///
-/// SID support is compiled in only when libsidplayfp is installed on the
-/// build host. The `XEBBLE_HAS_SIDPLAYFP` preprocessor macro is defined when
-/// it is available. Use `AudioEngine::sid_supported()` at runtime.
+/// SID support is always available — libsidplayfp and libresidfp are built
+/// from source automatically via CMake ExternalProject.
 ///
 /// ## Quick-start
 ///
@@ -166,7 +165,7 @@ public:
     /// The format is detected from the file extension:
     ///   - `.wav` / `.flac` / `.mp3` / `.ogg`  → miniaudio PCM decoder
     ///   - `.mod` / `.xm` / `.it` / `.s3m` / `.med` / … → libxmp
-    ///   - `.sid` / `.psid` / `.rsid`           → libsidplayfp (if available)
+    ///   - `.sid` / `.psid` / `.rsid`           → libsidplayfp
     ///
     /// `play_music()` is non-blocking; the audio thread begins decoding
     /// immediately.
@@ -236,10 +235,10 @@ public:
     // Capability queries
     // -----------------------------------------------------------------------
 
-    /// @brief Returns `true` if libsidplayfp SID support was compiled in.
+    /// @brief Returns `true` if libsidplayfp SID support is available.
     ///
-    /// When this returns `false`, calling `play_music()` with a `.sid` path
-    /// logs a warning and does nothing.
+    /// Always returns `true` — libsidplayfp is built from source and
+    /// unconditionally linked.
     [[nodiscard]] static bool sid_supported();
 
     /// @brief Returns `true` if the audio device was successfully opened.

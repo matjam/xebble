@@ -69,10 +69,5 @@ if(XEBBLE_MOLTENVK_ICD_PATH)
     )
 endif()
 
-# Optional SID chiptune support via libsidplayfp
-if(XEBBLE_HAS_SIDPLAYFP)
-    target_compile_definitions(xebble PUBLIC XEBBLE_HAS_SIDPLAYFP)
-    target_include_directories(xebble PRIVATE ${SIDPLAYFP_INCLUDE_DIRS})
-    target_link_libraries(xebble PUBLIC ${SIDPLAYFP_LIBRARIES})
-    target_link_options(xebble PUBLIC ${SIDPLAYFP_LDFLAGS_OTHER})
-endif()
+# SID chiptune support via libsidplayfp (built from source via ExternalProject)
+target_link_libraries(xebble PUBLIC sidplayfp)

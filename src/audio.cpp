@@ -4,7 +4,7 @@
 /// Translation unit layout:
 ///   1. miniaudio single-file implementation (MA_IMPLEMENTATION guard).
 ///   2. Internal XmpDataSource adapter (audio_xmp.hpp).
-///   3. Internal SidDataSource adapter (audio_sid.hpp, optional).
+///   3. Internal SidDataSource adapter (audio_sid.hpp).
 ///   4. AudioEngine::Impl — owns the ma_engine, active music state, and
 ///      cached sound buffer map.
 ///   5. AudioEngine public method bodies.
@@ -142,13 +142,11 @@ struct AudioEngine::Impl {
     bool xmp_sound_init = false;
     bool xmp_ds_init = false;
 
-#ifdef XEBBLE_HAS_SIDPLAYFP
     // SID chiptune music via libsidplayfp.
     internal::SidDataSource sid_ds{};
     ma_sound sid_sound{};
     bool sid_sound_init = false;
     bool sid_ds_init = false;
-#endif
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -172,7 +170,6 @@ struct AudioEngine::Impl {
                 xmp_ds_init = false;
             }
             break;
-#ifdef XEBBLE_HAS_SIDPLAYFP
         case MusicKind::Sid:
             if (sid_sound_init) {
                 ma_sound_uninit(&sid_sound);
@@ -183,7 +180,6 @@ struct AudioEngine::Impl {
                 sid_ds_init = false;
             }
             break;
-#endif
         case MusicKind::None:
             break;
         }
@@ -207,13 +203,11 @@ struct AudioEngine::Impl {
                 ma_sound_set_volume(&xmp_sound, vol);
             }
             break;
-#ifdef XEBBLE_HAS_SIDPLAYFP
         case MusicKind::Sid:
             if (sid_sound_init) {
                 ma_sound_set_volume(&sid_sound, vol);
             }
             break;
-#endif
         case MusicKind::None:
             break;
         }
@@ -483,7 +477,6 @@ void AudioEngine::play_music(const std::filesystem::path& path, bool loop) {
     const std::string ext = ext_lower(path);
 
     if (is_sid_ext(ext)) {
-#ifdef XEBBLE_HAS_SIDPLAYFP
         const ma_uint32 rate = ma_engine_get_sample_rate(&impl_->engine);
         ma_result r = internal::sid_ds_init_file(impl_->sid_ds, key.c_str(), loop, rate);
         if (r != MA_SUCCESS) {
@@ -508,10 +501,6 @@ void AudioEngine::play_music(const std::filesystem::path& path, bool loop) {
         ma_sound_set_volume(&impl_->sid_sound, impl_->master_volume * impl_->music_volume);
         ma_sound_start(&impl_->sid_sound);
         impl_->music_kind = MusicKind::Sid;
-#else
-        log(LogLevel::Warn, "AudioEngine: SID support not compiled in. "
-                            "Install libsidplayfp and rebuild.");
-#endif
         return;
     }
 
@@ -577,7 +566,6 @@ void AudioEngine::play_music_from_memory(const void* data, std::size_t size, std
     }
 
     if (is_sid_ext(ext)) {
-#ifdef XEBBLE_HAS_SIDPLAYFP
         const ma_uint32 rate = ma_engine_get_sample_rate(&impl_->engine);
         ma_result r = internal::sid_ds_init_memory(impl_->sid_ds, data, size, loop, rate);
         if (r != MA_SUCCESS) {
@@ -600,9 +588,6 @@ void AudioEngine::play_music_from_memory(const void* data, std::size_t size, std
         ma_sound_set_volume(&impl_->sid_sound, impl_->master_volume * impl_->music_volume);
         ma_sound_start(&impl_->sid_sound);
         impl_->music_kind = MusicKind::Sid;
-#else
-        log(LogLevel::Warn, "AudioEngine: SID support not compiled in.");
-#endif
         return;
     }
 
@@ -698,7 +683,6 @@ void AudioEngine::set_music_paused(bool paused) {
             }
         }
         break;
-#ifdef XEBBLE_HAS_SIDPLAYFP
     case MusicKind::Sid:
         if (impl_->sid_sound_init) {
             if (paused) {
@@ -708,7 +692,6 @@ void AudioEngine::set_music_paused(bool paused) {
             }
         }
         break;
-#endif
     case MusicKind::None:
         break;
     }
@@ -768,11 +751,7 @@ float AudioEngine::music_volume() const {
 // ---------------------------------------------------------------------------
 
 bool AudioEngine::sid_supported() {
-#ifdef XEBBLE_HAS_SIDPLAYFP
     return true;
-#else
-    return false;
-#endif
 }
 
 bool AudioEngine::device_available() const {
@@ -814,13 +793,11 @@ void AudioEngine::update() {
             impl_->stop_current_music();
         }
     }
-#ifdef XEBBLE_HAS_SIDPLAYFP
     if (impl_->music_kind == MusicKind::Sid && impl_->sid_sound_init) {
         if (impl_->sid_ds.at_end) {
             impl_->stop_current_music();
         }
     }
-#endif
 }
 
 } // namespace xebble

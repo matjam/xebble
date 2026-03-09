@@ -6,7 +6,7 @@ Future features beyond the core renderer and ECS. The goal is for Xebble to hand
 
 ## Audio ✓ DONE
 
-- [x] Integrate a thin audio wrapper (miniaudio header-only + libxmp + optional libsidplayfp) for sound effects and music streaming
+- [x] Integrate a thin audio wrapper (miniaudio header-only + libxmp + vendored libsidplayfp) for sound effects and music streaming
 - [x] `play_sound(asset)` / `play_music(asset, loop)` / `set_volume()` / master + sfx + music volume controls
 - [x] Expose audio assets through `AssetManager` and the TOML manifest (`[sounds]` / `[music]` tables)
 - [x] `AudioEngine` injected as a World resource; `update()` called per frame by `xebble::run()`
