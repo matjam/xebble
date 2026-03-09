@@ -8,6 +8,8 @@
 #include <xebble/world.hpp>
 
 #include <algorithm>
+#include <cmath>
+#include <format>
 #include <ranges>
 
 namespace xebble {
@@ -635,6 +637,142 @@ bool PanelBuilder::text_input(std::string_view id, std::u8string& value, TextInp
     }
 
     return submitted;
+}
+
+void PanelBuilder::progress_bar(float value, float max, ProgressBarStyle style) {
+    if (max <= 0.0f) {
+        max = 1.0f;
+    }
+    float clamped = std::clamp(value, 0.0f, max);
+    float fraction = clamped / max;
+
+    float h = style.height > 0.0f ? style.height : text_height() + padding_ * 2;
+    auto r = next_control_rect(h);
+
+    // Background (empty portion).
+    Color bg = pick_color(style.bg_color, ctx_.theme_->progress_bg_color);
+    ctx_.draw_rect(r, bg, z_base_ + 0.05f);
+
+    // Filled portion.
+    if (fraction > 0.0f) {
+        Color fill = pick_color(style.fill_color, ctx_.theme_->progress_fill_color);
+        Rect fill_rect = {r.x, r.y, r.w * fraction, r.h};
+        ctx_.draw_rect(fill_rect, fill, z_base_ + 0.06f);
+    }
+
+    // Optional text overlay ("value / max").
+    if (style.show_text) {
+        // Format as integers if both are whole numbers, otherwise one decimal.
+        std::u8string label;
+        std::string s;
+        if (value == std::floor(value) && max == std::floor(max)) {
+            s = std::format("{} / {}", static_cast<int>(clamped), static_cast<int>(max));
+        } else {
+            s = std::format("{:.1f} / {:.1f}", clamped, max);
+        }
+        label = std::u8string(s.begin(), s.end());
+
+        float text_w = measure_text_width(label);
+        float text_x = r.x + (r.w - text_w) / 2.0f;
+        float text_y = r.y + (r.h - text_height()) / 2.0f;
+        Color text_col = pick_color(style.text_color, ctx_.theme_->progress_text_color);
+        ctx_.draw_text_at(label, text_x, text_y, text_col, z_base_ + 0.1f);
+    }
+}
+
+void PanelBuilder::separator(SeparatorStyle style) {
+    float thickness = style.thickness > 0.0f ? style.thickness : 1.0f;
+    float top_m = style.top_margin > 0.0f ? style.top_margin : margin_;
+    float bottom_m = style.bottom_margin > 0.0f ? style.bottom_margin : margin_;
+
+    // Add extra top margin (subtract the default margin that next_control_rect adds).
+    if (top_m > margin_) {
+        cursor_y_ += top_m - margin_;
+    }
+
+    auto r = next_control_rect(thickness);
+
+    Color col = pick_color(style.color, ctx_.theme_->separator_color);
+    ctx_.draw_rect(r, col, z_base_ + 0.05f);
+
+    // Adjust cursor for custom bottom margin (next widget call will add its own margin_).
+    if (bottom_m > margin_) {
+        cursor_y_ += bottom_m - margin_;
+    }
+}
+
+void PanelBuilder::message_log(std::string_view id, const MessageLog& log, MessageLogStyle style) {
+    float row_h = text_height() + padding_;
+    auto visible_rows = static_cast<int>(style.visible_rows);
+    float total_h = row_h * static_cast<float>(visible_rows);
+    auto r = next_control_rect(total_h);
+
+    // Background.
+    Color bg = pick_color(style.bg_color, ctx_.theme_->msglog_bg_color);
+    ctx_.draw_rect(r, bg, z_base_ + 0.05f);
+
+    if (log.empty()) {
+        return;
+    }
+
+    std::string id_str(id);
+    int& scroll_offset = ctx_.scroll_offsets_[id_str];
+
+    ctx_.register_widget(id_str, r);
+
+    int total_messages = static_cast<int>(log.size());
+    int max_scroll = std::max(0, total_messages - visible_rows);
+
+    // Auto-scroll: pin to bottom when enabled and user hasn't scrolled up.
+    if (style.auto_scroll && scroll_offset >= max_scroll - 1) {
+        scroll_offset = max_scroll;
+    }
+
+    // Handle mouse scroll.
+    if (ctx_.is_hot(id_str) && ctx_.frame_events_ != nullptr) {
+        for (auto& e : *ctx_.frame_events_) {
+            if (e.type == EventType::MouseScroll && !e.consumed) {
+                scroll_offset -= static_cast<int>(e.mouse_scroll().dy);
+                e.consumed = true;
+                break;
+            }
+        }
+    }
+
+    scroll_offset = std::clamp(scroll_offset, 0, max_scroll);
+
+    // Draw visible messages.
+    int vis_count = std::min(visible_rows, total_messages - scroll_offset);
+    for (int i = 0; i < vis_count; ++i) {
+        int msg_idx = scroll_offset + i;
+        if (msg_idx < 0 || msg_idx >= total_messages) {
+            break;
+        }
+
+        const auto& msg = log[static_cast<size_t>(msg_idx)];
+        float msg_y = r.y + static_cast<float>(i) * row_h;
+
+        // Convert LogColor to Color.
+        Color text_col = {msg.color.r, msg.color.g, msg.color.b, msg.color.a};
+        ctx_.draw_text_at(msg.text, r.x + padding_, msg_y + padding_ * 0.5f, text_col,
+                          z_base_ + 0.1f);
+    }
+
+    // Draw a small scroll indicator if there are messages above or below.
+    if (max_scroll > 0) {
+        Color indicator_col = ctx_.theme_->separator_color;
+        if (scroll_offset > 0) {
+            // Up arrow indicator (small rect at top-right).
+            Rect up_rect = {r.x + r.w - padding_ * 2, r.y + 1.0f, padding_, padding_};
+            ctx_.draw_rect(up_rect, indicator_col, z_base_ + 0.08f);
+        }
+        if (scroll_offset < max_scroll) {
+            // Down arrow indicator (small rect at bottom-right).
+            Rect down_rect = {r.x + r.w - padding_ * 2, r.y + total_h - padding_ - 1.0f, padding_,
+                              padding_};
+            ctx_.draw_rect(down_rect, indicator_col, z_base_ + 0.08f);
+        }
+    }
 }
 
 // --- Systems ---

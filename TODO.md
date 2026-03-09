@@ -24,8 +24,9 @@ Future features beyond the core renderer and ECS. The goal is for Xebble to hand
 
 ## UI Widgets
 
-- [ ] `progress_bar(value, max, style)` widget — health bars, loading indicators; used in almost every game
-- [ ] Scrollable text / log view widget — integrate `MessageLog` directly into `UIContext`
+- [x] `progress_bar(value, max, style)` widget — health bars, loading indicators; fill + background + optional text overlay
+- [x] `separator(style)` widget — horizontal divider line between widget groups
+- [x] `message_log(id, log, style)` widget — scrollable `MessageLog` view with per-message colors, mouse-scroll, auto-scroll
 - [ ] Tooltip support
 - [ ] Modal dialog with backdrop
 - [ ] Number input / slider widget

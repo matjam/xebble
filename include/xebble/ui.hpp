@@ -63,6 +63,7 @@
 
 #include <xebble/event.hpp>
 #include <xebble/font.hpp>
+#include <xebble/msglog.hpp>
 #include <xebble/renderer.hpp>
 #include <xebble/system.hpp>
 #include <xebble/types.hpp>
@@ -182,6 +183,51 @@ struct TextInputStyle {
     Color text_color = {0, 0, 0, 0};   ///< Input text colour.
 };
 
+/// @brief Style overrides for a progress bar widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
+///
+/// @code
+/// // Red health bar.
+/// p.progress_bar(hp, max_hp, ProgressBarStyle{
+///     .fill_color = {180, 40, 40, 255},
+///     .bg_color   = {40,  20, 20, 255},
+/// });
+/// @endcode
+struct ProgressBarStyle {
+    Color fill_color = {0, 0, 0, 0}; ///< Filled portion colour.
+    Color bg_color = {0, 0, 0, 0};   ///< Empty portion background colour.
+    Color text_color = {0, 0, 0, 0}; ///< Optional overlay text colour.
+    float height = 0.0f;             ///< Bar height in pixels; 0 = use glyph height + padding.
+    bool show_text = false;          ///< If true, draw "value / max" centered on the bar.
+};
+
+/// @brief Style overrides for a horizontal separator widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
+struct SeparatorStyle {
+    Color color = {0, 0, 0, 0}; ///< Line colour; {0,0,0,0} = use theme text colour at half alpha.
+    float thickness = 0.0f;     ///< Line thickness in pixels; 0 = 1 pixel.
+    float top_margin = 0.0f;    ///< Extra space above the separator; 0 = use theme margin.
+    float bottom_margin = 0.0f; ///< Extra space below the separator; 0 = use theme margin.
+};
+
+/// @brief Style overrides for a message log widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
+///
+/// @code
+/// p.message_log("combat_log", log, MessageLogStyle{
+///     .visible_rows = 6,
+///     .bg_color = {20, 20, 30, 200},
+/// });
+/// @endcode
+struct MessageLogStyle {
+    Color bg_color = {0, 0, 0, 0}; ///< Background colour for the log area.
+    float visible_rows = 8;        ///< Number of text rows visible at once.
+    bool auto_scroll = true;       ///< Automatically scroll to show the newest message.
+};
+
 /// @brief Visual theme controlling colours, spacing, and z-ordering for all UI.
 ///
 /// Assign a theme to `UIContext` (via `set_theme()` or through
@@ -222,6 +268,11 @@ struct UITheme {
     Color input_active_color = {50, 50, 70, 255};        ///< Text input background (focused).
     Color list_color = {40, 40, 50, 255};                ///< List row background.
     Color list_selected_color = {70, 70, 100, 255};      ///< Selected list row background.
+    Color progress_fill_color = {80, 160, 80, 255};      ///< Progress bar filled portion.
+    Color progress_bg_color = {40, 40, 50, 255};         ///< Progress bar empty portion.
+    Color progress_text_color = {230, 230, 230, 255};    ///< Progress bar overlay text.
+    Color separator_color = {100, 100, 120, 128};        ///< Horizontal separator line.
+    Color msglog_bg_color = {30, 30, 40, 200};           ///< Message log background.
     float padding = 4.0f;                                ///< Inner padding within a panel (px).
     float margin = 2.0f;                                 ///< Vertical gap between widgets (px).
     float z_order = 100.0f;                              ///< Base draw depth for all UI elements.
@@ -326,6 +377,49 @@ public:
     /// @endcode
     [[nodiscard]] bool text_input(std::string_view id, std::u8string& value,
                                   TextInputStyle style = {});
+
+    /// @brief Draw a horizontal progress bar showing value out of max.
+    ///
+    /// Useful for health bars, XP bars, loading indicators, and any other
+    /// value/max display. Optionally overlays "value / max" text on the bar.
+    ///
+    /// @param value  Current value (clamped to [0, max]).
+    /// @param max    Maximum value; must be > 0.
+    /// @param style  Visual overrides.
+    ///
+    /// @code
+    /// p.progress_bar(player_hp, player_max_hp);
+    /// p.progress_bar(xp, xp_to_level, ProgressBarStyle{
+    ///     .fill_color = {100, 100, 200, 255},
+    ///     .show_text  = true,
+    /// });
+    /// @endcode
+    void progress_bar(float value, float max, ProgressBarStyle style = {});
+
+    /// @brief Draw a horizontal separator line between widget groups.
+    ///
+    /// @code
+    /// p.text("Character Stats");
+    /// p.separator();
+    /// p.text("STR: 18");
+    /// p.text("DEX: 14");
+    /// @endcode
+    void separator(SeparatorStyle style = {});
+
+    /// @brief Draw a scrollable message log view.
+    ///
+    /// Displays the most recent messages from a `MessageLog`, with per-message
+    /// colors preserved. Supports mouse-scroll to view older messages.
+    ///
+    /// @param id     Unique string identifier for scroll state.
+    /// @param log    The MessageLog to display.
+    /// @param style  Visual overrides.
+    ///
+    /// @code
+    /// auto& log = world.resource<MessageLog>();
+    /// p.message_log("game_log", log);
+    /// @endcode
+    void message_log(std::string_view id, const MessageLog& log, MessageLogStyle style = {});
 
     /// @brief Lay out child widgets horizontally on a single row.
     ///
