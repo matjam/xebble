@@ -37,7 +37,8 @@ add_library(xebble STATIC
 )
 
 target_include_directories(xebble PUBLIC
-    ${PROJECT_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 target_link_libraries(xebble PUBLIC

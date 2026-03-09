@@ -484,7 +484,7 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
         impl.offscreen_descriptors[i] = impl.get_or_create_descriptor(*impl.offscreen_textures[i]);
     }
 
-    // Find shader directory: .app bundle > relative to exe > build paths
+    // Find shader directory: .app bundle > relative to exe > installed prefix > build paths
     auto shader_dir = std::filesystem::path();
     {
         std::vector<std::filesystem::path> search_paths;
@@ -495,6 +495,18 @@ std::expected<Renderer, Error> Renderer::create(Window& window, const RendererCo
             auto exe_dir = std::filesystem::path(exe_buf).parent_path();
             search_paths.push_back(exe_dir / "../Resources/shaders"); // .app bundle
             search_paths.push_back(exe_dir / "shaders");              // next to exe
+            // Installed prefix: exe is in <prefix>/bin, shaders in <prefix>/share/xebble/shaders
+            search_paths.push_back(exe_dir / "../share/xebble/shaders");
+        }
+#elifdef __linux__
+        // Resolve the executable path via /proc/self/exe
+        std::error_code ec;
+        auto exe_path = std::filesystem::read_symlink("/proc/self/exe", ec);
+        if (!ec) {
+            auto exe_dir = exe_path.parent_path();
+            search_paths.push_back(exe_dir / "shaders"); // next to exe
+            // Installed prefix: exe is in <prefix>/bin, shaders in <prefix>/share/xebble/shaders
+            search_paths.push_back(exe_dir / "../share/xebble/shaders");
         }
 #endif
         search_paths.push_back("build/debug/shaders");

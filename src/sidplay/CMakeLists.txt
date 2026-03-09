@@ -109,10 +109,9 @@ target_include_directories(sidplayfp
         ${CMAKE_CURRENT_SOURCE_DIR}/sidtune
     PUBLIC
         # Public API: <sidplayfp/sidplayfp.h>, <sidplayfp/builders/residfp.h>, etc.
-        # The directory layout under sidplay/ mirrors the installed include tree:
-        #   sidplay/sidplayfp/sidplayfp.h  ->  <sidplayfp/sidplayfp.h>
-        #   sidplay/sidplayfp/builders/residfp.h  ->  <sidplayfp/builders/residfp.h>
-        ${CMAKE_CURRENT_SOURCE_DIR}
+        # Only needed at build time — xebble wraps sidplayfp completely so
+        # consumers never #include sidplayfp headers directly.
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
 # The code uses #ifdef HAVE_CONFIG_H / #include "config.h" in several TUs.

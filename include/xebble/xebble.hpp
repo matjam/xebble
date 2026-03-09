@@ -21,6 +21,7 @@
 #include <xebble/pathfinding.hpp>
 #include <xebble/procgen.hpp>
 #include <xebble/renderer.hpp>
+#include <xebble/rng.hpp>
 #include <xebble/scene.hpp>
 #include <xebble/serial.hpp>
 #include <xebble/spritesheet.hpp>

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 4.0)
 project(xebble VERSION 0.1.0 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -95,3 +98,57 @@ endif()
 
 enable_testing()
 add_subdirectory(tests)
+
+# ---------------------------------------------------------------------------
+# Install rules — allow consumers to find_package(xebble)
+# ---------------------------------------------------------------------------
+
+# Install public headers
+install(DIRECTORY include/xebble
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Install compiled SPIR-V shaders
+set(XEBBLE_SHADER_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/xebble/shaders)
+install(FILES
+    ${CMAKE_BINARY_DIR}/shaders/sprite.vert.spv
+    ${CMAKE_BINARY_DIR}/shaders/sprite.frag.spv
+    ${CMAKE_BINARY_DIR}/shaders/blit.vert.spv
+    ${CMAKE_BINARY_DIR}/shaders/blit.frag.spv
+    DESTINATION ${XEBBLE_SHADER_INSTALL_DIR}
+)
+
+# Install library targets and generate export set
+install(TARGETS xebble sidplayfp
+    EXPORT xebbleTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# Install the export set
+install(EXPORT xebbleTargets
+    FILE xebbleTargets.cmake
+    NAMESPACE xebble::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xebble
+)
+
+# Generate and install the package config file
+configure_package_config_file(
+    cmake/xebbleConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/xebbleConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xebble
+    PATH_VARS XEBBLE_SHADER_INSTALL_DIR
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/xebbleConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/xebbleConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/xebbleConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xebble
+)
