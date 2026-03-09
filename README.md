@@ -53,20 +53,39 @@ glfw3, vulkan-headers, vulkan-loader, vulkan-memory-allocator, stb, freetype, sh
 
 - **libsidplayfp 2.16.1** (GPL-2.0-or-later) -- SID chip emulation for chiptune audio
 
-## Installing as a library
+## Using xebble in another project
 
-Xebble can be installed and consumed by other CMake projects via `find_package()`:
+### Option 1: add_subdirectory (recommended for local development)
+
+If xebble lives alongside your game in `~/src/`, point directly at the source tree:
+
+```cmake
+cmake_minimum_required(VERSION 4.0)
+project(my_game LANGUAGES CXX)
+
+add_subdirectory(../xebble xebble)
+
+add_executable(my_game main.cpp)
+target_link_libraries(my_game PRIVATE xebble)
+add_dependencies(my_game xebble_shaders)
+```
+
+Your game project needs the same vcpkg toolchain. The simplest approach is to
+copy xebble's `vcpkg.json` dependencies into your own manifest (or inherit them).
+When xebble is included via `add_subdirectory()` its examples and tests are
+automatically skipped -- only the library, shaders, and sidplayfp are built.
+
+### Option 2: install + find_package
+
+For a more traditional setup, install xebble to a local prefix:
 
 ```bash
-# Build and install to a local prefix
 cmake --preset release
 cmake --build build/release
 cmake --install build/release --prefix ~/.local
 ```
 
-### Consuming from another project
-
-In your game's `CMakeLists.txt`:
+Then in your game's `CMakeLists.txt`:
 
 ```cmake
 cmake_minimum_required(VERSION 4.0)
@@ -78,13 +97,9 @@ add_executable(my_game main.cpp)
 target_link_libraries(my_game PRIVATE xebble::xebble)
 ```
 
-Your game project will also need vcpkg for the transitive dependencies. Set the
-same `CMAKE_TOOLCHAIN_FILE` in your presets or command line. The `xebbleConfig.cmake`
-package file calls `find_dependency()` for all required packages automatically.
-
-The installed package also exports `XEBBLE_SHADER_DIR` pointing to the installed
-SPIR-V shaders, though the renderer searches for them automatically relative to
-the executable.
+Your game project needs vcpkg for the transitive dependencies. The
+`xebbleConfig.cmake` package file calls `find_dependency()` for all required
+packages automatically.
 
 ## Examples
 

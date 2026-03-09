@@ -25,8 +25,9 @@ if(APPLE)
     add_link_options("LINKER:-no_warn_duplicate_libraries")
 endif()
 
-option(XEBBLE_PROFILE "Enable gperftools CPU profiling in ex06_ecs" OFF)
-
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
 find_package(Vulkan REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
@@ -45,59 +46,73 @@ find_path(MINIAUDIO_INCLUDE_DIR miniaudio.h
         "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed/${VCPKG_TARGET_TRIPLET}/include"
     REQUIRED
 )
-add_library(miniaudio::miniaudio INTERFACE IMPORTED)
-target_include_directories(miniaudio::miniaudio INTERFACE "${MINIAUDIO_INCLUDE_DIR}")
+if(NOT TARGET miniaudio::miniaudio)
+    add_library(miniaudio::miniaudio INTERFACE IMPORTED)
+    target_include_directories(miniaudio::miniaudio INTERFACE "${MINIAUDIO_INCLUDE_DIR}")
+endif()
 message(STATUS "Found miniaudio: ${MINIAUDIO_INCLUDE_DIR}/miniaudio.h")
-find_package(GTest CONFIG REQUIRED)
 
 # shaderc for shader compilation
 find_package(unofficial-shaderc CONFIG REQUIRED)
 
+# ---------------------------------------------------------------------------
+# Core library targets
+# ---------------------------------------------------------------------------
 add_subdirectory(shaders)
 add_subdirectory(src/sidplay)
 add_subdirectory(src)
-add_subdirectory(examples)
 
-# On macOS, find and bundle MoltenVK so binaries are self-contained
-if(APPLE)
-    find_library(MOLTENVK_LIB MoltenVK HINTS /opt/homebrew/lib /usr/local/lib)
-    if(MOLTENVK_LIB)
-        message(STATUS "Found MoltenVK: ${MOLTENVK_LIB}")
+# ---------------------------------------------------------------------------
+# Examples, tests, MoltenVK bundling — only when building xebble directly
+# ---------------------------------------------------------------------------
+if(PROJECT_IS_TOP_LEVEL)
+    option(XEBBLE_PROFILE "Enable gperftools CPU profiling in ex06_ecs" OFF)
 
-        # Resolve symlinks to get the real dylib path
-        get_filename_component(MOLTENVK_REAL "${MOLTENVK_LIB}" REALPATH)
+    find_package(GTest CONFIG REQUIRED)
 
-        # Copy dylib to build output
-        file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
-        file(COPY_FILE "${MOLTENVK_REAL}" "${CMAKE_BINARY_DIR}/lib/libMoltenVK.dylib"
-             ONLY_IF_DIFFERENT)
+    add_subdirectory(examples)
 
-        # Generate ICD JSON pointing to the bundled dylib
-        file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/vulkan/icd.d")
-        file(WRITE "${CMAKE_BINARY_DIR}/vulkan/icd.d/MoltenVK_icd.json"
-            "{\n"
-            "    \"file_format_version\": \"1.0.0\",\n"
-            "    \"ICD\": {\n"
-            "        \"library_path\": \"${CMAKE_BINARY_DIR}/lib/libMoltenVK.dylib\",\n"
-            "        \"api_version\": \"1.2.0\",\n"
-            "        \"is_portability_driver\": true\n"
-            "    }\n"
-            "}\n"
-        )
+    # On macOS, find and bundle MoltenVK so binaries are self-contained
+    if(APPLE)
+        find_library(MOLTENVK_LIB MoltenVK HINTS /opt/homebrew/lib /usr/local/lib)
+        if(MOLTENVK_LIB)
+            message(STATUS "Found MoltenVK: ${MOLTENVK_LIB}")
 
-        set(XEBBLE_MOLTENVK_ICD_PATH "${CMAKE_BINARY_DIR}/vulkan/icd.d/MoltenVK_icd.json"
-            CACHE INTERNAL "Path to bundled MoltenVK ICD JSON")
+            # Resolve symlinks to get the real dylib path
+            get_filename_component(MOLTENVK_REAL "${MOLTENVK_LIB}" REALPATH)
 
-        message(STATUS "MoltenVK bundled to: ${CMAKE_BINARY_DIR}/lib/libMoltenVK.dylib")
-    else()
-        message(FATAL_ERROR
-            "MoltenVK not found. Install via: brew install molten-vk\n"
-            "Or set MOLTENVK_LIB to the path of libMoltenVK.dylib")
+            # Copy dylib to build output
+            file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+            file(COPY_FILE "${MOLTENVK_REAL}" "${CMAKE_BINARY_DIR}/lib/libMoltenVK.dylib"
+                 ONLY_IF_DIFFERENT)
+
+            # Generate ICD JSON pointing to the bundled dylib
+            file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/vulkan/icd.d")
+            file(WRITE "${CMAKE_BINARY_DIR}/vulkan/icd.d/MoltenVK_icd.json"
+                "{\n"
+                "    \"file_format_version\": \"1.0.0\",\n"
+                "    \"ICD\": {\n"
+                "        \"library_path\": \"${CMAKE_BINARY_DIR}/lib/libMoltenVK.dylib\",\n"
+                "        \"api_version\": \"1.2.0\",\n"
+                "        \"is_portability_driver\": true\n"
+                "    }\n"
+                "}\n"
+            )
+
+            set(XEBBLE_MOLTENVK_ICD_PATH "${CMAKE_BINARY_DIR}/vulkan/icd.d/MoltenVK_icd.json"
+                CACHE INTERNAL "Path to bundled MoltenVK ICD JSON")
+
+            message(STATUS "MoltenVK bundled to: ${CMAKE_BINARY_DIR}/lib/libMoltenVK.dylib")
+        else()
+            message(FATAL_ERROR
+                "MoltenVK not found. Install via: brew install molten-vk\n"
+                "Or set MOLTENVK_LIB to the path of libMoltenVK.dylib")
+        endif()
     endif()
-endif()
 
-enable_testing()
-add_subdirectory(tests)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 # ---------------------------------------------------------------------------
 # Install rules — allow consumers to find_package(xebble)
