@@ -75,6 +75,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -149,10 +150,11 @@ struct TextStyle {
 /// if (p.button("Delete Save", danger_btn)) { delete_save_file(); }
 /// @endcode
 struct ButtonStyle {
-    Color color = {0, 0, 0, 0};       ///< Normal button background colour.
-    Color hover_color = {0, 0, 0, 0}; ///< Background colour when the cursor hovers.
-    Color text_color = {0, 0, 0, 0};  ///< Button label text colour.
-    float width = 0.0f;               ///< Fixed width in pixels; 0 = fill panel content width.
+    Color color = {0, 0, 0, 0};         ///< Normal button background colour.
+    Color hover_color = {0, 0, 0, 0};   ///< Background colour when the cursor hovers.
+    Color pressed_color = {0, 0, 0, 0}; ///< Background colour when mouse is held down.
+    Color text_color = {0, 0, 0, 0};    ///< Button label text colour.
+    float width = 0.0f;                 ///< Fixed width in pixels; 0 = fill panel content width.
 };
 
 /// @brief Style overrides for a checkbox widget.
@@ -162,6 +164,15 @@ struct CheckboxStyle {
     Color color = {0, 0, 0, 0};         ///< Unchecked box background colour.
     Color checked_color = {0, 0, 0, 0}; ///< Checked box background colour.
     Color text_color = {0, 0, 0, 0};    ///< Label text colour.
+};
+
+/// @brief Style overrides for a radio button widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
+struct RadioButtonStyle {
+    Color color = {0, 0, 0, 0};          ///< Unselected dot background colour.
+    Color selected_color = {0, 0, 0, 0}; ///< Selected dot background colour.
+    Color text_color = {0, 0, 0, 0};     ///< Label text colour.
 };
 
 /// @brief Style overrides for a scrollable list widget.
@@ -200,6 +211,21 @@ struct ProgressBarStyle {
     Color text_color = {0, 0, 0, 0}; ///< Optional overlay text colour.
     float height = 0.0f;             ///< Bar height in pixels; 0 = use glyph height + padding.
     bool show_text = false;          ///< If true, draw "value / max" centered on the bar.
+};
+
+/// @brief Style overrides for a horizontal slider widget.
+///
+/// Any field left at `{0,0,0,0}` inherits from the active theme.
+///
+/// @code
+/// static float volume = 0.75f;
+/// p.slider("volume", u8"Volume", volume, 0.0f, 1.0f);
+/// @endcode
+struct SliderStyle {
+    Color track_color = {0, 0, 0, 0}; ///< Background track colour.
+    Color thumb_color = {0, 0, 0, 0}; ///< Thumb/handle colour.
+    Color text_color = {0, 0, 0, 0};  ///< Label text colour.
+    bool show_value = true;           ///< If true, display the current value as text.
 };
 
 /// @brief Style overrides for a horizontal separator widget.
@@ -258,12 +284,19 @@ struct UITheme {
     std::variant<const BitmapFont*, const Font*> font = static_cast<const BitmapFont*>(nullptr);
 
     Color bg_color = {20, 20, 30, 220};                  ///< Panel background fill colour.
+    Color border_color = {100, 100, 130, 200};           ///< Border colour for panels and controls.
+    float border_width = 1.0f;                           ///< Border thickness in pixels.
     Color text_color = {200, 200, 200, 255};             ///< Default label/text colour.
     Color button_color = {60, 60, 80, 255};              ///< Button background (normal).
     Color button_hover_color = {80, 80, 110, 255};       ///< Button background (hovered).
+    Color button_pressed_color = {40, 40, 60, 255};      ///< Button background (mouse held down).
     Color button_text_color = {230, 230, 230, 255};      ///< Button label colour.
     Color checkbox_color = {60, 60, 80, 255};            ///< Checkbox background (unchecked).
     Color checkbox_checked_color = {100, 180, 100, 255}; ///< Checkbox background (checked).
+    Color radio_color = {60, 60, 80, 255};               ///< Radio button background (unselected).
+    Color radio_selected_color = {100, 180, 100, 255};   ///< Radio button background (selected).
+    Color slider_track_color = {40, 40, 50, 255};        ///< Slider track background.
+    Color slider_thumb_color = {100, 100, 140, 255};     ///< Slider thumb/handle.
     Color input_color = {40, 40, 50, 255};               ///< Text input background (inactive).
     Color input_active_color = {50, 50, 70, 255};        ///< Text input background (focused).
     Color list_color = {40, 40, 50, 255};                ///< List row background.
@@ -273,8 +306,8 @@ struct UITheme {
     Color progress_text_color = {230, 230, 230, 255};    ///< Progress bar overlay text.
     Color separator_color = {100, 100, 120, 128};        ///< Horizontal separator line.
     Color msglog_bg_color = {30, 30, 40, 200};           ///< Message log background.
-    float padding = 4.0f;                                ///< Inner padding within a panel (px).
-    float margin = 2.0f;                                 ///< Vertical gap between widgets (px).
+    float padding = 6.0f;                                ///< Inner padding within a panel (px).
+    float margin = 4.0f;                                 ///< Vertical gap between widgets (px).
     float z_order = 100.0f;                              ///< Base draw depth for all UI elements.
 };
 
@@ -307,7 +340,7 @@ class UIContext;
 /// @endcode
 class PanelBuilder {
 public:
-    PanelBuilder(UIContext& ctx, Rect panel_rect, float z_base);
+    PanelBuilder(UIContext& ctx, Rect panel_rect, float z_base, std::string_view panel_id);
 
     /// @brief Draw a static text label.
     ///
@@ -344,6 +377,39 @@ public:
     ///            CheckboxStyle{ .checked_color = {80, 150, 80, 255} });
     /// @endcode
     void checkbox(std::u8string_view label, bool& value, CheckboxStyle style = {});
+
+    /// @brief Draw a labelled radio button. Sets @p selected to @p value when clicked.
+    ///
+    /// Multiple radio buttons sharing the same `int& selected` form a group —
+    /// only the one whose @p value matches @p selected is shown as active.
+    ///
+    /// @code
+    /// static int difficulty = 1;
+    /// p.radio_button(u8"Easy",   difficulty, 0);
+    /// p.radio_button(u8"Normal", difficulty, 1);
+    /// p.radio_button(u8"Hard",   difficulty, 2);
+    /// @endcode
+    void radio_button(std::u8string_view label, int& selected, int value,
+                      RadioButtonStyle style = {});
+
+    /// @brief Draw a horizontal slider for adjusting a floating-point value.
+    ///
+    /// Click or drag anywhere on the track to set the value. The slider
+    /// responds to mouse-down dragging via `active_id_`.
+    ///
+    /// @param id     Unique string identifier.
+    /// @param label  Text label drawn to the left of the slider.
+    /// @param value  Current value (modified in place, clamped to [min, max]).
+    /// @param min    Minimum value.
+    /// @param max    Maximum value.
+    /// @param style  Visual overrides.
+    ///
+    /// @code
+    /// static float volume = 0.75f;
+    /// p.slider("vol", u8"Volume", volume, 0.0f, 1.0f);
+    /// @endcode
+    void slider(std::string_view id, std::u8string_view label, float& value, float min, float max,
+                SliderStyle style = {});
 
     /// @brief Draw a scrollable list of string items.
     ///
@@ -421,6 +487,20 @@ public:
     /// @endcode
     void message_log(std::string_view id, const MessageLog& log, MessageLogStyle style = {});
 
+    /// @brief Show a tooltip for the preceding widget when it is hovered.
+    ///
+    /// Call immediately after the widget you want to annotate. The tooltip
+    /// is drawn near the mouse cursor and is always on top.
+    ///
+    /// @code
+    /// p.checkbox(u8"VSync", vsync);
+    /// p.tooltip(u8"Synchronise frame rate to monitor refresh.");
+    ///
+    /// if (p.button(u8"Quit")) { std::exit(0); }
+    /// p.tooltip(u8"Exit the application.");
+    /// @endcode
+    void tooltip(std::u8string_view text);
+
     /// @brief Lay out child widgets horizontally on a single row.
     ///
     /// All widgets added inside @p fn are placed left-to-right. After the
@@ -435,13 +515,13 @@ public:
     /// @endcode
     template<typename Fn>
     void horizontal(Fn&& fn) {
-        float saved_y = cursor_y_;
-        float saved_x = content_x_;
-        float saved_w = content_width_;
+        const float saved_y = cursor_y_;
+        const float saved_x = content_x_;
+        const float saved_w = content_width_;
         in_horizontal_ = true;
         horiz_cursor_x_ = content_x_;
         horiz_max_h_ = 0;
-        fn(*this);
+        std::forward<Fn>(fn)(*this);
         in_horizontal_ = false;
         cursor_y_ = saved_y + horiz_max_h_ + margin_;
         content_x_ = saved_x;
@@ -455,10 +535,19 @@ private:
     // After next_control_rect() in horizontal mode, call this to correct the
     // cursor advance when the widget's actual width differs from content_width_.
     void correct_horiz_advance(float actual_w);
-    float text_height() const;
-    float measure_text_width(std::u8string_view text) const;
+    [[nodiscard]] float text_height() const;
+    [[nodiscard]] float measure_text_width(std::u8string_view text) const;
 
-    UIContext& ctx_;
+    /// @brief Build a scoped widget ID: "panel_id##label##N".
+    ///
+    /// The panel ID prefix prevents collisions between identically-labelled
+    /// widgets in different panels. The per-panel sequence number (N)
+    /// disambiguates two widgets with the same label inside the *same* panel.
+    [[nodiscard]] std::string make_widget_id(std::string_view label);
+
+    UIContext& ctx_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+    std::string panel_id_;
+    std::string last_widget_id_;
     Rect panel_rect_;
     float z_base_;
     float cursor_y_;
@@ -466,6 +555,7 @@ private:
     float content_width_;
     float padding_;
     float margin_;
+    int widget_seq_ = 0;
     bool in_horizontal_ = false;
     float horiz_cursor_x_ = 0;
     float horiz_max_h_ = 0;
@@ -535,9 +625,55 @@ public:
         auto rect = resolve_placement(placement);
         draw_panel_bg(rect);
 
-        float z = theme_->z_order;
-        PanelBuilder builder(*this, rect, z);
-        fn(builder);
+        const float z = theme_->z_order;
+        PanelBuilder builder(*this, rect, z, id);
+        std::forward<Fn>(fn)(builder);
+    }
+
+    /// @brief Draw a modal dialog: a semi-transparent backdrop over the entire
+    /// screen followed by a centred panel.
+    ///
+    /// All mouse input outside the dialog is consumed by the backdrop, making
+    /// underlying panels non-interactive while the modal is open.
+    ///
+    /// @param id        Unique panel identifier.
+    /// @param size      Width and height of the dialog panel.
+    /// @param fn        Layout callback: `void fn(PanelBuilder&)`.
+    /// @param backdrop  Backdrop overlay colour (default: semi-transparent black).
+    ///
+    /// @code
+    /// if (show_confirm) {
+    ///     ui.modal("confirm_dlg", {300, 120}, [&](auto& p) {
+    ///         p.text(u8"Are you sure?");
+    ///         p.horizontal([&](auto& row) {
+    ///             if (row.button(u8"Yes")) { do_thing(); show_confirm = false; }
+    ///             if (row.button(u8"No"))  { show_confirm = false; }
+    ///         });
+    ///     });
+    /// }
+    /// @endcode
+    template<typename Fn>
+    void modal(std::string_view id, Vec2 size, Fn&& fn, Color backdrop = {0, 0, 0, 160}) {
+        // Draw full-screen backdrop.
+        const auto sw = static_cast<float>(screen_w_);
+        const auto sh = static_cast<float>(screen_h_);
+        const float modal_z = theme_->z_order + 5.0f;
+        draw_rect({0, 0, sw, sh}, backdrop, modal_z);
+
+        // Register the backdrop as a widget so it captures stray clicks.
+        register_widget(std::string(id) + "##backdrop", {0, 0, sw, sh});
+
+        // Centre the dialog panel.
+        const float px = (sw - size.x) / 2.0f;
+        const float py = (sh - size.y) / 2.0f;
+        const Rect rect = {px, py, size.x, size.y};
+        draw_rect(rect, theme_->bg_color, modal_z + 0.01f);
+        if (theme_->border_width > 0.0f) {
+            draw_border(rect, theme_->border_color, theme_->border_width, modal_z + 0.02f);
+        }
+
+        PanelBuilder builder(*this, rect, modal_z + 0.03f, id);
+        std::forward<Fn>(fn)(builder);
     }
 
     /// @brief Flush all accumulated draw calls to the renderer.
@@ -560,12 +696,14 @@ private:
     Rect resolve_placement(const PanelPlacement& p) const;
     void draw_panel_bg(Rect rect);
     void draw_rect(Rect rect, Color color, float z);
+    void draw_border(Rect rect, Color color, float width, float z);
     void draw_text_at(std::u8string_view text, float x, float y, Color color, float z);
     float glyph_width() const;
     float glyph_height() const;
 
     void register_widget(std::string_view id, Rect rect);
     bool is_hot(std::string_view id) const;
+    bool is_active(std::string_view id) const;
     bool is_clicked(std::string_view id) const;
 
     // 1×1 white texture used as the source for all filled rect draws.
@@ -590,6 +728,7 @@ private:
     std::vector<WidgetRect> curr_rects_;
 
     std::unordered_map<std::string, int> scroll_offsets_;
+    std::unordered_map<std::string, bool> scroll_at_bottom_;
     std::unordered_map<std::string, size_t> cursor_positions_;
     std::vector<char> input_chars_;
 

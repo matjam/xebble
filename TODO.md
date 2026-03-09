@@ -27,9 +27,10 @@ Future features beyond the core renderer and ECS. The goal is for Xebble to hand
 - [x] `progress_bar(value, max, style)` widget — health bars, loading indicators; fill + background + optional text overlay
 - [x] `separator(style)` widget — horizontal divider line between widget groups
 - [x] `message_log(id, log, style)` widget — scrollable `MessageLog` view with per-message colors, mouse-scroll, auto-scroll
-- [ ] Tooltip support
-- [ ] Modal dialog with backdrop
-- [ ] Number input / slider widget
+- [x] `radio_button(label, selected, value)` widget — mutually exclusive option selection within a group
+- [x] `slider(id, label, value, min, max)` widget — horizontal slider for floating-point values with click-and-drag support
+- [x] `tooltip(text)` — hover tooltip on the preceding widget, positioned near the mouse cursor
+- [x] `modal(id, size, fn)` — modal dialog with semi-transparent backdrop that blocks underlying input
 - [ ] Nested panels / tabs
 
 ## UI Layout
