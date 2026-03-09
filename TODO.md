@@ -12,6 +12,14 @@ Future features beyond the core renderer and ECS. The goal is for Xebble to hand
 - [x] `AudioEngine` injected as a World resource; `update()` called per frame by `xebble::run()`
 - [x] Example `ex17_audio` demonstrates in-memory WAV beep, tracker music, SID chiptune, volume controls
 
+## Configuration ✓ DONE
+
+- [x] `Config` class loads a `game.toml` with `[window]`, `[renderer]`, `[audio]`, `[assets]`, `[game]` sections
+- [x] Engine sections map to existing config structs; `[game]` exposed as raw `toml::table` via `Config::game_value<T>()`
+- [x] `run()` overloads accept a filesystem path to auto-load config and inject `Config` as a World resource
+- [x] Audio volumes from `[audio]` applied to `AudioEngine` on startup
+- [x] Missing config files return defaults (not an error)
+
 ## Input
 
 - [ ] Gamepad / controller support via GLFW joystick API; add `GamepadButton` and `GamepadAxis` event types to `EventType`
@@ -38,6 +46,118 @@ Future features beyond the core renderer and ECS. The goal is for Xebble to hand
 - [ ] Auto-size panel to its content
 - [ ] Side-by-side panels that respond to content size
 - [ ] Configurable column/row layout with padding that doesn't require manual positioning
+
+## Shader Effects
+
+Named shader effects as first-class assets, attachable to sprites. Layered
+design: start with named fragment shader effects (glow, dissolve, palette swap),
+designed so a full material system can be added later.
+
+### Architecture overview
+
+The current renderer has a single hardcoded sprite pipeline (`sprite.vert` +
+`sprite.frag`). The plan is to support multiple pipelines -- one per registered
+shader effect -- that differ only in their fragment shader. The vertex shader,
+vertex input layout, and descriptor set layout remain shared.
+
+### New types
+
+- **`ShaderEffect`** (`include/xebble/shader_effect.hpp`) -- owns a named
+  VkPipeline compiled from a custom fragment shader. Has a name string and a
+  push constant block for per-effect uniforms (`time`, `intensity`). Move-only.
+
+- **`ShaderEffectParams`** -- 16-byte struct pushed to the fragment stage:
+  `float time` (elapsed seconds), `float intensity` (per-sprite 0-1), 8 bytes
+  padding.
+
+### Pipeline factory
+
+Add `Pipeline::create_sprite_effect_pipeline()` to `src/vulkan/pipeline.cpp`.
+Takes the default vertex SPIR-V + a custom fragment SPIR-V blob (compiled at
+runtime via shaderc). Shares the same vertex input layout, descriptor set
+layout, and push constant range as the default sprite pipeline. Push constant
+range extended: 64 bytes `mat4 projection` (vertex) + 16 bytes effect params
+(fragment).
+
+### Renderer changes
+
+- Store registered effects: `unordered_map<string, ShaderEffect>`
+- `register_shader_effect(name, glsl_source)` -- compiles GLSL to SPIR-V via
+  shaderc, creates the pipeline, stores it
+- `DrawBatch` gains a `VkPipeline pipeline` field (VK_NULL_HANDLE = default)
+- Draw loop: track last-bound pipeline, rebind + re-push constants only when
+  the batch's pipeline differs
+- Sorting becomes `(z_order, pipeline_ptr, texture)` to minimize pipeline
+  switches
+- Push `ShaderEffectParams` to the fragment stage before each pipeline-group
+
+### Sprite component
+
+`Sprite` gets `const ShaderEffect* effect = nullptr` and
+`float effect_intensity = 1.0f`.
+
+### Built-in systems
+
+`SpriteRenderSystem` sort key becomes `(z_order, effect, texture)`. Batch
+pipeline field set from the sprite's effect pointer.
+
+### Asset manager
+
+New manifest section:
+```toml
+[shaders]
+glow     = "shaders/glow.frag"
+dissolve = "shaders/dissolve.frag"
+```
+
+Loads each `.frag` file, compiles via shaderc, calls
+`renderer.register_shader_effect()`.
+
+### Custom fragment shader contract
+
+```glsl
+layout(location = 0) in vec2 fragTexCoord;
+layout(location = 1) in vec4 fragColor;
+layout(set = 0, binding = 0) uniform sampler2D texSampler;
+layout(push_constant) uniform EffectParams {
+    layout(offset = 64) float time;
+    layout(offset = 68) float intensity;
+    layout(offset = 72) float pad0;
+    layout(offset = 76) float pad1;
+} effect;
+layout(location = 0) out vec4 outColor;
+```
+
+### Usage
+
+```cpp
+renderer->register_shader_effect("glow", glow_frag_source);
+auto* glow = renderer->shader_effect("glow");
+world.build_entity()
+    .with(Position{100, 100})
+    .with(Sprite{&sheet, 0, 1.0f, {}, 1.0f, 0.0f, 0.5f, 0.5f, glow, 0.8f})
+    .build();
+```
+
+### Future: full material system
+
+Material = ShaderEffect + parameter values + additional texture bindings
+(normal maps, palette LUTs, noise). Per-material UBOs at descriptor set 1.
+Hot-reload of shader source during development.
+
+### Files to modify
+
+| File | Change |
+|---|---|
+| `include/xebble/shader_effect.hpp` | New: ShaderEffect class |
+| `include/xebble/components.hpp` | Add effect ptr + intensity to Sprite |
+| `include/xebble/renderer.hpp` | Add register/get shader_effect methods |
+| `include/xebble/asset_manager.hpp` | Add ShaderEntry to manifest |
+| `src/vulkan/pipeline.hpp` | Add create_sprite_effect_pipeline() |
+| `src/vulkan/pipeline.cpp` | Implement effect pipeline creation |
+| `src/renderer.cpp` | Effect storage, per-batch pipeline switching |
+| `src/builtin_systems.cpp` | Effect-aware sort key, batch pipeline field |
+| `src/asset_manager.cpp` | Load and compile shader assets |
 
 ## Animation
 
