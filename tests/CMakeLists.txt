@@ -18,6 +18,7 @@ add_executable(xebble_tests
     test_procgen.cpp
     test_serial.cpp
     test_input_map.cpp
+    test_config.cpp
 )
 
 target_link_libraries(xebble_tests PRIVATE

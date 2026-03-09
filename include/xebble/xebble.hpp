@@ -8,6 +8,7 @@
 #include <xebble/audio.hpp>
 #include <xebble/builtin_systems.hpp>
 #include <xebble/components.hpp>
+#include <xebble/config.hpp>
 #include <xebble/debug.hpp>
 #include <xebble/ecs.hpp>
 #include <xebble/event.hpp>

@@ -3,6 +3,7 @@
 #include <xebble/audio.hpp>
 #include <xebble/builtin_systems.hpp>
 #include <xebble/components.hpp>
+#include <xebble/config.hpp>
 #include <xebble/embedded_font.hpp>
 #include <xebble/event.hpp>
 #include <xebble/game.hpp>
@@ -235,6 +236,67 @@ int run(SceneRouter router, const GameConfig& config) {
     { SceneStack drop = std::move(stack); }
 
     return 0;
+}
+
+// ---------------------------------------------------------------------------
+// run() overloads that accept a TOML config file path
+// ---------------------------------------------------------------------------
+
+static void apply_audio_config(AudioEngine& audio, const Config& cfg) {
+    audio.set_master_volume(cfg.master_volume());
+    audio.set_music_volume(cfg.music_volume());
+    audio.set_sfx_volume(cfg.sfx_volume());
+}
+
+int run(World world, const std::filesystem::path& config_path) {
+    auto cfg = Config::load(config_path);
+    if (!cfg) {
+        log(LogLevel::Error, cfg.error().message);
+        return 1;
+    }
+
+    auto h = make_engine(cfg->to_game_config());
+    if (!h.ok)
+        return 1;
+
+    apply_audio_config(*h.audio, *cfg);
+
+    // Inject the Config as a world resource so systems can read [game] values.
+    world.add_resource<Config>(std::move(*cfg));
+
+    std::shared_ptr<BitmapFont> shared_font;
+    if (!inject_and_init(world, *h.renderer, *h.assets, *h.audio, shared_font))
+        return 1;
+
+    while (!h.window->should_close()) {
+        h.window->poll_events();
+        auto raw = h.window->events();
+
+        world.resource<EventQueue>().events.assign(raw.begin(), raw.end());
+
+        if (h.renderer->begin_frame()) {
+            float dt = h.renderer->delta_time();
+            h.audio->update();
+            world.tick_update(dt);
+            world.tick_draw(*h.renderer);
+            h.renderer->end_frame();
+        }
+    }
+
+    { World drop = std::move(world); }
+
+    return 0;
+}
+
+int run(SceneRouter router, const std::filesystem::path& config_path) {
+    auto cfg = Config::load(config_path);
+    if (!cfg) {
+        log(LogLevel::Error, cfg.error().message);
+        return 1;
+    }
+
+    // Delegate to the GameConfig overload.
+    return run(std::move(router), cfg->to_game_config());
 }
 
 } // namespace xebble

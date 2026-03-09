@@ -76,11 +76,14 @@
 #pragma once
 
 #include <xebble/asset_manager.hpp>
+#include <xebble/config.hpp>
 #include <xebble/renderer.hpp>
 #include <xebble/scene.hpp>
 #include <xebble/types.hpp>
 #include <xebble/window.hpp>
 #include <xebble/world.hpp>
+
+#include <filesystem>
 
 namespace xebble {
 
@@ -248,5 +251,24 @@ int run(World world, const GameConfig& config);
 /// }
 /// @endcode
 int run(SceneRouter router, const GameConfig& config);
+
+/// @brief Run a single-world game using a TOML configuration file.
+///
+/// Convenience overload: loads the given TOML file with `Config::load()`,
+/// converts to a `GameConfig`, and calls `run(World, GameConfig)`.  The
+/// returned `Config` is also injected as a World resource so systems can
+/// read game-specific values from the `[game]` section.
+///
+/// @code
+/// int main() {
+///     World world;
+///     world.add_system<MyGame>();
+///     return xebble::run(std::move(world), "game.toml");
+/// }
+/// @endcode
+int run(World world, const std::filesystem::path& config_path);
+
+/// @brief Run a scene-stack game using a TOML configuration file.
+int run(SceneRouter router, const std::filesystem::path& config_path);
 
 } // namespace xebble

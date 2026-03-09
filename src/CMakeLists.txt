@@ -34,6 +34,7 @@ add_library(xebble STATIC
     fov.cpp
     pathfinding.cpp
     audio.cpp
+    config.cpp
 )
 
 target_include_directories(xebble PUBLIC
